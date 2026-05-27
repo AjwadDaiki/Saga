@@ -102,7 +102,7 @@ namespace Saga.Save
         /// </summary>
         private static GameState Migrate(GameState state)
         {
-            const int currentVersion = 3;
+            const int currentVersion = 4;
 
             if (state.saveVersion < 2)
             {
@@ -121,12 +121,29 @@ namespace Saga.Save
                 Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v3 (added currentStade).");
             }
 
+            if (state.saveVersion < 4)
+            {
+                // v3 -> v4: combat active system (Sprint 4). Default to Training, no engaged adversaire.
+                state.currentPhase = Saga.Data.CombatPhase.Training;
+                state.currentAdversaireId = null;
+                state.currentAdversaireHp = default;
+                state.chronoRemaining = 0f;
+                state.tapsTowardsNextAdversaire = 0;
+                state.totalAdversairesDefeated = 0;
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v4 (added combat active system fields).");
+            }
+
             // Defensive: always ensure non-null collections + valid scalars post-deserialization.
             if (state.upgradeLevels == null)
             {
                 state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
             }
             if (state.currentStade <= 0) state.currentStade = 1;
+            // Always boot in Training to avoid loading mid-combat with a stale chrono / dangling adversaire ref.
+            // Sprint 5+ may persist combat state intentionally if a player quits mid-fight.
+            state.currentPhase = Saga.Data.CombatPhase.Training;
+            state.currentAdversaireId = null;
+            state.chronoRemaining = 0f;
 
             state.saveVersion = currentVersion;
             return state;

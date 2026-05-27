@@ -48,6 +48,63 @@
 
 ---
 
+## 2026-05-27 — Sprint 4: Combat phase state machine (CombatProcessor POCO)
+
+**Décision**: Le cycle de combat est modélisé comme une state machine POCO `CombatProcessor`, ticked par `GameTicker` à 10Hz. Les phases (`CombatPhase` enum) sont :
+`Training` → `AdversaireIncoming` (1s cinematic) → `AdversaireActive` → soit `AdversaireVictory` (2s) → `Training`, soit `PlayerDeathTemporary` → (click pour reprendre) → `Training`.
+
+Les transitions raise `OnPhaseChanged(prev, next)`. Les Views UI/World filtrent leur visibilité sur l'event.
+
+**Raison**: Pattern reproductible (mêmes APIs que `StadeManager`). POCO = testable sans Unity. Le tick polling pour fin-de-combat (HP ≤ 0, chrono ≤ 0) garde `DamageDealer` simple et découple les responsabilities.
+
+**Conséquence**:
+- `CombatProcessor.Tick`, `StartIncoming`, `ResolveDeathTemporary` — surface minimale
+- Tests EditMode 8 cases couvrent toutes les transitions
+- Sprint 5 (Capitaines/Boss) ajoutera 2 phases (`BossIncoming`, `BossActive`, etc.) sans refactor du squelette
+
+---
+
+## 2026-05-27 — Sprint 4: les taps en combat dealent du damage, pas de la Force
+
+**Décision**: Pendant `AdversaireActive`, chaque tap calcule `gain = forcePerTap × comboMult` mais l'applique au HP de l'adversaire au lieu de l'ajouter à `GameState.force`. La Force est gagnée uniquement à la victoire (`AdversaireData.RewardForce`).
+
+Implementation: `TapHandler.OnTapPerformed` gating explicite sur `state.currentPhase`. `DamageDealer` (POCO subscriber to `OnTapResolved`) applique le damage uniquement en `AdversaireActive`.
+
+**Raison**: Le brief Sprint 4 précise "Issues: Victoire → Drop de récompenses (Force bonus + chance loot)". Implicitly = pas de Force per-tap en combat. Préserve l'incentive narratif : la victoire est une récompense distincte, pas un gain progressif.
+
+**Conséquence**:
+- Les cards upgrades restent achetables pendant le combat (pas de raison de bloquer)
+- `TapFxSpawner` "+X floating" garde la même UX visuelle mais représente damage en combat (peut-être à refiner Sprint 5 polish — `-X` depuis l'adversaire serait plus correct)
+- `ComboSystem` continue de fonctionner cross-phase — le combo n'est pas reset en quittant Training
+
+---
+
+## 2026-05-27 — Sprint 4: boot policy = reset combat state à Training
+
+**Décision**: `SaveService.Migrate` force `currentPhase = Training`, `currentAdversaireId = null`, `chronoRemaining = 0` à chaque load, indépendamment de la version save.
+
+**Raison**: Évite de loader mid-combat avec un chrono stale qui se déclencherait à 0 dès le boot → `PlayerDeathTemporary` à l'ouverture du jeu = horrible UX. Plus simple : reset systématique. Sprint 5+ pourra persister le combat state intentionnellement si pertinent (e.g. quitter mid-boss pour ne pas perdre une victoire).
+
+**Conséquence**:
+- Quitter mid-combat = perdre le combat en cours (le joueur revient au mannequin)
+- Pas vu comme une perte UX (les combats Sprint 4 durent <60s, perte mineure)
+- Sprint 5 Capitaines: ajustement possible (chrono long, peut justifier persistance)
+
+---
+
+## 2026-05-27 — Sprint 4: placeholder sprites procéduraux pour adversaires
+
+**Décision**: Pour Sprint 4 MVP, les adversaires sont représentés par un sprite procédural blanc 60×100 px généré au runtime, tinté par voie (gris/ambre/bleu/vert/bronze/etc. per `AdversaireWorldView.ColorForVoie`).
+
+**Raison**: Brief explicite "Pour les sprites: utilise placeholder solide pour MVP". Sprint 5+ remplacera par de vrais sprites (rvros pack a déjà des frames hurt/die/idle réutilisables pour les ennemis, ou import dédié).
+
+**Conséquence**:
+- `AdversaireData.SpriteIdleName` field présent mais ignoré par Sprint 4 (utilisable Sprint 5+ pour pointer vers une Resources lookup)
+- 1 texture statique partagée entre toutes les instances (perf-friendly)
+- Lisibilité immédiate par couleur de voie (matches l'UI palette per-voie de `05_VISUAL_STYLE.md`)
+
+---
+
 ## 2026-05-27 — Sprint 3: art direction pivot vers "Simple Chibi - Pixel Adventurer"
 
 **Décision** (tranchée par coordinateur after Ajwad's review of initial anatomical templates):

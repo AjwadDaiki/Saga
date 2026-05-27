@@ -44,6 +44,7 @@ namespace Saga.Core
         public Canvas MainCanvas { get; private set; }
         public Transform CharacterTransform { get; private set; }
         public Transform MannequinTransform { get; private set; }
+        public Transform AdversaireTransform { get; private set; }
 
         private void Awake()
         {
@@ -63,6 +64,7 @@ namespace Saga.Core
             var worldRoot = new GameObject("WorldRoot").transform;
             BuildCharacter(worldRoot);
             BuildMannequin(worldRoot);
+            BuildAdversaire(worldRoot);
             BuildSlashFxSpawner(worldRoot);
 
             BuildEventSystem();
@@ -73,6 +75,289 @@ namespace Saga.Core
             BuildTapFxSpawner(MainCanvas);
             BuildUpgradePanel(MainCanvas);
             BuildStadeTransitionOverlay(MainCanvas);
+
+            // Sprint 4: combat active system UI
+            BuildAdversaireProgressBar(MainCanvas);
+            BuildCombatHud(MainCanvas);
+            BuildAdversaireSpawnView(MainCanvas);
+            BuildDeathOverlay(MainCanvas);
+        }
+
+        private void BuildAdversaire(Transform parent)
+        {
+            // Same position as mannequin — they're mutually exclusive (phase-driven visibility).
+            var go = new GameObject("Adversaire", typeof(SpriteRenderer), typeof(AdversaireWorldView));
+            go.transform.SetParent(parent, false);
+            go.transform.position = MannequinPosition;
+
+            var sr = go.GetComponent<SpriteRenderer>();
+            sr.sortingOrder = 5;
+            sr.color = new Color(1, 1, 1, 0); // start invisible
+
+            var view = go.GetComponent<AdversaireWorldView>();
+            view.Renderer = sr;
+
+            AdversaireTransform = go.transform;
+        }
+
+        private static void BuildAdversaireProgressBar(Canvas canvas)
+        {
+            var root = new GameObject("AdversaireProgressBar",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireProgressBarView));
+            root.transform.SetParent(canvas.transform, false);
+            var rootRt = (RectTransform)root.transform;
+            rootRt.anchorMin = new Vector2(0.5f, 1f);
+            rootRt.anchorMax = new Vector2(0.5f, 1f);
+            rootRt.pivot = new Vector2(0.5f, 1f);
+            rootRt.anchoredPosition = new Vector2(0, -32);
+            rootRt.sizeDelta = new Vector2(800, 80);
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 1f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            // Background plate
+            var bg = new GameObject("Bg", typeof(RectTransform), typeof(Image));
+            bg.transform.SetParent(rootRt, false);
+            var bgRt = (RectTransform)bg.transform;
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+            var bgImage = bg.GetComponent<Image>();
+            bgImage.color = new Color(0.10f, 0.10f, 0.10f, 0.85f);
+            bgImage.raycastTarget = false;
+
+            // Fill (horizontal)
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(rootRt, false);
+            var fillRt = (RectTransform)fill.transform;
+            fillRt.anchorMin = new Vector2(0, 0); fillRt.anchorMax = new Vector2(1, 1);
+            fillRt.offsetMin = new Vector2(4, 4); fillRt.offsetMax = new Vector2(-4, -28);
+            var fillImage = fill.GetComponent<Image>();
+            fillImage.color = new Color(0.98f, 0.78f, 0.46f, 0.9f); // ambre
+            fillImage.type = Image.Type.Filled;
+            fillImage.fillMethod = Image.FillMethod.Horizontal;
+            fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fillImage.fillAmount = 0f;
+            fillImage.raycastTarget = false;
+
+            // Label
+            var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            label.transform.SetParent(rootRt, false);
+            var labelRt = (RectTransform)label.transform;
+            labelRt.anchorMin = new Vector2(0, 1); labelRt.anchorMax = new Vector2(1, 1);
+            labelRt.pivot = new Vector2(0.5f, 1f);
+            labelRt.anchoredPosition = new Vector2(0, -4);
+            labelRt.sizeDelta = new Vector2(0, 24);
+            var labelTmp = label.GetComponent<TextMeshProUGUI>();
+            labelTmp.alignment = TextAlignmentOptions.Center;
+            labelTmp.color = TextSecondary;
+            labelTmp.fontSize = 22;
+            labelTmp.text = "Prochain adversaire";
+            labelTmp.raycastTarget = false;
+
+            var view = root.GetComponent<AdversaireProgressBarView>();
+            view.Group = group;
+            view.FillImage = fillImage;
+            view.Label = labelTmp;
+            view.PulseTarget = rootRt;
+        }
+
+        private static void BuildCombatHud(Canvas canvas)
+        {
+            var root = new GameObject("CombatHud",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(CombatHudView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -132);
+            rt.sizeDelta = new Vector2(900, 200);
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            // Adversaire name
+            var nameGo = new GameObject("Name", typeof(RectTransform), typeof(TextMeshProUGUI));
+            nameGo.transform.SetParent(rt, false);
+            var nameRt = (RectTransform)nameGo.transform;
+            nameRt.anchorMin = new Vector2(0, 1); nameRt.anchorMax = new Vector2(1, 1);
+            nameRt.pivot = new Vector2(0.5f, 1f);
+            nameRt.anchoredPosition = new Vector2(0, 0);
+            nameRt.sizeDelta = new Vector2(0, 50);
+            var nameLabel = nameGo.GetComponent<TextMeshProUGUI>();
+            nameLabel.alignment = TextAlignmentOptions.Center;
+            nameLabel.color = TextPrimary;
+            nameLabel.fontSize = 38;
+            nameLabel.fontStyle = FontStyles.Bold;
+            nameLabel.text = "";
+            nameLabel.raycastTarget = false;
+
+            // HP bar bg
+            var hpBg = new GameObject("HpBg", typeof(RectTransform), typeof(Image));
+            hpBg.transform.SetParent(rt, false);
+            var hpBgRt = (RectTransform)hpBg.transform;
+            hpBgRt.anchorMin = new Vector2(0.5f, 1f); hpBgRt.anchorMax = new Vector2(0.5f, 1f);
+            hpBgRt.pivot = new Vector2(0.5f, 1f);
+            hpBgRt.anchoredPosition = new Vector2(0, -55);
+            hpBgRt.sizeDelta = new Vector2(700, 28);
+            var hpBgImg = hpBg.GetComponent<Image>();
+            hpBgImg.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);
+            hpBgImg.raycastTarget = false;
+
+            // HP bar fill
+            var hpFill = new GameObject("HpFill", typeof(RectTransform), typeof(Image));
+            hpFill.transform.SetParent(hpBgRt, false);
+            var hpFillRt = (RectTransform)hpFill.transform;
+            hpFillRt.anchorMin = Vector2.zero; hpFillRt.anchorMax = Vector2.one;
+            hpFillRt.offsetMin = new Vector2(3, 3); hpFillRt.offsetMax = new Vector2(-3, -3);
+            var hpFillImg = hpFill.GetComponent<Image>();
+            hpFillImg.color = new Color(0.85f, 0.30f, 0.25f, 0.95f); // sang
+            hpFillImg.type = Image.Type.Filled;
+            hpFillImg.fillMethod = Image.FillMethod.Horizontal;
+            hpFillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            hpFillImg.fillAmount = 1f;
+            hpFillImg.raycastTarget = false;
+
+            // HP numeric label inside the bar
+            var hpLabel = new GameObject("HpLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            hpLabel.transform.SetParent(hpBgRt, false);
+            var hpLabelRt = (RectTransform)hpLabel.transform;
+            hpLabelRt.anchorMin = Vector2.zero; hpLabelRt.anchorMax = Vector2.one;
+            hpLabelRt.offsetMin = Vector2.zero; hpLabelRt.offsetMax = Vector2.zero;
+            var hpLabelTmp = hpLabel.GetComponent<TextMeshProUGUI>();
+            hpLabelTmp.alignment = TextAlignmentOptions.Center;
+            hpLabelTmp.color = TextPrimary;
+            hpLabelTmp.fontSize = 18;
+            hpLabelTmp.text = "";
+            hpLabelTmp.raycastTarget = false;
+
+            // Chrono label
+            var chrono = new GameObject("Chrono", typeof(RectTransform), typeof(TextMeshProUGUI));
+            chrono.transform.SetParent(rt, false);
+            var chronoRt = (RectTransform)chrono.transform;
+            chronoRt.anchorMin = new Vector2(0.5f, 1f); chronoRt.anchorMax = new Vector2(0.5f, 1f);
+            chronoRt.pivot = new Vector2(0.5f, 1f);
+            chronoRt.anchoredPosition = new Vector2(0, -100);
+            chronoRt.sizeDelta = new Vector2(200, 60);
+            var chronoTmp = chrono.GetComponent<TextMeshProUGUI>();
+            chronoTmp.alignment = TextAlignmentOptions.Center;
+            chronoTmp.color = TextPrimary;
+            chronoTmp.fontSize = 48;
+            chronoTmp.fontStyle = FontStyles.Bold;
+            chronoTmp.text = "0:00";
+            chronoTmp.raycastTarget = false;
+
+            var view = root.GetComponent<CombatHudView>();
+            view.Group = group;
+            view.NameLabel = nameLabel;
+            view.HpLabel = hpLabelTmp;
+            view.HpFill = hpFillImg;
+            view.ChronoLabel = chronoTmp;
+        }
+
+        private static void BuildAdversaireSpawnView(Canvas canvas)
+        {
+            var root = new GameObject("AdversaireSpawnView",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireSpawnView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = new Vector2(0, 0.55f); rt.anchorMax = new Vector2(1, 0.7f);
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            var label = new GameObject("Name", typeof(RectTransform), typeof(TextMeshProUGUI));
+            label.transform.SetParent(rt, false);
+            var labelRt = (RectTransform)label.transform;
+            labelRt.anchorMin = Vector2.zero; labelRt.anchorMax = Vector2.one;
+            labelRt.offsetMin = Vector2.zero; labelRt.offsetMax = Vector2.zero;
+            var labelTmp = label.GetComponent<TextMeshProUGUI>();
+            labelTmp.alignment = TextAlignmentOptions.Center;
+            labelTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f); // ambre
+            labelTmp.fontSize = 96;
+            labelTmp.fontStyle = FontStyles.Bold;
+            labelTmp.text = "";
+            labelTmp.raycastTarget = false;
+
+            var view = root.GetComponent<AdversaireSpawnView>();
+            view.Group = group;
+            view.NameLabel = labelTmp;
+        }
+
+        private static void BuildDeathOverlay(Canvas canvas)
+        {
+            var root = new GameObject("DeathOverlay",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(DeathOverlayView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            // Render order: append last in canvas → drawn on top.
+            root.transform.SetAsLastSibling();
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            var bg = root.GetComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.95f);
+            bg.raycastTarget = true;
+
+            // Title "TU ES MORT"
+            var title = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+            title.transform.SetParent(rt, false);
+            var titleRt = (RectTransform)title.transform;
+            titleRt.anchorMin = new Vector2(0, 0.55f); titleRt.anchorMax = new Vector2(1, 0.7f);
+            titleRt.offsetMin = Vector2.zero; titleRt.offsetMax = Vector2.zero;
+            var titleTmp = title.GetComponent<TextMeshProUGUI>();
+            titleTmp.alignment = TextAlignmentOptions.Center;
+            titleTmp.color = new Color(0.6f, 0.05f, 0.05f, 1f); // rouge sombre
+            titleTmp.fontSize = 128;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.text = "TU ES MORT";
+            titleTmp.raycastTarget = false;
+
+            // Subtitle quote
+            var sub = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+            sub.transform.SetParent(rt, false);
+            var subRt = (RectTransform)sub.transform;
+            subRt.anchorMin = new Vector2(0.1f, 0.42f); subRt.anchorMax = new Vector2(0.9f, 0.52f);
+            subRt.offsetMin = Vector2.zero; subRt.offsetMax = Vector2.zero;
+            var subTmp = sub.GetComponent<TextMeshProUGUI>();
+            subTmp.alignment = TextAlignmentOptions.Center;
+            subTmp.color = TextSecondary;
+            subTmp.fontSize = 28;
+            subTmp.fontStyle = FontStyles.Italic;
+            subTmp.text = "";
+            subTmp.raycastTarget = false;
+
+            // Hint at bottom
+            var hint = new GameObject("Hint", typeof(RectTransform), typeof(TextMeshProUGUI));
+            hint.transform.SetParent(rt, false);
+            var hintRt = (RectTransform)hint.transform;
+            hintRt.anchorMin = new Vector2(0, 0.15f); hintRt.anchorMax = new Vector2(1, 0.22f);
+            hintRt.offsetMin = Vector2.zero; hintRt.offsetMax = Vector2.zero;
+            var hintTmp = hint.GetComponent<TextMeshProUGUI>();
+            hintTmp.alignment = TextAlignmentOptions.Center;
+            hintTmp.color = new Color(0.55f, 0.55f, 0.55f, 1f);
+            hintTmp.fontSize = 28;
+            hintTmp.text = "";
+            hintTmp.raycastTarget = false;
+
+            var view = root.GetComponent<DeathOverlayView>();
+            view.Group = group;
+            view.Title = titleTmp;
+            view.Subtitle = subTmp;
+            view.Hint = hintTmp;
         }
 
         private static void CleanLeftoverWorldSprites()

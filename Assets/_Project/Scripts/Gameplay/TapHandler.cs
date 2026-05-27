@@ -47,27 +47,39 @@ namespace Saga.Gameplay
 
         private void OnTapPerformed(InputAction.CallbackContext ctx)
         {
-            // Filter UI clicks (upgrade buttons land in Sprint 2 — keep this in place).
+            // Filter UI clicks (upgrade buttons + death overlay etc.).
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
-            // Base tier × Méditation bonus = effective combo multiplier this tap.
+            // Sprint 4: phase gating. Only Training and AdversaireActive accept taps.
+            //   - AdversaireIncoming / Victory / PlayerDeathTemporary = cinematic phases, no input.
+            // Same combo math runs either way (so combo doesn't reset crossing phases).
+            var phase = gm.State.currentPhase;
+            if (phase != Saga.Data.CombatPhase.Training && phase != Saga.Data.CombatPhase.AdversaireActive) return;
+
             var tierMult = _combo.RegisterTap();
             var bonus = StatsCalculator.GetComboMultiplierBonus(gm.State, gm.Content);
             var finalMult = tierMult * bonus;
 
             var baseGain = StatsCalculator.GetForcePerTap(gm.State, gm.Content);
-            var gain = baseGain * finalMult;
+            var value = baseGain * finalMult;
 
-            gm.State.force += gain;
+            if (phase == Saga.Data.CombatPhase.Training)
+            {
+                // In Training: the value is Force gained. DamageDealer ignores OnTapResolved out of combat.
+                gm.State.force += value;
+                GameEvents.RaiseForceChanged();
+            }
+            // In AdversaireActive: DamageDealer applies `value` as damage to currentAdversaireHp.
+            // No Force is added per tap — reward comes from AdversaireDefeated.
+
             gm.State.totalTaps++;
             gm.Save?.MarkDirty();
 
-            GameEvents.RaiseForceChanged();
             var screenPos = Pointer.current != null ? Pointer.current.position.ReadValue() : (Vector2)Input.mousePosition;
-            GameEvents.RaiseTapResolved(gain, finalMult, screenPos);
+            GameEvents.RaiseTapResolved(value, finalMult, screenPos);
         }
     }
 }

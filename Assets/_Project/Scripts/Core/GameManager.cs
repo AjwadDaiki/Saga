@@ -23,6 +23,9 @@ namespace Saga.Core
         public UpgradeService Upgrades { get; private set; }
         public DisciplesProcessor Disciples { get; private set; }
         public StadeManager Stades { get; private set; }
+        public CombatProcessor Combat { get; private set; }
+        public AdversaireSpawner Adversaires { get; private set; }
+        public DamageDealer Damage { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -52,9 +55,20 @@ namespace Saga.Core
             Upgrades = new UpgradeService(Content);
             Disciples = new DisciplesProcessor(Content);
             Stades = new StadeManager();
+            Combat = new CombatProcessor(Content);
+            Adversaires = new AdversaireSpawner(Content, Combat);
+            Damage = new DamageDealer(Content);
 
-            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | savePath={Save.SavePath}");
+            // Route per-tap progress to the spawner. DamageDealer subscribes itself in its constructor.
+            GameEvents.OnTapResolved += HandleTapForSpawner;
+
+            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | adv={Content.AllAdversaires.Count} | savePath={Save.SavePath}");
             GameEvents.RaiseForceChanged();
+        }
+
+        private void HandleTapForSpawner(BreakInfinity.BigDouble gain, float multiplier, UnityEngine.Vector2 screenPos)
+        {
+            Adversaires?.OnTap(State);
         }
 
         private void OnApplicationPause(bool paused)

@@ -13,7 +13,7 @@ namespace Saga.Data
     public class GameState
     {
         /// <summary>Schema version. Bump on breaking change. Migration handled by SaveService.</summary>
-        public int saveVersion = 3;
+        public int saveVersion = 4;
 
         // -- Currencies (BigDouble — protect against 1e15+ ceiling) -------
         public BigDouble force;
@@ -34,7 +34,21 @@ namespace Saga.Data
         /// <summary>Current visual tier per <see cref="Stade"/>. Starts at 1 (Mendiant).</summary>
         public int currentStade = 1;
 
-        // Sprint 4+ : aggregates expanded as systems come online
-        // (voies, esprits, regions, prestige level, lore, etc.)
+        // -- Combat active system (Sprint 4) ------------------------------
+        /// <summary>Current lifecycle phase per <see cref="CombatPhase"/>. Default Training.</summary>
+        public CombatPhase currentPhase = CombatPhase.Training;
+        /// <summary>Id of the currently engaged adversaire (null if none).</summary>
+        public string currentAdversaireId;
+        /// <summary>Live HP of the current adversaire during AdversaireActive.</summary>
+        public BigDouble currentAdversaireHp;
+        /// <summary>Seconds left on the combat chrono (counts down during AdversaireActive).</summary>
+        public float chronoRemaining;
+        /// <summary>Taps accumulated since last spawn (or last reset) toward the next adversaire.</summary>
+        public int tapsTowardsNextAdversaire;
+        /// <summary>Lifetime count of adversaires defeated (drives Capitaine/Maître progression Sprint 5+).</summary>
+        public int totalAdversairesDefeated;
+
+        // Sprint 5+ : aggregates expanded as systems come online
+        // (boss kills, voies, esprits, regions, prestige level, lore, etc.)
     }
 }
