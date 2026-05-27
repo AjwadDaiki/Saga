@@ -59,6 +59,7 @@ namespace Saga.UI
             _isVisible = true;
             _running = DOTween.Sequence()
                 .Append(DOTween.To(() => _group.alpha, a => _group.alpha = a, 1f, _fadeIn).SetEase(Ease.OutQuad));
+            _running.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -79,6 +80,7 @@ namespace Saga.UI
                     _group.blocksRaycasts = false;
                     _group.interactable = false;
                 });
+            _running.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
 }

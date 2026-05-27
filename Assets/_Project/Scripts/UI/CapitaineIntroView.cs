@@ -51,6 +51,7 @@ namespace Saga.UI
             _running.Append(DOTween.To(() => _group.alpha, a => _group.alpha = a, 1f, 0.5f).SetEase(Ease.OutQuad));
             _running.AppendInterval(1.5f);
             _running.Append(DOTween.To(() => _group.alpha, a => _group.alpha = a, 0f, 0.5f).SetEase(Ease.InQuad));
+            _running.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
 }

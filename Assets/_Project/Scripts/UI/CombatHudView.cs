@@ -77,7 +77,8 @@ namespace Saga.UI
                        || next == CombatPhase.CapitaineActive
                        || next == CombatPhase.CapitaineVictory;
             var target = visible ? 1f : 0f;
-            DOTween.To(() => _group.alpha, a => _group.alpha = a, target, 0.25f).SetEase(Ease.OutQuad);
+            DOTween.To(() => _group.alpha, a => _group.alpha = a, target, 0.25f).SetEase(Ease.OutQuad)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HandleAdversaireSpawned(AdversaireData data)

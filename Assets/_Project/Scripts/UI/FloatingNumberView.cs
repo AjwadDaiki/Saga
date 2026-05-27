@@ -80,6 +80,9 @@ namespace Saga.UI
                 seq.Join(DOTween.To(() => _group.alpha, a => _group.alpha = a, 0f, _duration).SetEase(Ease.InQuad));
             }
             seq.OnComplete(() => Destroy(gameObject));
+            // Auto-kill the whole sequence if this GameObject gets destroyed externally (scene reload,
+            // play mode toggle, parent removal) before OnComplete fires.
+            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private static Color TierColor(int tier)

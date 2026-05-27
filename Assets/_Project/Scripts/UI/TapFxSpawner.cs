@@ -148,8 +148,9 @@ namespace Saga.UI
 
             UnityEngine.Object.Destroy(go, 0.9f); // belt-and-braces
             var seq = DOTween.Sequence();
-            seq.Append(rt.DOLocalMove(endLocal, 0.8f).SetEase(Ease.OutCubic).SetTarget(rt));
-            seq.Join(DOTween.To(() => group.alpha, a => { if (group != null) group.alpha = a; }, 0f, 0.8f).SetEase(Ease.InQuad).SetTarget(rt));
+            seq.Append(rt.DOLocalMove(endLocal, 0.8f).SetEase(Ease.OutCubic));
+            seq.Join(DOTween.To(() => group.alpha, a => { if (group != null) group.alpha = a; }, 0f, 0.8f).SetEase(Ease.InQuad));
+            seq.SetLink(go, LinkBehaviour.KillOnDestroy);
         }
 
         private void SpawnDust(Vector2 anchored)
@@ -186,9 +187,10 @@ namespace Saga.UI
             UnityEngine.Object.Destroy(go, DustDuration + 0.05f);
 
             var seq = DOTween.Sequence();
-            seq.Append(rt.DOLocalMove(endLocal, DustDuration).SetEase(Ease.OutQuad).SetTarget(rt));
-            seq.Join(DOTween.To(() => cg.alpha, a => { if (cg != null) cg.alpha = a; }, 0f, DustDuration).SetEase(Ease.InQuad).SetTarget(rt));
-            seq.Join(rt.DOScale(0.4f, DustDuration).SetEase(Ease.InQuad).SetTarget(rt));
+            seq.Append(rt.DOLocalMove(endLocal, DustDuration).SetEase(Ease.OutQuad));
+            seq.Join(DOTween.To(() => cg.alpha, a => { if (cg != null) cg.alpha = a; }, 0f, DustDuration).SetEase(Ease.InQuad));
+            seq.Join(rt.DOScale(0.4f, DustDuration).SetEase(Ease.InQuad));
+            seq.SetLink(go, LinkBehaviour.KillOnDestroy);
         }
     }
 }

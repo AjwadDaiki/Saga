@@ -77,7 +77,7 @@ namespace Saga.Gameplay
             {
                 if (_bodyRenderer == null) return;
                 var c = _bodyRenderer.color; c.a = a; _bodyRenderer.color = c;
-            }, 1f, 0.5f).SetEase(Ease.OutQuad).SetTarget(transform);
+            }, 1f, 0.5f).SetEase(Ease.OutQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
 
             if (_auraRenderer != null)
             {
@@ -85,7 +85,7 @@ namespace Saga.Gameplay
                 {
                     if (_auraRenderer == null) return;
                     var c = _auraRenderer.color; c.a = a; _auraRenderer.color = c;
-                }, 0.4f, 0.5f).SetEase(Ease.OutQuad).SetTarget(transform);
+                }, 0.4f, 0.5f).SetEase(Ease.OutQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
 
             // Idle body scale + aura pulse
@@ -93,7 +93,7 @@ namespace Saga.Gameplay
             _idleScale = transform.DOScale(1.03f, 1.5f)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
-                .SetTarget(transform);
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
 
             if (_auraRenderer != null)
             {
@@ -101,7 +101,7 @@ namespace Saga.Gameplay
                 _auraPulse = _auraRenderer.transform.DOScale(1.35f, 1.5f)
                     .SetEase(Ease.InOutSine)
                     .SetLoops(-1, LoopType.Yoyo)
-                    .SetTarget(_auraRenderer.transform);
+                    .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
         }
 
@@ -121,8 +121,8 @@ namespace Saga.Gameplay
             // Permanent gentle shake while enraged
             _enrageShake?.Kill();
             _enrageShake = transform.DOShakePosition(99f, 0.05f, vibrato: 6, randomness: 90f, snapping: false, fadeOut: false)
-                .SetTarget(transform)
-                .SetLoops(-1);
+                .SetLoops(-1)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HandleDefeated(CapitaineData data, BigDouble reward)
@@ -130,7 +130,7 @@ namespace Saga.Gameplay
             _idleScale?.Kill();
             _auraPulse?.Kill();
             _enrageShake?.Kill();
-            transform.DOScale(0.7f, 0.5f).SetEase(Ease.InQuad).SetTarget(transform);
+            transform.DOScale(0.7f, 0.5f).SetEase(Ease.InQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             FadeOut(0.6f);
         }
 
@@ -190,14 +190,14 @@ namespace Saga.Gameplay
                 DOTween.To(() => _bodyRenderer.color.a, a =>
                 {
                     if (_bodyRenderer == null) return; var c = _bodyRenderer.color; c.a = a; _bodyRenderer.color = c;
-                }, 0f, duration).SetEase(Ease.InQuad).SetTarget(transform);
+                }, 0f, duration).SetEase(Ease.InQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
             if (_auraRenderer != null)
             {
                 DOTween.To(() => _auraRenderer.color.a, a =>
                 {
                     if (_auraRenderer == null) return; var c = _auraRenderer.color; c.a = a; _auraRenderer.color = c;
-                }, 0f, duration).SetEase(Ease.InQuad).SetTarget(transform);
+                }, 0f, duration).SetEase(Ease.InQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
         }
 

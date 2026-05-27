@@ -48,6 +48,7 @@ namespace Saga.Gameplay
                 if (_flashImage == null) return;
                 var col = _flashImage.color; col.a = a; _flashImage.color = col;
             }, 0f, _flashDuration * 0.7f).SetEase(Ease.InQuad));
+            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void ShakeCamera()
@@ -55,11 +56,13 @@ namespace Saga.Gameplay
             var cam = Camera.main;
             if (cam == null) return;
             // Native DOShakePosition is on Transform (core DOTween shortcut).
+            // SetLink to OUR gameObject (not the camera's) so the shake dies cleanly when this
+            // controller is unloaded — the camera typically outlives any single scene reload.
             cam.transform.DOKill();
             var basePos = cam.transform.localPosition;
             cam.transform.DOShakePosition(_shakeDuration, _shakeStrength, vibrato: 18, randomness: 90f, snapping: false, fadeOut: true)
-                .SetTarget(cam.transform)
-                .OnComplete(() => { if (cam != null) cam.transform.localPosition = basePos; });
+                .OnComplete(() => { if (cam != null) cam.transform.localPosition = basePos; })
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
 }

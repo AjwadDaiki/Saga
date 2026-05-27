@@ -80,7 +80,7 @@ namespace Saga.UI
 
             _root.DOKill();
             _root.localScale = Vector3.zero;
-            _root.DOScale(1f, 0.35f).SetEase(Ease.OutBack).SetTarget(_root);
+            _root.DOScale(1f, 0.35f).SetEase(Ease.OutBack).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
 
             // Permanent glow pulse on the background while visible.
             _glow?.Kill();
@@ -92,7 +92,8 @@ namespace Saga.UI
                     a => { if (_background == null) return; var c = _background.color; c.a = a; _background.color = c; },
                     Mathf.Lerp(baseColor.a, 0.6f, 0.7f),
                     0.6f
-                ).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo).SetTarget(_background);
+                ).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo)
+                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
         }
 
@@ -105,8 +106,9 @@ namespace Saga.UI
             _glow?.Kill();
 
             _root.DOKill();
-            _root.DOScale(0f, 0.25f).SetEase(Ease.InBack).SetTarget(_root)
-                .OnComplete(() => { if (_group != null) _group.alpha = 0f; });
+            _root.DOScale(0f, 0.25f).SetEase(Ease.InBack)
+                .OnComplete(() => { if (_group != null) _group.alpha = 0f; })
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HideInstant()

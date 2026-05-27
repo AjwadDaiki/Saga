@@ -71,11 +71,14 @@ namespace Saga.Gameplay
             // Whatever DOTween does (or fails to do), the GameObject is gone within duration+50ms.
             Destroy(go, _duration + 0.05f);
 
-            // Tweens target the transform so SetTarget-based kill happens cleanly on Destroy.
-            var scaleT = go.transform.DOScale(Vector3.one * (_finalScale * comboScale), _duration).SetEase(Ease.OutQuad);
-            scaleT.SetTarget(go.transform);
+            // SetLink(go, KillOnDestroy) makes DOTween auto-kill the tween when Unity destroys the
+            // GameObject — eliminates the "Target or field is missing/null" warning spam when the
+            // timed Destroy races the tween's tail.
+            go.transform.DOScale(Vector3.one * (_finalScale * comboScale), _duration)
+                .SetEase(Ease.OutQuad)
+                .SetLink(go, LinkBehaviour.KillOnDestroy);
 
-            var fadeT = DOTween.To(
+            DOTween.To(
                 () => sr != null ? sr.color.a : 0f,
                 a =>
                 {
@@ -85,8 +88,9 @@ namespace Saga.Gameplay
                     sr.color = c;
                 },
                 0f,
-                _duration).SetEase(Ease.InQuad);
-            fadeT.SetTarget(go.transform);
+                _duration)
+                .SetEase(Ease.InQuad)
+                .SetLink(go, LinkBehaviour.KillOnDestroy);
         }
 
         private static Sprite GetOrCreateSlashSprite()

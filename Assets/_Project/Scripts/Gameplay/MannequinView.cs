@@ -42,7 +42,8 @@ namespace Saga.Gameplay
             if (gm?.State != null && gm.State.currentPhase != CombatPhase.Training) return;
 
             transform.DOKill(complete: true);
-            transform.DOShakePosition(_shakeDuration, _shakeStrength, vibrato: 14, randomness: 90f, snapping: false, fadeOut: true);
+            transform.DOShakePosition(_shakeDuration, _shakeStrength, vibrato: 14, randomness: 90f, snapping: false, fadeOut: true)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HandlePhaseChanged(CombatPhase prev, CombatPhase next)
@@ -53,7 +54,7 @@ namespace Saga.Gameplay
             {
                 if (_renderer == null) return;
                 var c = _renderer.color; c.a = a; _renderer.color = c;
-            }, target, 0.3f).SetEase(Ease.OutQuad).SetTarget(transform);
+            }, target, 0.3f).SetEase(Ease.OutQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
 }

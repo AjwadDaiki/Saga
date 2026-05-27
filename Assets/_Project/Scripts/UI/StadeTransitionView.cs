@@ -66,6 +66,7 @@ namespace Saga.UI
             _running.Append(DOTween.To(() => _overlay.alpha, a => _overlay.alpha = a, _peakAlpha, _fadeInDuration).SetEase(Ease.OutQuad));
             _running.AppendInterval(_holdDuration);
             _running.Append(DOTween.To(() => _overlay.alpha, a => _overlay.alpha = a, 0f, _fadeOutDuration).SetEase(Ease.InQuad));
+            _running.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private static string GetStadeName(int stade)

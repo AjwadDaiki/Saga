@@ -62,7 +62,7 @@ namespace Saga.UI
                 _pulse = _pulseTarget.DOScale(1.03f, 0.5f)
                     .SetEase(Ease.InOutSine)
                     .SetLoops(-1, LoopType.Yoyo)
-                    .SetTarget(_pulseTarget);
+                    .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
             else if (ratio < 0.9f && _pulse != null && _pulse.IsActive())
             {

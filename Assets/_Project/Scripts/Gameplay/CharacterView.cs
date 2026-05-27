@@ -50,7 +50,7 @@ namespace Saga.Gameplay
             _breathTween = transform.DOScale(_breathScale, _breathHalfPeriod)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
-                .SetTarget(transform);
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void OnDestroy()

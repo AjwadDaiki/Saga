@@ -68,15 +68,16 @@ namespace Saga.Gameplay
             // Fade in
             DOTween.To(() => _renderer.color.a, a =>
             {
+                if (_renderer == null) return;
                 var c = _renderer.color; c.a = a; _renderer.color = c;
-            }, 1f, 0.3f).SetEase(Ease.OutQuad).SetTarget(transform);
+            }, 1f, 0.3f).SetEase(Ease.OutQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
 
             // Restart idle loop
             _idleScaleLoop?.Kill();
             _idleScaleLoop = transform.DOScale(1.03f, 1.5f)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
-                .SetTarget(transform);
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HandleDamaged(BigDouble damage, BigDouble currentHp, BigDouble maxHp)
@@ -89,12 +90,12 @@ namespace Saga.Gameplay
         {
             _idleScaleLoop?.Kill();
             // Slump + fade out
-            transform.DOScale(0.7f, 0.4f).SetEase(Ease.InQuad).SetTarget(transform);
+            transform.DOScale(0.7f, 0.4f).SetEase(Ease.InQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             DOTween.To(() => _renderer.color.a, a =>
             {
                 if (_renderer == null) return;
                 var c = _renderer.color; c.a = a; _renderer.color = c;
-            }, 0f, 0.5f).SetEase(Ease.InQuad).SetTarget(transform);
+            }, 0f, 0.5f).SetEase(Ease.InQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HandlePhaseChanged(CombatPhase prev, CombatPhase next)
@@ -128,7 +129,7 @@ namespace Saga.Gameplay
             {
                 if (_renderer == null) return;
                 var c = _renderer.color; c.a = a; _renderer.color = c;
-            }, target, 0.3f).SetEase(Ease.OutQuad).SetTarget(transform);
+            }, target, 0.3f).SetEase(Ease.OutQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private static Color ColorForVoie(Voie voie)

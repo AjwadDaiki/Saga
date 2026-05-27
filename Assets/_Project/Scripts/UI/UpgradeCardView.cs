@@ -68,7 +68,8 @@ namespace Saga.UI
                 // Punch scale on successful buy. DOPunchScale is in DOTween core (ShortcutExtensions).
                 _rect.DOKill();
                 _rect.localScale = Vector3.one;
-                _rect.DOPunchScale(Vector3.one * 0.08f, 0.28f, 6, 0.5f);
+                _rect.DOPunchScale(Vector3.one * 0.08f, 0.28f, 6, 0.5f)
+                    .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
             Refresh();
         }

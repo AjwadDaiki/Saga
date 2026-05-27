@@ -51,7 +51,8 @@ namespace Saga.UI
             // Visible only during Training. Combat phases get the CombatHud.
             if (_group == null) return;
             var target = next == Saga.Data.CombatPhase.Training ? 1f : 0f;
-            DOTween.To(() => _group.alpha, a => _group.alpha = a, target, 0.25f).SetEase(Ease.OutQuad);
+            DOTween.To(() => _group.alpha, a => _group.alpha = a, target, 0.25f).SetEase(Ease.OutQuad)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void Refresh(int currentTaps, int threshold)
@@ -78,7 +79,7 @@ namespace Saga.UI
                 _pulse = _pulseTarget.DOScale(1.04f, 0.5f)
                     .SetEase(Ease.InOutSine)
                     .SetLoops(-1, LoopType.Yoyo)
-                    .SetTarget(_pulseTarget);
+                    .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
             else if (ratio < 0.9f && _pulse != null && _pulse.IsActive())
             {
