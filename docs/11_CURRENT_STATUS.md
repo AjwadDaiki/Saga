@@ -4,11 +4,11 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 4 — Combat Active System (code 100%, validation Editor pending).
+**Phase**: Sprint 4 closed (validé in-play par Ajwad, mergé `dev` + `main`, tagué `v0.4.0`). **Sprint 5 en attente du brief** (Boss Mineurs + Élan, coordinateur prépare réponses aux 3 questions).
 
 **Dernière session**: 2026-05-27, dev Claude (Opus 4.7) sur Claude Code.
 
-**Branche active**: `feat/sprint-4-combat-active` (depuis dev).
+**Branche active**: `dev` (en standby), pas de feat branch active.
 
 ## Sprints terminés
 
@@ -18,138 +18,72 @@
 | 1 | `v0.1.0` | Core tap loop : compteur ticker, combo 4 tiers, "+X" floating, dust, save/reload | ✅ closed |
 | 2 | `v0.2.0` | Upgrades de base : Frappe, Disciple, Méditation. Cards bottom, near-miss glow. | ✅ closed |
 | 3 | `v0.3.0` | Pixel adventurer + 3 attack variations weighted + stade transition + NumberJuice | ✅ closed |
-| 4 | (pending) | Combat Active System : Adversaire, chrono, mort temporaire | 🟡 code 100%, validation pending |
+| 4 | `v0.4.0` | Combat Active System : Adversaire spawn + chrono + mort temporaire + 5 adversaires | ✅ closed |
 
-## Sprint 4 — ce qui est fait ✅
+## Sprint 4 — accomplissements clés (validés en play)
 
-### GAME_DESIGN_v2 absorbed
-- `docs/GAME_DESIGN_v2.md` lu intégralement. Architecture combat à 3 phases (Training / Adversaire / Boss). Sprint 4 implémente Phase 2 (Adversaire). Bosses Sprint 5-6.
-
-### Data layer (Phase A)
-- `Data/CombatPhase.cs` enum (Training, AdversaireIncoming, AdversaireActive, AdversaireVictory, PlayerDeathTemporary)
-- `Data/Voie.cs` enum (None, Samurai, Viking, Wuxia, Spartiate, Mongol, Saladin, Aztec, Gaulois) — 9 valeurs
-- `Data/AdversaireData.cs` SO (id, displayName, voie, hp BigDouble, rewardForce BigDouble, lootChance, spriteIdleName, chronoSeconds). `CreateForTests` factory sous `#if UNITY_INCLUDE_TESTS`.
-- `Data/GameState.cs` : ajout `currentPhase`, `currentAdversaireId`, `currentAdversaireHp`, `chronoRemaining`, `tapsTowardsNextAdversaire`, `totalAdversairesDefeated`. saveVersion 3 → 4.
-- `Save/SaveService.cs.Migrate` v3 → v4 : init combat fields. Defensive: toujours reset à Training au boot pour éviter le mid-combat resurrection.
-
-### Events (Phase B) — 7 nouveaux channels dans `GameEvents.cs`
-- `OnPhaseChanged(CombatPhase prev, CombatPhase next)`
-- `OnAdversaireSpawned(AdversaireData)`
-- `OnAdversaireDamaged(BigDouble damage, BigDouble currentHp, BigDouble maxHp)`
-- `OnAdversaireDefeated(AdversaireData, BigDouble reward)`
-- `OnPlayerDiedTemporary()`
-- `OnChronoUpdated(float remaining, float total)`
-- `OnAdversaireProgressUpdated(int currentTaps, int threshold)`
-
-### Services (Phase C)
-- `Gameplay/AdversaireSpawner.cs` (POCO) : table thresholds par stade (50/100/200/400/800/1600), incrémente sur tap (Training only), pick random au seuil, délègue à CombatProcessor.StartIncoming
-- `Gameplay/CombatProcessor.cs` (POCO) : state machine 5 phases avec `StartIncoming`, `Tick`, `ResolveDeathTemporary`. Penalty -10% Force à la mort temporaire. Reward auto-appliqué à la victoire.
-- `Gameplay/DamageDealer.cs` (POCO) : subscriber `OnTapResolved` static-lifetime. Applique damage à `currentAdversaireHp` uniquement en AdversaireActive. Raise `OnAdversaireDamaged`.
-- `Core/ContentDatabase.cs` étendu : 2e dictionnaire `adversairesById`, charge depuis `Resources/Adversaires`, DI seam pour tests (`new ContentDatabase(upgrades, adversaires)`).
-- `Core/GameManager.cs` : instancie Combat + Adversaires + Damage en Awake. Hook `OnTapResolved` → `Adversaires.OnTap(state)`.
-- `Core/GameTicker.cs` : appelle `Combat.Tick(state, dt)` après `Stades.Tick`.
-- `Gameplay/TapHandler.cs` : phase-gating — Training ajoute Force, AdversaireActive laisse DamageDealer faire son boulot, autres phases ignorent le tap.
-
-### Editor utility (Phase D)
-- `Editor/AdversaireAssetsCreator.cs` + menu `Saga > Sprint 4 > Generate Adversaire Assets`
-- Crée 5 SOs idempotent dans `Resources/Adversaires/` :
-  - Ronin Errant (None, 100 HP, 30F reward, 15% loot, 30s)
-  - Spadassin Nordique (Viking, 150, 50, 20%, 35s)
-  - Initié Wuxia (Wuxia, 200, 75, 25%, 40s)
-  - Hoplite Lâche (Spartiate, 250, 100, 30%, 45s)
-  - Pèlerin du Nord (None, 80, 40, 20%, 25s)
-
-### UI (Phase E) — 5 nouvelles views
-- `UI/AdversaireProgressBarView.cs` : top-center, fill ambre + label "Prochain adversaire — N/M". Pulse subtil ≥ 90%. Hide en combat.
-- `UI/CombatHudView.cs` : nom + HP bar rouge + chrono (rouge sous 5s). Fade in/out par phase.
-- `UI/AdversaireSpawnView.cs` : full-screen centered banner — fade-in name 0.25s, hold 1s, fade-out 0.3s sur OnAdversaireSpawned.
-- `UI/DeathOverlayView.cs` : full-screen Image noir alpha 0.95 + "TU ES MORT" + sous-titre quote + hint "Click pour reprendre". `IPointerClickHandler` capture le click → `CombatProcessor.ResolveDeathTemporary`.
-- `Gameplay/AdversaireWorldView.cs` : sprite procédural 60×100 tinté par voie. Idle scale loop, shake on damage, fade-out on defeated, translucent on death temporary.
-
-### Scene wiring (Phase E suite)
-- `MainSceneBootstrap.cs` étendu :
-  - `BuildAdversaire` (world space) à la position du mannequin, visibility phase-driven
-  - `BuildAdversaireProgressBar` (top center, sous le compteur)
-  - `BuildCombatHud` (top center, sous progress bar, hidden by default)
-  - `BuildAdversaireSpawnView` (banner overlay)
-  - `BuildDeathOverlay` (full-screen, last sibling pour render on top)
-- `MannequinView.cs` phase-aware : fade-out à l'entrée de combat, fade-in retour Training. Shake-on-tap filtré Training uniquement.
-
-### Tests EditMode (Phase F) — 16 nouveaux cases (total 73)
-- `AdversaireDataTests` (3) : factory round-trip, enum distinct, MVP set construction
-- `AdversaireSpawnerTests` (5) : thresholds par stade, below/at threshold, non-Training no-spawn, empty pool gracieux
-- `CombatProcessorTests` (8) : StartIncoming, Incoming → Active après 1s, chrono decrement, HP 0 → Victory + reward, chrono expire → Death, Victory → Training après 2s, ResolveDeathTemporary -10% Force, Tick no-op en Death sans Resolve
-
-## Sprint 4 — décisions design loguées (DESIGN_DECISIONS_LOG.md)
-
-1. **CombatProcessor state machine POCO** ticked à 10Hz, pattern reproductible
-2. **Taps en combat = damage, pas Force** — gating dans TapHandler
-3. **Boot policy reset à Training** — évite mid-combat resurrection corrompue
-4. **Sprites procéduraux par voie** — Sprint 5+ remplace avec art
-
-## Sprint 4 — Ajwad-pending (3 clics)
-
-1. **Refocus Unity** → compile (~15 nouveaux fichiers)
-2. **Menu `Saga > Sprint 4 > Generate Adversaire Assets`** → crée les 5 SOs
-3. **Test Runner > EditMode > Run All** → 73 tests devraient passer
-4. **Play mode** Main scene → checklist :
-   - Barre "Prochain adversaire" en haut, se remplit avec les taps
-   - À 50 taps (stade 1) : mannequin fade-out, adversaire fade-in, banner nom centré
-   - Chrono démarre (30s typique), HP bar adversaire visible
-   - Tap = damage, HP descend, mannequin reste caché
-   - Si tu tues à temps : reward Force ajoutée, mannequin réapparait après 2s
-   - Si chrono expire : écran noir + "TU ES MORT" + click pour reprendre, Force -10%
-   - Save/quit/reload → boot en Training, pas de combat zombie
-
-## Critère de succès Sprint 4 (cf brief)
-
-> "Tu joues, tu tapes le mannequin → Barre se remplit → adversaire arrive → chrono démarre → tu tapes ses HP → victoire (reward) ou chrono expire (mort temporaire) → retour mannequin"
-
-✅ Code prêt. Validation par Ajwad après les 3 clics.
+- **Barre "Prochain Adversaire"** se remplit par tap (threshold par stade : 50/100/200/400/800/1600)
+- **5 adversaires** Sprint 4 implémentés (Ronin Errant, Spadassin Nordique, Initié Wuxia, Hoplite Lâche, Pèlerin du Nord)
+- **Combat actif chronométré** : HP bar descend, chrono décompte, taps dealent damage (pas Force pendant combat)
+- **Victoire** : reward Force ajoutée, animation fade-out, retour mannequin 2s
+- **Mort temporaire** : écran noir "TU ES MORT" + quote + click-to-resume, -10% Force penalty
+- **Phase state machine** propre (5 phases via `CombatPhase` enum + `CombatProcessor` POCO)
+- **73 tests EditMode** verts (16 Sprint 4)
+- **Editor utility** `Saga > Sprint 4 > Generate Adversaire Assets` one-click
 
 ## Métriques de projet
 
-- **Sprints closed** : 3/11 (Sprint 4 en validation)
-- **Branches** : main + dev à `v0.3.0`, feat/sprint-4-combat-active en cours
-- **Tags** : v0.1.0, v0.2.0, v0.3.0
-- **Lignes de code C# runtime (hors lib tierce)** : ~3000 (Sprint 4: +600)
-- **Tests EditMode** : 73 cases
-- **ScriptableObjects** : 3 upgrades + 1 SpriteAnimationLibrary + 5 adversaires (9 total)
-- **Voies implémentées** : 0/8 mécaniquement (Sprint 7+), tintées dans AdversaireWorldView dès Sprint 4
+- **Sprints closed** : 4/11
+- **Branches** : main + dev synced à `8ebfb2a` (tag v0.4.0)
+- **Tags** : `v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`
+- **Lignes de code C# runtime (hors lib tierce)** : ~3000
+- **Tests EditMode** : 73 cases (NumberFormatter 13, ComboSystem 11, UpgradeData 5, StatsCalculator 8, UpgradeService 10, StadeManager 10, AdversaireData 3, AdversaireSpawner 5, CombatProcessor 8)
+- **ScriptableObjects** : 9 (3 upgrades + 1 SpriteAnimationLibrary + 5 adversaires)
+- **Phases combat implémentées** : 5/5 Sprint 4 (Training, AdversaireIncoming, AdversaireActive, AdversaireVictory, PlayerDeathTemporary). Bosses Sprint 5-6.
+
+## ⏸️ Sprint 5 — en attente du brief enrichi
+
+Coordinateur prépare le brief Sprint 5 (Boss Mineurs / Capitaines + mécanique Élan). 3 questions à trancher :
+1. **Visuels Capitaines** : sprite dédié ou même adventurer rvros tinté par voie ?
+2. **Élan jauge UI** : remplace l'affichage combo actuel ou en plus ?
+3. **Mécanique Vague AOE** : visuel basique Sprint 5 ou polish Sprint 11 ?
+
+Pendant ce temps, le dev Claude reste sur `dev` en standby.
+
+## Sprint 5 — base technique prête à consommer
+
+Foundations Sprint 4 prêtes pour Sprint 5 :
+- `CombatProcessor` state machine extensible (2 phases bosses à ajouter sans refactor du squelette)
+- `CombatPhase` enum extensible
+- `OnPhaseChanged` event utilisable pour les transitions boss
+- `DamageDealer` réutilisable (damage logic identique pour bosses)
+- `AdversaireData` SO pattern réutilisable pour `CapitaineData` (mêmes champs + HP/phases plus complexes)
+- `MainSceneBootstrap.BuildAdversaire` réutilisable pour le boss (même position, sprite différent)
+- 50+ frames rvros restantes dans `downloads/` pour les boss (run, jump, fall, die particulièrement)
+- 30 Échos + Reliques (Sprint 6) pourront utiliser le même `ContentDatabase` + Editor utility pattern
 
 ## Polish items deferred (toujours optionnels)
 
-1. Refactor `MainSceneBootstrap` → scene-authored UI
-2. Fix `IsPointerOverGameObject` warnings InputSystem Unity 6
-3. Import fonts Inter + JetBrains Mono via Font Asset Creator
-4. Slice du `10_weaponhit_spritesheet.png` pour slash FX frame-by-frame
-5. "+X" floating vs "-X" floating selon phase (Sprint 4 amer mais lisible)
+1. **Refactor `MainSceneBootstrap` → scene-authored UI** : encore non traité (MCP tools flaky)
+2. **Fix `IsPointerOverGameObject` warnings** : encore non traité
+3. **Import fonts Inter + JetBrains Mono** : encore non traité
+4. **Slice `10_weaponhit_spritesheet.png`** pour slash FX frame-by-frame
+5. **"+X" → "-X" floating en combat** : log mineure Sprint 4, à fix début Sprint 5
 
 ## Questions ouvertes pour le coordinateur
 
-Aucune côté dev Sprint 4. Toutes les décisions tranchées par défauts raisonnables loguées dans DESIGN_DECISIONS_LOG.
-
-**Pré-décisions Sprint 5** (Boss Mineurs / Capitaines + Élan) :
-- 8 Capitaines (un par voie) : sprite per capitaine ou même rvros adventurer tinté par voie ?
-- Élan jauge UI : remplacement du compteur de combo actuel ou en plus ?
-- Mécanique Vague (cinematic AOE) : Sprint 5 visuel basique ou polish Sprint 11 ?
+Aucune côté dev en standby. Toutes les questions Sprint 5 listées ci-dessus, en cours côté coordinateur.
 
 ## Prochaine session (Sprint 5)
 
-Cf GAME_DESIGN_v2 §Sprint 5 :
-- Mécanique Élan (jauge + bouton Vague + animation)
-- Boss Mineurs (Capitaines) tous les 10 adversaires
-- 8 Capitaines avec variations HP/phases
-- Cinématique d'arrivée Capitaine
-- Drops runes/reliques (basique)
+**Quand brief arrive** : Boss Mineurs + Élan + Vague AOE. 4-5 jours d'effort estimé.
 
-**Pré-requis avant Sprint 5** : tu valides Sprint 4 (3 clics ci-dessus).
+**Pré-requis Sprint 5** : tu valides ce sprint 4 (déjà fait ✅) + coordinateur livre brief avec décisions sur les 3 questions.
 
 ## Notes session
 
-- Bridge MCP tools toujours flaky (resource OK, tools "no instance"). 4 sprints d'affilée en filesystem-only.
-- Pattern Editor utility (`Saga > Sprint N > Generate Y Assets`) maintenant à 3 utilities (Sprint 2, 3, 4). Workflow rodé pour générer du contenu SO sans dépendre de MCP.
-- Le combat phase state machine est très clean — 5 phases, 6 transitions, tout couvert par 8 tests. Sprint 5 Capitaines ajoutera des phases mais le pattern Tick + TransitionTo se réutilise sans refactor.
-- Architecture event-driven solide : `OnTapResolved` est la seule entrée user → AdversaireSpawner (compteur), DamageDealer (damage), CharacterView (anim), TapFxSpawner (FX), MannequinView (shake), CombatProcessor (indirect via Tick). 6 consumers, 0 coupling.
-- 73 tests EditMode, tous green-ready (la suite tests EditMode est devenue notre safety net principal vu que les visuals doivent encore être validés en play).
-- Combat lifecycle: ~30-45s par fight. Avec 5 adversaires variés et chrono variable, le rythme devrait être bon. À itérer post-play test.
+- 4 sprints clos consécutifs, workflow merge → tag → cleanup → status update bien rodé.
+- Bridge MCP tools toujours flaky côté dev Claude (resource layer OK, tool routing échoue avec "no instance found"). 4 sprints d'affilée en filesystem-only validés sans drama — c'est la baseline opérationnelle.
+- Sprint 4 fait passer SAGA d'un idle pur à un idle + combat actif chronométré. Première vraie couche "tension" introduite. Brief Sprint 5 ajoute Élan (jauge tap accumulator + Vague AOE button) — autre forme de tension active.
+- 73 tests EditMode total — coverage solide sur data + services + state machines. UI views non testées (visual integration, validation play par Ajwad).
+- 600 lignes Sprint 4 (3000 total). Bon ratio de productivité. Le state machine pattern (CombatProcessor) et le service POCO pattern (AdversaireSpawner, DamageDealer) sont devenus le standard architectural — Sprint 5 Capitaines suivra la même grammaire.
