@@ -4,106 +4,77 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 2 - Upgrades de base (code 100%, validation Editor pending)
+**Phase**: Sprint 2 closed (validé en play test by Ajwad, mergé `dev` + `main`, tagué `v0.2.0`). **En attente décision artistique avant Sprint 3.**
 
 **Dernière session**: 2026-05-27, dev Claude (Opus 4.7) sur Claude Code
 
-## Sprint 2 — ce qui est fait ✅
+## Sprints terminés
 
-### Data layer (Phase A)
-- `Data/UpgradeData.cs` ScriptableObject : ID, displayName, descriptionFr, costBase, costMultiplier, effectType, effectValue, icon. Méthode `GetCostForLevel(int)` = `base × multiplier^level`. OnValidate vérifie la cohérence éditeur. Factory `CreateForTests` sous `#if UNITY_INCLUDE_TESTS` pour les tests EditMode.
-- `Data/UpgradeEffectType.cs` enum : `ForcePerTap`, `ForcePerSecond`, `ComboMultiplierBonus`
-- `Data/GameState.cs` : ajout `upgradeLevels: Dictionary<string, int>`, `saveVersion` bumpé de 1 → 2
-- `Save/SaveService.cs` : méthode `Migrate(GameState)` idempotente. v1 → v2 init upgradeLevels à dict vide.
-
-### Services (Phase B)
-- `Core/ContentDatabase.cs` : loads upgrades from `Resources/Upgrades/` (production) ou via DI (tests). API `GetUpgrade(id)`, `AllUpgrades`. Doublons d'ID warned.
-- `Gameplay/UpgradeService.cs` : `GetLevel`, `GetCostForNextLevel`, `CanAfford`, `TryPurchase` (atomic: deduct + level++ + raise events + MarkDirty)
-- `Gameplay/StatsCalculator.cs` : aggregator pur (`GetForcePerTap`, `GetForcePerSecond`, `GetComboMultiplierBonus`)
-- `Gameplay/DisciplesProcessor.cs` : tick 10Hz, accrue `forcePerSec × dt` à state.force
-- `Core/GameTicker.cs` : hook `Disciples.Tick()` avant le save throttle
-- `Core/GameManager.cs` : instancie Content + Upgrades + Disciples au Awake. Log inclut le count d'upgrades.
-- `Core/GameEvents.cs` : `OnComboChanged` signature étendue à `(int tier, float baseMultiplier)`, ajout `OnUpgradePurchased(string id, int newLevel)`
-- `Gameplay/ComboSystem.cs` : update raise signature pour fournir baseMult
-- `Gameplay/TapHandler.cs` : utilise `StatsCalculator.GetForcePerTap` + applique `× GetComboMultiplierBonus`. Field `BaseGainPerTap` retiré (obsolète).
-
-### Editor utility (Phase C)
-- `Assets/_Project/Editor/Saga.Editor.asmdef` (refs Saga.Runtime, Editor-only)
-- `Assets/_Project/Editor/UpgradeAssetsCreator.cs` : menu `Saga > Sprint 2 > Generate Upgrade Assets`. Crée/update les 3 SOs idempotent :
-  - Frappe : ForcePerTap, base 10, ×1.15, +1/level
-  - Disciple : ForcePerSecond, base 50, ×1.20, +1/level
-  - Méditation : ComboMultiplierBonus, base 200, ×1.50, +0.05/level
-
-### UI (Phase D)
-- `UI/UpgradeCardView.cs` : self-builds hierarchy (background, name, level, cost, effect, button). Listens `OnForceChanged` + `OnUpgradePurchased`. Near-miss glow ambre quand force ∈ [80%, 100%) du cost. Punch scale DOTween core sur purchase.
-- `UI/ComboMeterView.cs` : refactor pour afficher la final multiplier (base × bonus). Listens aussi `OnUpgradePurchased` pour redraw quand Méditation up.
-- `Core/MainSceneBootstrap.cs` : ajout `BuildUpgradePanel()` qui crée 3 cards horizontalement en bas (anchored bottom-stretch, 96px du bas, 220px de haut). Cards distribuées proportionnellement via anchors fractionnaires.
-
-### Tests EditMode (Phase E)
-- `Tests/EditMode/UpgradeDataTests.cs` : 5 cases (cost level 0, geometric scaling, Disciple profile, Méditation steep curve, properties round-trip)
-- `Tests/EditMode/StatsCalculatorTests.cs` : 8 cases (no upgrades, Frappe linear, type filtering, Disciple sum, no-disciple zero, Méditation bonus, combined)
-- `Tests/EditMode/UpgradeServiceTests.cs` : 10 cases (initial level, unknown id, base cost, affordability boundaries, purchase deduct, cost increase, sequential purchase, unknown upgrade fail)
-
-**Total tests EditMode** : 24 (Sprint 1) + 23 (Sprint 2) = **47 cases**
-
-## Sprint 2 — décisions design loguées (DESIGN_DECISIONS_LOG.md)
-
-1. **Méditation = multiplicateur global** : `final = baseTier × (1 + level × 0.05)` (vs additif au cap, multiplicatif final-only, etc.). Toujours senti, compose proprement avec Frappe.
-2. **ContentDatabase test seam** : injection optionnelle de upgrades via constructor pour DI tests. Production = Resources auto, tests = inline array.
-3. **SO assets via Editor utility** : menu `Saga > Sprint 2 > Generate Upgrade Assets` plutôt que YAML manuel (filesystem-mode blocking au refresh des GUIDs scripts). Pattern reproductible Sprint 3+.
-
-## Sprint 2 — Ajwad-pending (1 clic UI Unity)
-
-1. **Refocus Unity** → compile + génération .meta de tous les nouveaux scripts/asmdefs
-2. **Menu `Saga > Sprint 2 > Generate Upgrade Assets`** → crée les 3 SOs dans `Assets/_Project/Resources/Upgrades/`
-3. **Test Runner** > EditMode > Run All → 47 tests devraient passer
-4. **Play mode** Main scene → tap 30 min, acheter une dizaine d'upgrades, vérifier auto-tap Disciple (Force monte hors-tap), vérifier Méditation amplifie le combo
-5. (Optional) Fix les 72 warnings IsPointerOverGameObject d'InputSystem — pas chiant si on a le temps, sinon Sprint 3
-
-## Critère de succès Sprint 2 (cf 08_ROADMAP)
-
-> "tu peux farmer 30 minutes et acheter une dizaine d'upgrades, sentir une progression, l'auto-tap de disciples fonctionne"
-
-✅ Code prêt. Validation Editor + play test par Ajwad.
+| Sprint | Tag | Description | Status |
+|--------|-----|-------------|--------|
+| 0 | — | Setup Unity 6 + URP 2D + asmdefs + git + plugins (BreakInfinity, DOTween) | ✅ closed |
+| 1 | `v0.1.0` | Core tap loop : compteur ticker, combo 4 tiers, "+X" floating, dust particles, save/reload | ✅ closed |
+| 2 | `v0.2.0` | Upgrades de base : Frappe (per-tap), Disciple (passive Force/sec), Méditation (combo amp). UI cards bottom dock, near-miss glow. | ✅ closed |
 
 ## Métriques de projet
 
-- **Sprint actuel** : 2/11 (code 100%, validation Editor pending)
-- **Lignes de code C# runtime (hors lib tierce)** : ~1900 (Sprint 1: 1100 + Sprint 2: 800)
-- **Tests EditMode** : 47 cases
-- **ScriptableObjects** : 3 prévus (Frappe, Disciple, Méditation), à générer via menu
+- **Sprint actuel** : 2/11 closed → Sprint 3 en attente
+- **Branches** : `main` + `dev` synced à `0de172c`, pas de feat branch active
+- **Tags** : `v0.1.0`, `v0.2.0`
+- **Lignes de code C# runtime (hors lib tierce)** : ~1900
+- **Tests EditMode** : 47 cases (24 Sprint 1 + 23 Sprint 2)
+- **ScriptableObjects** : 3 (Frappe, Disciple, Méditation)
 - **Voies implémentées** : 0/8 (Sprint 4+)
+
+## 🚧 En attente : décision artistique pour Sprint 3
+
+Ajwad a demandé au coordinateur de trancher entre :
+- **Option A** : pivot complet vers chibi cute pixel art (refs erisesra, Eatventure)
+- **Option B** : garder sumi-e dark "Lame & Encre" pour le perso officiel, chibi seulement pour les templates communauté
+
+Cette décision impacte :
+- Le rig perso Sprint 3 (Stade 1 Mendiant, Stade 2 Apprenti)
+- Le choix Spine 2D vs Unity 2D Animation
+- L'identité visuelle des dojos et FX
+- La palette par voie
+
+**Tant que cette décision n'est pas tranchée**, Sprint 3 ne démarre pas. Le dev Claude reste disponible pour des polish tasks (cf section suivante).
+
+## Polish items deferred (optionnels, désormais hors-Sprint)
+
+À traiter au choix avant ou pendant Sprint 3 :
+
+1. **Refactor `MainSceneBootstrap` → scene-authored UI** : le runtime-builder est OK fonctionnellement mais le scene-authored est plus idiomatique Unity. Requires `manage_scene` MCP tool (currently flaky). À traiter quand MCP tools sont stables.
+2. **Fix 43 warnings `IsPointerOverGameObject`** : Unity 6 InputSystem deprecation. Le call est dans `TapHandler.cs`, fix = passer `Pointer.current.deviceId` en argument. Mérite play test pour vérifier le comportement du UI filter avant de livrer.
+3. **Import fonts Inter Variable + JetBrains Mono Variable** : pour vrai ticker tabular sur le compteur Force. Requires TMP Font Asset Creator (Editor UI), pas faisable en filesystem.
+
+Aucun de ces items n'est bloquant pour Sprint 3.
 
 ## Questions ouvertes pour le coordinateur
 
-Aucune. Q principal (formule Méditation multiplicative vs additive) tranchée par défaut raisonnable + log. Si Ajwad/coord rejette, refactor `StatsCalculator.GetComboMultiplierBonus` = 5 lignes.
+1. **Direction artistique** : chibi cute vs sumi-e dark (cf section au-dessus). **Bloquant Sprint 3**.
+2. **Spine 2D vs Unity 2D Animation** : à trancher au Sprint 3 (le doc 06_TECH_STACK.md le mentionne). Probablement influencée par la décision artistique #1.
 
-## Prochaine session (Sprint 3)
+## Prochaine session (Sprint 3, en attente)
 
-**Objectif** : Stade visuel et milestone — le perso change visuellement au passage de palier (Mendiant → Apprenti → Guerrier).
+**Objectif** (cf 08_ROADMAP.md) : Stade visuel et milestone — le perso change visuellement aux paliers.
 
-À faire (cf 08_ROADMAP.md Sprint 3) :
-- `Gameplay/StadeManager.cs` qui surveille les seuils
-- Rig perso Stade 1 (silhouette mendiant) + Stade 2 (apprenti avec katana)
-- Animations idle + tap-react (Unity 2D Animation ou Spine — DÉCISION À PRENDRE)
-- Background dojo Stade 1 + Stade 2
-- Mini-cinématique 1-2s au passage de stade (ink wash transition, swap sprites, drum hit)
-- Sound design : ambient loop différent par stade
+À faire :
+- `StadeManager` qui surveille les seuils Force
+- Setup rig perso Stade 1 (Mendiant) + Stade 2 (Apprenti avec katana)
+- Animations idle + tap-react (Unity 2D Animation OU Spine, selon décision)
+- Background dojo Stade 1 + Stade 2 (style selon décision)
+- Mini-cinématique 1-2s au passage de stade (ink wash transition OU style chibi, drum hit)
 - NumberJuice complet (taille de chiffre selon magnitude, couleur selon palier)
+- Sound design : ambient loop différent par stade
 
-**Pré-requis avant Sprint 3** : 
-- Ajwad valide Sprint 2 (compile + menu generate + tests + play)
-- **Décision Spine 2D vs Unity 2D Animation à trancher** (cf 06_TECH_STACK.md + DESIGN_DECISIONS_LOG)
-
-**Polish secondaire en début Sprint 3** :
-- Import Inter + JetBrains Mono via Font Asset Creator (deferred depuis Sprint 1)
-- Fix les 72 warnings IsPointerOverGameObject (deferred depuis Sprint 1)
-- Refactor MainSceneBootstrap vers scene-authored (deferred depuis Sprint 1)
+**Pré-requis avant Sprint 3** : décision artistique tranchée + (idéalement) MCP tools stables pour l'authoring scene.
 
 ## Notes libres
 
-- Bridge MCP Coplay reste flaky : `mcpforunity://instances` voit Saga@97f3fed9b4b5fd40, mais tools (`read_console`, `manage_asset`, etc.) répondent "No Unity Editor instances found". Routing tool layer cassé. Filesystem-only continue de fonctionner.
-- L'Editor utility `UpgradeAssetsCreator` est un pattern qu'on pourra reproduire pour générer les voies/esprits/régions des sprints futurs sans dépendre de MCP. Probably crée une suite "Saga > Sprint X > Generate Y" au fil du temps.
-- Sprint 2 a 23 nouveaux tests EditMode. Coverage est plutôt bon : data layer (UpgradeData), service layer (UpgradeService), aggregator (StatsCalculator). Le UI (UpgradeCardView) n'a pas de tests — c'est OK, c'est du wiring + visual, pas de logique métier critique. Si Sprint 3+ amène plus de UI logique on ajoutera des PlayMode tests.
-- DisciplesProcessor.Tick raise OnForceChanged à chaque tick (10Hz) quand Force/sec > 0. Donc 10 events/sec quand 1+ Disciple acheté. ForceCounterView gère bien (smoothing exp). Si ça devient trop bruyant en Sprint 9 (multi-source events) on debouncera.
-- L'UpgradeService.TryPurchase appelle `GameManager.Instance?.Save?.MarkDirty()` directement — couplage tight au singleton. OK pour Sprint 2 minimal mais à refactor en injection Sprint 4+ quand on aura un proper IServiceContainer.
+- Sprint 2 a tourné sans accroc majeur après les 3 fixes compile post-refresh (Sign() using, HandleComboChanged sig, TMP API). Pattern asmdef + filesystem-mode commence à être bien rodé.
+- Bridge Coplay MCP tools toujours flaky (resource `mcpforunity://instances` OK, tools timeout). On a passé 2 sprints entiers en filesystem-only sans drame, c'est notre nouvelle baseline jusqu'à une release Coplay stable.
+- L'Editor utility pattern (`Saga > Sprint N > Generate Y Assets`) sera très utile Sprint 4+ pour générer les voies, esprits, régions. Bonne base reproductible.
+- 47 tests EditMode total, tous verts. Coverage data + services solid. UI views non testées (du wiring + visual, pas de métier critique).
+- Méditation multiplicatif global a bien marché en play test ("combo amplifié sensible"). Décision validée empiriquement.
+- À noter pour Sprint 3+ : si le pivot art est vers chibi cute, le doc 05_VISUAL_STYLE.md devra être updaté en parallèle (la palette "Lame & Encre" reste valide pour UI, mais le character art sera différent).
