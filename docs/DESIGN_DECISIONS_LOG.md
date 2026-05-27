@@ -48,6 +48,44 @@
 
 ---
 
+## 2026-05-27 — Sprint 6 pre-decisions (tranchées par coordinateur post-Sprint-5)
+
+### Q1 — Maîtres visuels (Boss Majeurs)
+**Décision**: rvros tinted avec **aura épaisse** pour Sprint 6 (placeholder cohérent avec la stratégie sprite Sprint 5 Capitaines).
+- Réutilise le pattern `CapitaineWorldView` mais avec aura plus large + tint plus intense
+- Sprite dédié par Maître → **Sprint 11 polish** uniquement
+- 8 Maîtres légendaires : Yoshitsune, Ragnar, Sun, Léonidas, Subutaï, Salah ad-Din, Ahuitzotl, Vercingétorix
+
+### Q2 — Souffle cooldown au prestige
+**Décision**: **Permanent**. Les mécaniques de jeu (skills, cooldowns) ne reset pas au prestige.
+
+| Prestige reset | Prestige persiste |
+|---|---|
+| Force | Échos accumulés |
+| Levels d'upgrades | Reliques conservées (1 par run) |
+| Voies non-maîtrisées | Titres |
+| totalAdversairesDefeated | Achievements |
+| totalCapitainesDefeated | **Cooldowns mécaniques (Souffle, Vague timing)** |
+| Adversaires actifs / Capitaines / Maîtres | citations finales accumulées |
+
+**Raison**: Un cooldown qui reset au prestige serait punitif et casserait le rythme du nouveau run. Les mécaniques actives sont "appris" — elles ne se désapprennent pas.
+
+### Q3 — Citation finale du joueur (prompt timing)
+**Décision**: **Prompt au début du run + modifiable à la mort**.
+- 1er run : prompt "Écris ta première phrase…" (max 80 caractères) avant le tap loop
+- Mort vs Maître : citation affichée dans la cinématique, **éditable avant validation**
+- Si pas de citation écrite au début (skip) : prompt au moment de la mort comme fallback
+- Citations cumulent dans `Hall des Légendes` du joueur
+
+**Raison**: Donne le contrôle au joueur (peut planifier sa devise), tout en gardant la possibilité d'improviser à la mort. Le double-temps (début + mort) évite la frustration d'un prompt obligatoire en plein middle of nowhere.
+
+**Conséquence**:
+- `GameState.playerCitation` (string, nullable) à ajouter Sprint 6
+- `Hall des Légendes` data structure (Sprint 10 surface), mais data tracking dès Sprint 6
+- UI prompt component à créer (modal text input)
+
+---
+
 ## 2026-05-27 — Sprint 5: Élan synergy with combo (×2 fill rate when combo active)
 
 **Décision**: Élan gain par tap = `ElanPerTap (5) × (comboTier > 0 ? ElanComboBonusMultiplier (2) : 1)`.
