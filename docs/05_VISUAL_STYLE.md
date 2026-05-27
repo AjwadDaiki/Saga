@@ -67,12 +67,15 @@ Couleur récupérable via `VoieData.AccentColor` sur la voie active.
 
 ### Personnage
 
-- **Silhouette flat**, traits épurés, encre sur papier
-- Le perso est lisible en miniature (test: à 64px de haut on doit savoir son tier et sa voie)
-- Animations: idle breathing + tap-react (recoil léger sur tap)
-- **Spine 2D** ou **Unity 2D Animation Skeleton** pour le rig
-- Le visage est rarement détaillé (silhouette > expression)
-- Les armes sont précises et signature (le katana doit ressembler à un katana, pas une épée générique)
+> **Direction tranchée 2026-05-27** : pivot vers **pixel art chibi simple** (style rvros Animated Adventurer). Voir DESIGN_DECISIONS_LOG.md même date.
+
+- **Pixel art chibi**, proportions ~1:2 (tête grosse, corps petit), style "Pixel Adventurer" simple et lisible
+- Culturellement **neutre par défaut**. Customisation par voie via overlays / palette swap (Sprint 4+).
+- Le perso est lisible en miniature à 64px haut.
+- Animations frame-by-frame depuis spritesheets : idle (4 frames), attack (5-6 frames), hurt (3 frames). Minimum viable pour Sprint 3 = idle + attack.
+- **Tech : Unity 2D Animation built-in** (Spine 2D écarté pour MVP — coût licence + workflow plus complexe non justifié).
+- Import settings : Filter Point, PPU 32 (à ajuster en play), Compression None.
+- Les armes restent signature par voie (visible sur les sprites override / overlays, pas sur le perso neutre).
 
 ### Mannequin / training dummy
 
@@ -82,10 +85,12 @@ Couleur récupérable via `VoieData.AccentColor` sur la voie active.
 
 ### Dojo / background
 
+- **Sprint 3+** : background dark mais pas noir total. Couleur de base `#1a1a1a` avec accents chaleureux ambre (pas le `#0d0d0d` ultra-dark de l'UI globale qui reste valide pour cards/modals).
 - Couches parallax simples (3 plans max pour les perfs mobile)
 - Ambient particles (poussière qui flotte, pétales selon voie)
-- Lighting 2D dynamique (URP 2D Lights) - une lumière chaude sur le perso, plus froide en background
+- Lighting 2D dynamique (URP 2D Lights) — une lumière chaude sur le perso, plus froide en background
 - Évolue par tier (voir 04_PROGRESSION.md)
+- **Pixel Perfect Camera** activée dans la scene Main pour préserver le rendu crispé des sprites pixel art.
 
 ### FX et particules
 

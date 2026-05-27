@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a258efa48d0ff5488d7d4e7b7734b05, type: 3}
+  m_Name: AdventurerAnimationLibrary
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.SpriteAnimationLibrary
+  _animations:
+  - animationName: idle
+    frames:
+    - {fileID: 21300000, guid: f7bed9c9ec07f44479473b080ef40594, type: 3}
+    - {fileID: 21300000, guid: 6b46a9da9faadf64d964164deb79ed2a, type: 3}
+    - {fileID: 21300000, guid: f6c5d5853f1beaa4f98c4e430cde5c06, type: 3}
+    - {fileID: 21300000, guid: 8642823609fef0642bc5f75ba8b5bce5, type: 3}
+    frameDuration: 0.15
+    loop: 1
+  - animationName: attack1
+    frames:
+    - {fileID: 21300000, guid: e145db48db11a2f46b30b519ccb478dd, type: 3}
+    - {fileID: 21300000, guid: 5aa6565c194a9634ab8cf2536f5086dc, type: 3}
+    - {fileID: 21300000, guid: 3fc43a1f534ff854fa98dd8c9aff1e63, type: 3}
+    - {fileID: 21300000, guid: 0600a1300e8719549bc499876ee1a98c, type: 3}
+    - {fileID: 21300000, guid: 3bdaee6ff76bc9e48ac8e8f6579fc812, type: 3}
+    frameDuration: 0.06
+    loop: 0
+  - animationName: attack2
+    frames:
+    - {fileID: 21300000, guid: e2f7065558185e04cbfc272f97b3e945, type: 3}
+    - {fileID: 21300000, guid: d29f7a51e8df88e42a7c928ed8c71ced, type: 3}
+    - {fileID: 21300000, guid: e306d1a85f9b2cb46904b8376c45457c, type: 3}
+    - {fileID: 21300000, guid: 54cb878f96715fd44a78b111431c61f1, type: 3}
+    - {fileID: 21300000, guid: 7dccd67c895bcde4b8f49135e3dc9c7f, type: 3}
+    - {fileID: 21300000, guid: c0fd7f8e9a5a6c4418be41db7d0a3921, type: 3}
+    frameDuration: 0.06
+    loop: 0
+  - animationName: attack3
+    frames:
+    - {fileID: 21300000, guid: 3a9f00473461ac648b44c9dec540c8a5, type: 3}
+    - {fileID: 21300000, guid: 56e61b22742dea847801b62bf9ce0c64, type: 3}
+    - {fileID: 21300000, guid: 646acc60632970a4cae6edea0a509857, type: 3}
+    - {fileID: 21300000, guid: 931cd7cb0fcd7da47bbf28c9b5d8bb3b, type: 3}
+    - {fileID: 21300000, guid: 53a4a473ce787f04ba66f794d112e31d, type: 3}
+    - {fileID: 21300000, guid: 59b506e5b9496d746a8da9386cab8f71, type: 3}
+    frameDuration: 0.06
+    loop: 0
+  - animationName: hurt
+    frames:
+    - {fileID: 21300000, guid: f17a9e2e09d5a594191b7a14698d5705, type: 3}
+    - {fileID: 21300000, guid: 64c88186525d17742bc2f41486162a7d, type: 3}
+    - {fileID: 21300000, guid: 7de628cda9df04a40aac5ef25c5add3e, type: 3}
+    frameDuration: 0.08
+    loop: 0

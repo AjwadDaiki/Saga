@@ -22,6 +22,7 @@ namespace Saga.Core
         public ContentDatabase Content { get; private set; }
         public UpgradeService Upgrades { get; private set; }
         public DisciplesProcessor Disciples { get; private set; }
+        public StadeManager Stades { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -50,6 +51,7 @@ namespace Saga.Core
             Content = new ContentDatabase();
             Upgrades = new UpgradeService(Content);
             Disciples = new DisciplesProcessor(Content);
+            Stades = new StadeManager();
 
             Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | savePath={Save.SavePath}");
             GameEvents.RaiseForceChanged();

@@ -48,6 +48,35 @@
 
 ---
 
+## 2026-05-27 — Sprint 3: art direction pivot vers "Simple Chibi - Pixel Adventurer"
+
+**Décision** (tranchée par coordinateur after Ajwad's review of initial anatomical templates):
+- Style officiel personnage : **pixel art chibi simple**, type `rvros Animated Adventurer`
+- Pas sumi-e dark (écarté), pas Cookie Run cute (écarté). Style efficace par sa simplicité.
+- Proportions ~1:2 (tête grosse, corps petit mais pas exagéré)
+- Culturellement neutre par défaut, customisable par voie via overlays (Sprint 4+)
+- Background dark non-noir : `#1a1a1a` avec accents chaleureux
+- UI menus : **on garde la direction A "Lame & Encre"** minimaliste. La palette ambre/coral/text reste valide pour toute l'UI (cards, compteur, popups). Seule la zone "character + background" change de style.
+
+**Tech artistique** :
+- Unity 2D Animation built-in (Spine 2D écarté pour MVP)
+- Pixel Perfect Camera dans la scene Main
+- Sprites : Filter Point (no filter), PPU 32 (pour les sprites adventurer ~50x37), Compression None
+- Pixels Per Unit cohérent à tester en play, ajustable
+
+**Raison**: 
+- Style chibi pixel = vibe nostalgique + lisible mobile + production-friendly (peu d'animations nécessaires pour communiquer)
+- rvros adventurer = base solide, 70+ frames d'animation prêtes à l'emploi
+- Unity 2D Animation built-in = pas de coût licence Spine ($69), workflow plus simple pour MVP
+
+**Conséquence**:
+- 05_VISUAL_STYLE.md sera amendé (section character art uniquement, UI reste intacte)
+- Sprint 3 implémente Stade 2 (Apprenti) avec rvros adventurer. Stade 1 Mendiant et 3+ pour plus tard.
+- Templates eris esra gardés en stock pour Sprint 6+ (customisation par voie / communauté)
+- Décision "Spine vs Unity 2D Animation" du 06_TECH_STACK : tranchée = Unity 2D Animation
+
+---
+
 ## 2026-05-27 — Sprint 2: Méditation = multiplicative combo bonus (× base tier)
 
 **Décision**: La formule finale du combo multiplier au tap est :

@@ -102,7 +102,7 @@ namespace Saga.Save
         /// </summary>
         private static GameState Migrate(GameState state)
         {
-            const int currentVersion = 2;
+            const int currentVersion = 3;
 
             if (state.saveVersion < 2)
             {
@@ -114,11 +114,19 @@ namespace Saga.Save
                 Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v2 (added upgradeLevels).");
             }
 
-            // Defensive: always ensure non-null collections post-deserialization.
+            if (state.saveVersion < 3)
+            {
+                // v2 -> v3: introduced currentStade (Sprint 3). Default 1 (Mendiant).
+                if (state.currentStade <= 0) state.currentStade = 1;
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v3 (added currentStade).");
+            }
+
+            // Defensive: always ensure non-null collections + valid scalars post-deserialization.
             if (state.upgradeLevels == null)
             {
                 state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
             }
+            if (state.currentStade <= 0) state.currentStade = 1;
 
             state.saveVersion = currentVersion;
             return state;

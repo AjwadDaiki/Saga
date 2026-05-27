@@ -13,7 +13,7 @@ namespace Saga.Data
     public class GameState
     {
         /// <summary>Schema version. Bump on breaking change. Migration handled by SaveService.</summary>
-        public int saveVersion = 2;
+        public int saveVersion = 3;
 
         // -- Currencies (BigDouble — protect against 1e15+ ceiling) -------
         public BigDouble force;
@@ -30,7 +30,11 @@ namespace Saga.Data
         /// <summary>Map from <c>UpgradeData.UpgradeId</c> to current level (0 = unpurchased).</summary>
         public Dictionary<string, int> upgradeLevels = new Dictionary<string, int>();
 
-        // Sprint 3+ : aggregates expanded as systems come online
+        // -- Tier visuel (Sprint 3) ---------------------------------------
+        /// <summary>Current visual tier per <see cref="Stade"/>. Starts at 1 (Mendiant).</summary>
+        public int currentStade = 1;
+
+        // Sprint 4+ : aggregates expanded as systems come online
         // (voies, esprits, regions, prestige level, lore, etc.)
     }
 }

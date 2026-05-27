@@ -81,3 +81,7 @@ Thumbs.db
 
 # Claude Code project metadata
 .claude/
+
+# Raw source assets — curated subsets imported into Assets/_Project/Art/
+downloads/
+

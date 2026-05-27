@@ -33,6 +33,9 @@ namespace Saga.Core
         /// <summary>Raised after an upgrade purchase succeeds. Args: upgradeId, new level.</summary>
         public static event Action<string, int> OnUpgradePurchased;
 
+        /// <summary>Raised when the character visual tier crosses a threshold. Args: previousStade, newStade.</summary>
+        public static event Action<int, int> OnStadeChanged;
+
         public static void RaiseForceChanged() => OnForceChanged?.Invoke();
 
         public static void RaiseComboChanged(int tier, float baseMultiplier)
@@ -43,5 +46,8 @@ namespace Saga.Core
 
         public static void RaiseUpgradePurchased(string upgradeId, int newLevel)
             => OnUpgradePurchased?.Invoke(upgradeId, newLevel);
+
+        public static void RaiseStadeChanged(int previousStade, int newStade)
+            => OnStadeChanged?.Invoke(previousStade, newStade);
     }
 }
