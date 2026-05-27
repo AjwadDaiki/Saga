@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Saga.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -18,6 +19,10 @@ namespace Saga.Gameplay
     {
         private InputAction _tapAction;
         private ComboSystem _combo;
+
+        // Reused buffer for the RaycastAll-based UI check (avoids per-tap GC alloc).
+        // Static OK since OnTapPerformed runs on the main thread synchronously.
+        private static readonly List<RaycastResult> _uiRaycastBuffer = new List<RaycastResult>();
 
         private void Awake()
         {
@@ -47,8 +52,14 @@ namespace Saga.Gameplay
 
         private void OnTapPerformed(InputAction.CallbackContext ctx)
         {
-            // Filter UI clicks (upgrade buttons + death overlay etc.).
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+            // Resolve pointer position up-front; we need it for the UI raycast filter AND for FX events.
+            var screenPos = Pointer.current != null ? Pointer.current.position.ReadValue() : (Vector2)Input.mousePosition;
+
+            // Filter UI clicks (upgrade buttons + Vague button + death overlay etc.).
+            // Unity 6 deprecates EventSystem.IsPointerOverGameObject() from inside InputAction
+            // callbacks (queries last frame's UI state). Replacement: manual RaycastAll with a
+            // fresh PointerEventData. See coordinator brief 2026-05-27.
+            if (IsPointerOverUI(screenPos)) return;
 
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
@@ -85,8 +96,18 @@ namespace Saga.Gameplay
             gm.State.totalTaps++;
             gm.Save?.MarkDirty();
 
-            var screenPos = Pointer.current != null ? Pointer.current.position.ReadValue() : (Vector2)Input.mousePosition;
             GameEvents.RaiseTapResolved(value, finalMult, screenPos);
+        }
+
+        private static bool IsPointerOverUI(Vector2 screenPosition)
+        {
+            var es = EventSystem.current;
+            if (es == null) return false;
+            // Fresh PointerEventData — doesn't reuse the engine's stale processing state.
+            var data = new PointerEventData(es) { position = screenPosition };
+            _uiRaycastBuffer.Clear();
+            es.RaycastAll(data, _uiRaycastBuffer);
+            return _uiRaycastBuffer.Count > 0;
         }
     }
 }
