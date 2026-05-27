@@ -48,6 +48,88 @@
 
 ---
 
+## 2026-05-27 — Sprint 1 strategy pivot: use only DOTween core shortcuts (DOLocalMove + DOTween.To), drop UI-module extension dependency
+
+**Décision** (coordinator pivot après 2 itérations infructueuses sur l'asmdef DOTween.Modules) :
+- `RectTransform.DOAnchorPos(Vector2, float)` → `Transform.DOLocalMove(Vector3, float)` (core shortcut, dans DOTween.dll)
+- `Image.DOFade(...)`, `TextMeshProUGUI.DOFade(...)`, `CanvasGroup.DOFade(...)` → `DOTween.To(() => x.alpha, a => x.alpha = a, end, duration)` (générique core)
+
+Refactor concret :
+- `FloatingNumberView` : ajout d'un field `_group: CanvasGroup`, Play() utilise `DOLocalMove` + `DOTween.To` sur l'alpha du CanvasGroup
+- `TapFxSpawner.SpawnFloatingNumber` : wire `view.Group = go.GetComponent<CanvasGroup>()` (le GameObject crée déjà via `typeof(CanvasGroup)`)
+- `TapFxSpawner.SpawnSingleDust` : ajout `CanvasGroup` au GameObject Dust, tween via DOLocalMove + DOTween.To
+- Anchors centrés (0.5, 0.5) sur tous les éléments tweenés → `anchoredPosition` ≈ `localPosition.xy`, l'animation est visuellement identique
+
+**Raison**: Note technique importante — `CanvasGroup.DOFade` est en réalité défini dans `DOTweenModuleUI.cs` (pas dans le core), donc ne fonctionnerait pas non plus dans notre setup actuel. Le vrai pattern stable est `DOTween.To<float>(getter, setter, end, duration)` qui est dans le DOTween.dll précompilé core, **indépendant des modules**. C'est aussi exactement ce que les extensions du module UI font sous le capot.
+
+Avantages du pivot :
+- Zero dépendance à `DOTween.Modules.asmdef` (donc plus de fragilité asmdef resolution)
+- Pattern reproductible : tous les futurs tweens passent par core shortcuts ou DOTween.To
+- Compatible avec n'importe quel `IEnumerable<float>`-like property (alpha, anything)
+
+**Conséquence**:
+- `DOTween.Modules.asmdef` reste sur disque mais inutilisée par Saga.Runtime (laissée par décision coordinator pour de futurs usages potentiels — ex: `SpriteRenderer.DOFade` au Sprint 3 sur le perso animé)
+- 4 errors → 0. 4 warnings Unity 6 obsolete API (`FindObjectOfType<T>` → `FindFirstObjectByType<T>`) fixés en passant.
+- Convention équipe : préférer `DOTween.To` direct + Transform core shortcuts pour toute animation Sprint 1+. Si on a vraiment besoin des extensions UI au Sprint 3+, on rouvre le dossier asmdef à ce moment.
+
+---
+
+## 2026-05-27 — Sprint 1 fix: DOTween Modules wrapped in dedicated asmdef
+
+**Décision**: Création de `Assets/Plugins/Demigiant/DOTween/Modules/DOTween.Modules.asmdef` qui couvre tous les `DOTweenModule*.cs` (UI, Sprite, Audio, Physics, Physics2D, UnityVersion, Utils — UIToolkit et EPOOutline restent guards off via `#if`). Précompiled ref `DOTween.dll`. Saga.Runtime.asmdef ajoute `"DOTween.Modules"` à ses references.
+
+**Raison**: Sans cet asmdef, les `*.cs` modules vivent dans Assembly-CSharp default. Saga.Runtime.asmdef avec `overrideReferences: true` ne peut pas voir Assembly-CSharp (impossibilité fondamentale d'Unity à référencer Assembly-CSharp depuis un asmdef). Conséquence: `RectTransform.DOAnchorPos` et `Image.DOFade` (qui vivent dans `DOTweenModuleUI.cs`) étaient invisibles → CS1061/CS1929 au compile. Le fix isole proprement les modules dans leur propre assembly référençable.
+
+**Conséquence**: 
+- DOTween UI extensions désormais accessibles depuis tout asmdef qui ref `DOTween.Modules`
+- Pattern reproductible si on importe d'autres libs tierces source-based (Spine, Lottie, etc.)
+- L'erreur cascade "Failed to resolve assembly Saga.Tests.EditMode" se résorbe automatiquement (les tests dépendaient de Saga.Runtime qui ne compilait pas)
+- Cleanup secondaire : retiré `defineConstraints: ["UNITY_INCLUDE_TESTS"]` du test asmdef (optionnel, élimine une variable pour isoler)
+
+---
+
+## 2026-05-27 — Sprint 1: TMP default font (LiberationSans SDF), custom fonts deferred
+
+**Décision**: Sprint 1 utilise TMP_Settings.defaultFontAsset (LiberationSans SDF, livré avec TextMeshPro). Pas d'import Inter + JetBrains Mono ce sprint.
+
+**Raison**: Custom font asset creation requires TMP Font Asset Creator (Editor UI), pas faisable en filesystem direct. Pour Sprint 1 critère succès (compteur monte avec juice, save/reload OK), TMP default suffit. Tradeoff connu : LiberationSans n'est pas tabular-aware, le ticker animation des chiffres aura un léger jitter (digit width variable). Acceptable pour validation gameplay, pas pour polish final.
+
+**Conséquence**:
+- Sprint 1 ships avec font generic. Visual polish à finir Sprint 2 (ou en fin Sprint 1 si Ajwad veut).
+- Quand fonts sont importées (Inter Variable + JetBrains Mono Variable depuis Google Fonts), drop dans `Assets/_Project/Art/Fonts/`, ouvrir Window > TextMeshPro > Font Asset Creator, générer SDF (sampling 8192 x 8192, character set ASCII + accented), résultat dans `Assets/_Project/Art/Fonts/Generated/`.
+- Update `ForceCounterView._label.font` + `ComboMeterView._label.font` references via Inspector quand fonts dispo.
+
+---
+
+## 2026-05-27 — Sprint 1: scene Main bootstrappée par runtime script (pas YAML-authored)
+
+**Décision**: Le contenu visuel de Main.unity (Canvas, ForceCounter TMP, ComboMeter TMP, background dark) est créé à runtime par `MainSceneBootstrap.Start()`. La scene Main.unity reste à son état de clone vide.
+
+**Raison**: Bridge MCP down empêche l'utilisation de manage_scene pour authorer la scène. Éditer le YAML .unity manuellement pour ajouter une hiérarchie Canvas+TMP+RectTransform avec les fileIDs corrects = fragile et long. Bootstrap programmatique = même résultat fonctionnel, idempotent, et plus testable.
+
+**Conséquence**: 
+- `MainSceneBootstrap.cs` attaché au GameObject par défaut de Main.unity (à wire au refocus Unity, OR via auto-creation par GameManager si scene active = Main).
+- Refactor vers scene-authored UI au Sprint 2 (idéalement quand MCP est back, ou quand Ajwad ouvre Unity et drag les Views dans la scene).
+- Pattern Sprint 1 = défensif et autonome ; pattern Sprint 2+ = scene-driven proper.
+
+---
+
+## 2026-05-27 — Sprint 1: combo en paliers discrets
+
+**Décision**: Système de combo en 4 tiers discrets:
+- Tap count 0-2 → x1.0 (warmup, no bonus)
+- Tap count 3-5 → x1.2
+- Tap count 6-9 → x1.5
+- Tap count 10+ → x2.0 (cap, plafond)
+
+Window: 1.5s entre 2 taps consécutifs. Si dépassé, reset à 0.
+
+**Raison**: 02_GAME_DESIGN.md ligne 111 énumère 4 paliers nommés (x1.0 → x1.2 → x1.5 → x2.0). 08_ROADMAP Sprint 1 dit "à 10 taps consécutifs". Discret est plus punchy qu'un lerp continu, et le "near-miss" entre x1.5 (tap 9) et x2.0 (tap 10) incite à tap rapidement. Implémentation cleaner aussi (lookup table). Ajwad/coordinateur peuvent reswap au lerp en changeant la classe ComboSystem si besoin.
+
+**Conséquence**: `ComboSystem.cs` implémenté avec lookup table `_tiers`. Multiplier exposé en float, tier en int 0..3.
+
+---
+
 ## 2026-05-27 — Sprint 0: Localization tables setup manuel par Ajwad
 
 **Décision**: Le package `com.unity.localization` est installé et résolu (✅), mais la création des tables `UI_Common` (FR + EN) sera faite manuellement par Ajwad via l'Editor UI quand il rouvrira Unity. Étapes:

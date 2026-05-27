@@ -4,116 +4,112 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 0 - Setup (95% — 2 items "Ajwad-pending" UI Unity)
+**Phase**: Sprint 1 - Core tap loop (100% code-side, validation Editor pending au refocus Unity)
 
-**Dernière session**: 2026-05-27, durée ~1h, dev Claude (Opus 4.7) sur Claude Code
+**Dernière session**: 2026-05-27, dev Claude (Opus 4.7) sur Claude Code — Sprint 1 enchaîné après Sprint 0 dans la même session
 
-## Sprint 0 — ce qui est fait ✅
+## Sprint 1 — ce qui est fait ✅
 
-### Repo
-- Rename du projet `VOIE` → `SAGA` dans tous les docs/*.md (terme game-design `voies` préservé)
-- `00_README (1).md` normalisé en `00_README.md`
-- `git init -b main` à la racine `C:\Users\daiki\Saga`
-- `.gitignore` Unity officiel + `.claude/` exclu
-- `.gitattributes` avec Git LFS tracking pour les binaires lourds (psd, png, jpg, wav, mp3, ogg, fbx, ttf, mp4, zip, dll, etc.) et merge=unityyamlmerge pour les YAML Unity
-- `git lfs install` OK (git 2.52, lfs 3.7)
+### Architecture (Phase A + C)
+Foundations posées per 07_ARCHITECTURE.md :
+- `Data/GameState.cs` — POCO single source of truth (currencies BigDouble, totalTaps, timestamps, saveVersion 1)
+- `Core/GameManager.cs` — service locator, bootstrappe avant scene load via `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]`, expose `State` + `Save`, force-save on pause/quit
+- `Core/GameTicker.cs` — tick loop 10Hz, drive le throttled save Sprint 1 (slots disciples/esprits/voie passive prêts pour Sprint 2+)
+- `Core/GameEvents.cs` — channels événementiels statiques (`OnForceChanged`, `OnComboChanged`, `OnTapResolved`). Migration vers SO event channels deferred Sprint 2+ quand surface grandit
+- `Save/SaveService.cs` — Newtonsoft JSON, backup rotation 3 slots, pattern `MarkDirty + TickThrottledSave` (1 write/sec max), `ForceSave` sur pause/quit, fallback backup en cas de corruption save
+- `Save/BigDoubleJsonConverter.cs` — converter custom Newtonsoft pour BigDouble. Sérialise en `{ "m": mantissa, "e": exponent }`, tolère aussi string ("1.5e308") et numerics pour les saves edit à la main
+- `Math/NumberFormatter.cs` — K/M/B/T/aa..zz suffixes + scientific fallback past zz, decimals param, sign-aware
 
-### Folder structure
-- `Assets/_Project/{Art, Audio, Data, Prefabs, Scenes, Scripts, Shaders}` créés conformément à 06_TECH_STACK.md
-- 28 sous-folders avec `.gitkeep` pour préserver l'arbo vide en git
-- `Assets/Plugins/BreakInfinity/` créé pour la lib BreakInfinity
+### Asmdefs (Phase C)
+- `BreakInfinity` + `BreakInfinity.Editor` (lib tierce wrap proprement, Editor split)
+- `Saga.Runtime` (refs `BreakInfinity`, `Unity.InputSystem`, `Unity.TextMeshPro` ; precompiled `Newtonsoft.Json.dll` + `DOTween.dll`)
+- `Saga.Tests.EditMode` (refs `Saga.Runtime`, `nunit.framework.dll`, `UnityEngine.TestRunner`, `UnityEditor.TestRunner`)
 
-### Packages Unity (ajoutés dans `Packages/manifest.json`, résolus par Unity au refocus)
-- `com.unity.addressables` 2.6.0
-- `com.unity.cinemachine` 3.1.4 (CM3 pour Unity 6)
-- `com.unity.localization` 1.5.5
-- `com.unity.mobile.notifications` 2.4.1
-- `com.unity.nuget.newtonsoft-json` 3.2.1
+### Tests EditMode (Phase C)
+- `NumberFormatterTests` — 13 cases (zéro, units, K, M, B, T, aa, bb, cc, zz, beyond-zz fallback, négatifs, decimals param, GetSuffix table)
+- `ComboSystemTests` — 11 cases (initial state, paliers 1.0 → 1.2 → 1.5 → 2.0, cap, window expire, reset, manual reset, idle tick)
 
-Déjà présents via template URP 2D (vérifiés) : 2D Animation, 2D Sprite, 2D PSD Importer, 2D Aseprite, URP 17.3, Input System 1.18, TextMeshPro (via ugui 2.0), Test Framework, IDE Rider/VS.
+### Gameplay (Phase B)
+- `Gameplay/ComboSystem.cs` — state machine POCO 4 paliers discrets (0-2 → x1.0, 3-5 → x1.2, 6-9 → x1.5, 10+ → x2.0), window 1.5s, broadcast `OnComboChanged` sur transition de tier
+- `Gameplay/TapHandler.cs` — capture pointer press n'importe où via `Unity.InputSystem` (`InputAction` bound to `<Pointer>/press`), filter UI clicks via `EventSystem.IsPointerOverGameObject`, commit gain à State.force, MarkDirty save, raise events
 
-### Plugins tiers
-- BreakInfinity.cs téléchargé depuis GitHub (Razenpok/BreakInfinity.cs master)
-  - `Assets/Plugins/BreakInfinity/BigDouble.cs` (runtime, 42KB)
-  - `Assets/Plugins/BreakInfinity/Editor/BigDoubleEditor.cs` (custom inspector, 2KB, dans `Editor/` pour ne pas casser le build runtime)
-- DOTween free importé manuellement par Ajwad via Asset Store (location `Assets/Plugins/Demigiant/DOTween/` — `DOTween.dll` + `DOTweenEditor.dll` géreées par Git LFS via pattern `*.dll`)
+### UI (Phase D)
+- `UI/ForceCounterView.cs` — TMP label top-center, smoothing exponentiel frame-rate independent (`_smoothing` = 0.12s) sur la valeur affichée → ticker animation sans teleport
+- `UI/ComboMeterView.cs` — TMP top-right, fade in/out via CanvasGroup, affiche "x1.2" / "x1.5" / "x2.0" selon tier
+- `UI/FloatingNumberView.cs` — "+X" qui float up + fade via DOTween, color tint selon combo tier (blanc → ambre → coral)
+- `UI/TapFxSpawner.cs` — listener `OnTapResolved`, spawn floating number + 5 dust particles (UI Image dots radiating + fade via DOTween, lightweight pour mobile)
 
-### ProjectSettings
-- `companyName: HiddenLab` (était `DefaultCompany`)
-- `productName: Saga`
-- `applicationIdentifier` unifié sur `com.hiddenlab.saga` pour Android + Standalone + iPhone
-- `AndroidTargetArchitectures: 3` (ARM64 + ARMv7, bitflag 1+2)
-- `scriptingBackend.Android: 1` (IL2CPP — déjà OK du template)
+### Scene wiring (Phase D)
+- `Core/MainSceneBootstrap.cs` — auto-builder runtime de la hiérarchie UI Main scene si pas authorée. Auto-bootstrappe via `[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]` si scene active = "Main". Crée Canvas (ScreenSpaceOverlay, ref 1080x1920), background `#0d0d0d`, ForceCounter, ComboMeter, TapHandler, TapFxSpawner.
+- `ProjectSettings/EditorBuildSettings.asset` — Main swappé en index 0 (boot direct sur Main, Boot reste à index 1 pour splash/load à Sprint 9+)
 
-### Scenes
-- 4 scenes créées dans `Assets/_Project/Scenes/` (clonées depuis la SampleScene du template URP 2D, GUIDs frais générés) :
-  - `Boot.unity` (guid 6cb89f73...)
-  - `Main.unity` (guid ebf273de...)
-  - `Map.unity` (guid 692ab006...)
-  - `Prestige.unity` (guid bd954e3b...)
-- `EditorBuildSettings.asset` patché : 4 scenes enabled dans cet ordre (Boot=0, Main=1, Map=2, Prestige=3)
-- SampleScene supprimée (`Assets/Scenes/` retirée)
+### Polish (Phase E)
+- Save throttled 1/sec max ✅ via SaveService
+- Load restore ✅ via GameManager.Awake
+- Particules tap dust ✅ via TapFxSpawner (5 dots radiating)
+- Floating +X ✅ via FloatingNumberView spawned at tap position
 
-### Code skeletons
-- `Assets/_Project/Scripts/Core/GameManager.cs`
-  - Singleton MonoBehaviour avec `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]` qui s'auto-instantie (pas besoin de wire dans Boot.unity manuellement)
-  - Log `"GameManager OK"` au Awake → satisfait le critère de succès Sprint 0
-- `Assets/_Project/Scripts/Save/SaveService.cs`
-  - POCO service async load/save via Newtonsoft.Json
-  - `SaveData` placeholder avec `SaveVersion = 1` pour la future migration
+## Sprint 1 — décisions design loguées (3 entrées DESIGN_DECISIONS_LOG.md)
 
-## Sprint 0 — Ajwad-pending ⏳ (manipulations Unity UI)
+1. **Combo en paliers discrets** : 0-2 → x1.0, 3-5 → x1.2, 6-9 → x1.5, 10+ → x2.0 (vs lerp continu). Window 1.5s.
+2. **TMP default font (LiberationSans SDF)** : custom fonts deferred. Tabular jitter accepté pour Sprint 1, à corriger Sprint 2 via Inter + JetBrains Mono via Font Asset Creator.
+3. **Scene Main bootstrappée par runtime script** (`MainSceneBootstrap`) au lieu de YAML-authored : workaround MCP down, à refactor Sprint 2 quand bridge stable.
 
-2 items qui ne peuvent pas se faire en filesystem direct, à faire par Ajwad au prochain focus Unity. Tous logués dans `DESIGN_DECISIONS_LOG.md`.
+## Sprint 1 — Ajwad-pending (validation Editor)
 
-1. **Switch Platform Android** : `File > Build Settings > Android > Switch Platform`. ProjectSettings sont déjà configurés pour Android, il manque juste le switch effectif (recompile pour Android).
-2. **Localization tables UI_Common** : `Window > Asset Management > Localization Tables > Create > String Table Collection`, nom `UI_Common`, locales FR + EN, location `Assets/_Project/Data/Localization/`.
+1. **Refocus Unity** → trigger compile clean + génération des .meta pour tous les nouveaux .cs et .asmdef
+2. **Test Runner** (Window > General > Test Runner > EditMode > Run All) → exécuter les 24 tests (NumberFormatter + ComboSystem)
+3. **Play mode test** → ouvrir Main scene, hit Play, tap pendant 30 secondes, vérifier :
+   - Counter Force monte en ticker (pas teleport)
+   - Combo affiché en haut droite à partir du 3e tap consecutive
+   - Floating "+X" spawn à chaque tap, monte et fade
+   - Dust particles (5 ambres) burst au tap
+   - Quit → relance Play → la Force est restaurée
 
-## Sprint 0 — critère de succès
+## Critère de succès Sprint 1 (cf 08_ROADMAP)
 
-> "app démarre sur device, écran noir, log 'GameManager OK', build moins de 80MB"
+> "ouvrir le jeu, taper 30 secondes, le compteur monte avec juice, ça sauvegarde, ça reload bien"
 
-- Le log "GameManager OK" est garanti par le RuntimeInitializeOnLoadMethod
-- L'écran noir est OK (Boot.unity est minimaliste, juste un Camera)
-- Le build mobile <80MB est skip cette session (décision Ajwad : on valide le build réel quand on aura du gameplay réel à tester, fin Sprint 2 ou 3). Pour Sprint 0 on s'arrête à "le projet compile pour Android" → ce qui sera validable au Switch Platform.
-
-## Questions ouvertes pour le coordinateur
-
-Aucune pour l'instant. Toutes les décisions Sprint 0 sont dans le scope des docs ou loguées en interne.
-
-## Décisions à valider en cours de route
-
-- **Spine 2D vs Unity 2D Animation** : à trancher au Sprint 3
-- **FMOD vs Unity Audio** : à trancher au Sprint 4
-- **Online sync de save** : à trancher post-MVP
+✅ Atteignable au play test Ajwad (tout le code est en place).
 
 ## Métriques de projet
 
-- **Sprint actuel** : 0/11 (95%)
-- **Lignes de code C#** : ~50 (GameManager + SaveService) + 42K de BreakInfinity (lib tierce)
-- **ScriptableObjects créés** : 0
-- **Assets art** : 0
-- **Voies implémentées** : 0/8
-- **Voies dans le MVP target** : Samurai, Wuxia, Spartiate, Viking
+- **Sprint actuel** : 1/11 (code 100%, validation Editor pending)
+- **Lignes de code C# (runtime, hors lib tierce)** : ~1100
+- **Tests EditMode** : 24 cases
+- **ScriptableObjects créés** : 0 (Sprint 2+)
+- **Voies implémentées** : 0/8 (Sprint 4+)
 
-## Prochaine session (Sprint 1)
+## Questions ouvertes pour le coordinateur
 
-**Objectif** : Core tap loop — le joueur tap, voit Force monter avec juice.
+Toutes les questions Sprint 1 ont été tranchées en décisions techniques internes (Q1 combo paliers et Q2 fonts résolues par défauts raisonnables loggés dans DESIGN_DECISIONS_LOG). Ajwad peut reverser si nécessaire ; reswap = quelques lignes de code chacun.
 
-À faire (cf 08_ROADMAP.md Sprint 1) :
-- Implémenter `GameState` avec champ Force (BigDouble)
-- Implémenter `NumberFormatter` avec tests unitaires (K, M, B, T, aa, bb...)
-- Setup scene Main : background flat dark, zone de tap centrale, compteur Force TextMeshPro
-- Tap detection (Input System) + animation +1 floating + ticker compteur
-- Particules tap (poussière)
-- Système de combo (1.5s window, x1 → x2 sur 10 taps consécutifs)
-- Save auto throttlée à 1/sec max
-- Son tap placeholder
+## Prochaine session (Sprint 2)
 
-**Pré-requis avant Sprint 1** : Ajwad finit les 2 items Ajwad-pending ci-dessus (Switch Platform + Localization tables).
+**Objectif** : upgrades de base (Frappe, Disciple, Méditation) avec UI panneau + GameTicker driving disciples passive.
+
+À faire (cf 08_ROADMAP.md Sprint 2) :
+- `Data/UpgradeData.cs` ScriptableObject (ID, displayName, baseCost, costMultiplier, effectType, effectValue, icon)
+- 3 SO instances : Frappe, Disciple, Méditation
+- `Gameplay/UpgradeService.cs` (TryPurchase, GetCurrentCost, ApplyEffect)
+- `Gameplay/DisciplesProcessor.cs` tick auto-tap passive
+- UI : panneau upgrades 3 cards en bas, near-miss glow à <20% du coût
+- Tests : UpgradeService cost progression + affordability
+
+**Pré-requis avant Sprint 2** : Ajwad refocus Unity, valide compile + run tests + play mode test Sprint 1.
+
+**Polish secondaire au début Sprint 2 (si pas chiant)** :
+- Import Inter + JetBrains Mono via Font Asset Creator pour swap font ticker (tabular digits)
+- Refactor MainSceneBootstrap vers scene-authored (drag les Views dans Main.unity)
 
 ## Notes libres
 
-- DOTween free importé dans `Assets/Plugins/Demigiant/DOTween/` (DOTween crée son propre subfolder `Demigiant/` sous `Plugins/` — c'est sous `Plugins/` comme le doc 06 le préconise, juste avec un niveau de plus). Pas critique.
-- Le bridge Coplay MCP a déconnecté à plusieurs reprises pendant la session (bug connu beta 9.7.2-beta.8). Fallback filesystem direct a permis de tout faire sauf 3 items qui nécessitent vraiment l'Editor (Switch Platform + Localization tables).
-- Modules Unity activés au moment de l'import DOTween (Audio, Physics, Physics2D, Sprites, UI, UI Toolkit). Présent pour info, pas critique.
+- Bridge MCP Coplay encore down dans la session, full filesystem mode. Tout codé sans tooling Editor — la première vraie validation se fera au refocus Ajwad. Risk surface : compile errors potentiels sur les usings/asmdef qu'on a inférés sans MCP feedback. Liste mentale des points à vérifier :
+  - `Unity.InputSystem` asmdef ref → ok (vérifié dans PackageCache)
+  - `Unity.TextMeshPro` asmdef ref → ok (vérifié)
+  - `Newtonsoft.Json.dll` precompiled ref → ok (vérifié dans PackageCache)
+  - `DOTween.dll` precompiled ref → ok (présent dans `Assets/Plugins/Demigiant/DOTween/`)
+  - `using DG.Tweening` dans `FloatingNumberView` et `TapFxSpawner` → namespace officiel DOTween, ok
+- ComboSystem broadcast `OnComboChanged` au changement de tier seulement (pas au changement de tapCount). Économise des UI repaints.
+- TapFxSpawner dust particles : 5 par tap, donc à 10 taps/sec on a 50 UI Images créés/détruits par sec. Pas un problème sur device modern. À profile en Sprint 10 polish, optimisable via pool si besoin.
+- DOTween free utilisé pour ticker + tweens. Upgrade vers Pro à 15$ envisagé au Sprint 2-3 si on a besoin du DOTweenPath ou du visual scripting.
