@@ -9,6 +9,7 @@ namespace Saga.Core
     /// Holds runtime references to all content ScriptableObjects.
     /// Sprint 2: <see cref="UpgradeData"/> from Resources/Upgrades/.
     /// Sprint 4: <see cref="AdversaireData"/> from Resources/Adversaires/.
+    /// Sprint 5: <see cref="CapitaineData"/> from Resources/Capitaines/.
     /// Sprint 7+ migrate to Addressables.
     ///
     /// Test seam: pass explicit collections (e.g. via *.CreateForTests factories)
@@ -18,15 +19,20 @@ namespace Saga.Core
     {
         private readonly Dictionary<string, UpgradeData> _upgradesById = new Dictionary<string, UpgradeData>();
         private readonly Dictionary<string, AdversaireData> _adversairesById = new Dictionary<string, AdversaireData>();
+        private readonly Dictionary<string, CapitaineData> _capitainesById = new Dictionary<string, CapitaineData>();
         private UpgradeData[] _orderedUpgrades = System.Array.Empty<UpgradeData>();
         private AdversaireData[] _orderedAdversaires = System.Array.Empty<AdversaireData>();
+        private CapitaineData[] _orderedCapitaines = System.Array.Empty<CapitaineData>();
 
         public IReadOnlyList<UpgradeData> AllUpgrades => _orderedUpgrades;
         public IReadOnlyList<AdversaireData> AllAdversaires => _orderedAdversaires;
+        public IReadOnlyList<CapitaineData> AllCapitaines => _orderedCapitaines;
 
-        public ContentDatabase() : this(null, null) { }
+        public ContentDatabase() : this(null, null, null) { }
 
-        public ContentDatabase(IEnumerable<UpgradeData> upgrades, IEnumerable<AdversaireData> adversaires = null)
+        public ContentDatabase(IEnumerable<UpgradeData> upgrades,
+            IEnumerable<AdversaireData> adversaires = null,
+            IEnumerable<CapitaineData> capitaines = null)
         {
             if (upgrades != null)
                 RegisterUpgrades(upgrades, sourceLabel: "injected");
@@ -37,6 +43,11 @@ namespace Saga.Core
                 RegisterAdversaires(adversaires, sourceLabel: "injected");
             else
                 RegisterAdversaires(Resources.LoadAll<AdversaireData>("Adversaires"), sourceLabel: "Resources/Adversaires");
+
+            if (capitaines != null)
+                RegisterCapitaines(capitaines, sourceLabel: "injected");
+            else
+                RegisterCapitaines(Resources.LoadAll<CapitaineData>("Capitaines"), sourceLabel: "Resources/Capitaines");
         }
 
         public UpgradeData GetUpgrade(string id)
@@ -47,6 +58,11 @@ namespace Saga.Core
         public AdversaireData GetAdversaire(string id)
         {
             return id != null && _adversairesById.TryGetValue(id, out var a) ? a : null;
+        }
+
+        public CapitaineData GetCapitaine(string id)
+        {
+            return id != null && _capitainesById.TryGetValue(id, out var c) ? c : null;
         }
 
         private void RegisterUpgrades(IEnumerable<UpgradeData> upgrades, string sourceLabel)
@@ -81,6 +97,23 @@ namespace Saga.Core
                 _adversairesById[a.Id] = a;
             }
             Debug.Log($"[ContentDatabase] Registered {_adversairesById.Count} adversaires from {sourceLabel}.");
+        }
+
+        private void RegisterCapitaines(IEnumerable<CapitaineData> capitaines, string sourceLabel)
+        {
+            _orderedCapitaines = capitaines?.Where(c => c != null).ToArray() ?? System.Array.Empty<CapitaineData>();
+            _capitainesById.Clear();
+            foreach (var c in _orderedCapitaines)
+            {
+                if (string.IsNullOrEmpty(c.Id)) continue;
+                if (_capitainesById.ContainsKey(c.Id))
+                {
+                    Debug.LogWarning($"[ContentDatabase] Duplicate CapitaineId '{c.Id}' in {c.name} — keeping first.");
+                    continue;
+                }
+                _capitainesById[c.Id] = c;
+            }
+            Debug.Log($"[ContentDatabase] Registered {_capitainesById.Count} capitaines from {sourceLabel}.");
         }
     }
 }

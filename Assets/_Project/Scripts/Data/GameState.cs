@@ -13,7 +13,7 @@ namespace Saga.Data
     public class GameState
     {
         /// <summary>Schema version. Bump on breaking change. Migration handled by SaveService.</summary>
-        public int saveVersion = 4;
+        public int saveVersion = 6;
 
         // -- Currencies (BigDouble — protect against 1e15+ ceiling) -------
         public BigDouble force;
@@ -48,7 +48,21 @@ namespace Saga.Data
         /// <summary>Lifetime count of adversaires defeated (drives Capitaine/Maître progression Sprint 5+).</summary>
         public int totalAdversairesDefeated;
 
-        // Sprint 5+ : aggregates expanded as systems come online
-        // (boss kills, voies, esprits, regions, prestige level, lore, etc.)
+        // -- Élan / Vague AOE (Sprint 5) ----------------------------------
+        /// <summary>Élan gauge value, 0..100. Fills on taps, decays after idle grace.</summary>
+        public float currentElan;
+        /// <summary>UTC seconds since boot of the last Vague trigger (reserved for future cooldown).</summary>
+        public float lastVagueTime;
+
+        // -- Capitaines (Sprint 5) ----------------------------------------
+        /// <summary>Lifetime count of Capitaines defeated (gates Maître access in Sprint 6).</summary>
+        public int totalCapitainesDefeated;
+        /// <summary>Id of the currently engaged Capitaine (null outside CapitaineIncoming/Active/Victory).</summary>
+        public string currentCapitaineId;
+        /// <summary>Current Capitaine HP phase: 0 = full, 1 = &lt;75%, 2 = &lt;50%, 3 = &lt;25% (enrage).</summary>
+        public int currentCapitainePhase;
+
+        // Sprint 6+ : aggregates expanded as systems come online
+        // (Maîtres, voies, esprits, regions, prestige level, lore, etc.)
     }
 }

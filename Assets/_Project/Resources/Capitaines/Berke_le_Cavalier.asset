@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15e6367db4a72ba4ab579e3458f70ad6, type: 3}
+  m_Name: Berke_le_Cavalier
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.CapitaineData
+  _id: berke_le_cavalier
+  _displayName: Berke le Cavalier
+  _voie: 5
+  _hp: 550
+  _rewardForce: 280
+  _guaranteedLoot: 1
+  _chronoSeconds: 60
+  _phaseThresholds:
+  - 0.75
+  - 0.5
+  - 0.25
+  _phaseColors:
+  - {r: 0.58, g: 0.66, b: 0.61, a: 1}
+  - {r: 0.5, g: 0.6, b: 0.55, a: 1}
+  - {r: 0.45, g: 0.55, b: 0.5, a: 1}
+  - {r: 0.95, g: 0.2, b: 0.15, a: 1}
+  _introCitation: La steppe t'a vu.
+  _deathCitation: "La steppe\u2026 t'accompagne."

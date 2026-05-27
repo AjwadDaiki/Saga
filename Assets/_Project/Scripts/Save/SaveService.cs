@@ -102,7 +102,7 @@ namespace Saga.Save
         /// </summary>
         private static GameState Migrate(GameState state)
         {
-            const int currentVersion = 4;
+            const int currentVersion = 6;
 
             if (state.saveVersion < 2)
             {
@@ -133,17 +133,38 @@ namespace Saga.Save
                 Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v4 (added combat active system fields).");
             }
 
+            if (state.saveVersion < 5)
+            {
+                // v4 -> v5: Élan / Vague AOE (Sprint 5). Default Élan 0.
+                state.currentElan = 0f;
+                state.lastVagueTime = 0f;
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v5 (added Élan + lastVagueTime).");
+            }
+
+            if (state.saveVersion < 6)
+            {
+                // v5 -> v6: Capitaines (Sprint 5). Default no engaged Capitaine.
+                state.totalCapitainesDefeated = 0;
+                state.currentCapitaineId = null;
+                state.currentCapitainePhase = 0;
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v6 (added Capitaine fields).");
+            }
+
             // Defensive: always ensure non-null collections + valid scalars post-deserialization.
             if (state.upgradeLevels == null)
             {
                 state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
             }
             if (state.currentStade <= 0) state.currentStade = 1;
-            // Always boot in Training to avoid loading mid-combat with a stale chrono / dangling adversaire ref.
+            // Always boot in Training to avoid loading mid-combat with a stale chrono / dangling enemy ref.
             // Sprint 5+ may persist combat state intentionally if a player quits mid-fight.
             state.currentPhase = Saga.Data.CombatPhase.Training;
             state.currentAdversaireId = null;
+            state.currentCapitaineId = null;
+            state.currentCapitainePhase = 0;
             state.chronoRemaining = 0f;
+            // Élan resets to 0 on boot (decay model — no point persisting a partial gauge).
+            state.currentElan = 0f;
 
             state.saveVersion = currentVersion;
             return state;

@@ -28,11 +28,12 @@ namespace Saga.UI
         private static readonly Color TierAmbre = new Color(0.98f, 0.78f, 0.46f, 1f); // #FAC775
         private static readonly Color TierCoral = new Color(0.99f, 0.45f, 0.20f, 1f); // ~#993C1D-ish
 
-        // Font size by magnitude tier.
-        private const float SizeSmall = 84f;   // < 100
-        private const float SizeMid   = 96f;   // < 10k
-        private const float SizeLarge = 108f;  // < 10M
-        private const float SizeHuge  = 124f;  // 10M+
+        // Font size by magnitude tier. Sprint 5 round-2: reduced by ~30% to free visual space
+        // for the gameplay zone (compteur was overpowering the character + mannequin).
+        private const float SizeSmall = 56f;   // < 100
+        private const float SizeMid   = 64f;   // < 10k
+        private const float SizeLarge = 72f;   // < 10M
+        private const float SizeHuge  = 84f;   // 10M+
 
         private BigDouble _displayed;
         private BigDouble _target;

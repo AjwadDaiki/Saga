@@ -25,7 +25,10 @@ namespace Saga.Core
         public StadeManager Stades { get; private set; }
         public CombatProcessor Combat { get; private set; }
         public AdversaireSpawner Adversaires { get; private set; }
+        public CapitaineSpawner Capitaines { get; private set; }
         public DamageDealer Damage { get; private set; }
+        public ElanService Elan { get; private set; }
+        public VagueResolver Vague { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -57,13 +60,19 @@ namespace Saga.Core
             Stades = new StadeManager();
             Combat = new CombatProcessor(Content);
             Adversaires = new AdversaireSpawner(Content, Combat);
+            Capitaines = new CapitaineSpawner(Content);
+            Combat.AttachCapitaineSpawner(Capitaines);
             Damage = new DamageDealer(Content);
+            Elan = new ElanService();
+            Vague = new VagueResolver(Content);
 
-            // Route per-tap progress to the spawner. DamageDealer subscribes itself in its constructor.
+            // Route per-tap progress to the spawner. DamageDealer, ElanService, VagueResolver
+            // subscribe themselves in their constructors.
             GameEvents.OnTapResolved += HandleTapForSpawner;
 
-            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | adv={Content.AllAdversaires.Count} | savePath={Save.SavePath}");
+            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | adv(registered/killed)={Content.AllAdversaires.Count}/{State.totalAdversairesDefeated} | cap(registered/killed)={Content.AllCapitaines.Count}/{State.totalCapitainesDefeated} | savePath={Save.SavePath}");
             GameEvents.RaiseForceChanged();
+            GameEvents.RaiseElanChanged(State.currentElan, Saga.Data.ElanConstants.ElanMax);
         }
 
         private void HandleTapForSpawner(BreakInfinity.BigDouble gain, float multiplier, UnityEngine.Vector2 screenPos)

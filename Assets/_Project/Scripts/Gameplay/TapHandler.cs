@@ -53,11 +53,14 @@ namespace Saga.Gameplay
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
-            // Sprint 4: phase gating. Only Training and AdversaireActive accept taps.
-            //   - AdversaireIncoming / Victory / PlayerDeathTemporary = cinematic phases, no input.
+            // Sprint 5: phase gating. Only Training, AdversaireActive, CapitaineActive accept taps.
+            //   - *Incoming / Victory / PlayerDeathTemporary = cinematic phases, no input.
             // Same combo math runs either way (so combo doesn't reset crossing phases).
             var phase = gm.State.currentPhase;
-            if (phase != Saga.Data.CombatPhase.Training && phase != Saga.Data.CombatPhase.AdversaireActive) return;
+            var phaseAccepts = phase == Saga.Data.CombatPhase.Training
+                            || phase == Saga.Data.CombatPhase.AdversaireActive
+                            || phase == Saga.Data.CombatPhase.CapitaineActive;
+            if (!phaseAccepts) return;
 
             var tierMult = _combo.RegisterTap();
             var bonus = StatsCalculator.GetComboMultiplierBonus(gm.State, gm.Content);
@@ -66,14 +69,18 @@ namespace Saga.Gameplay
             var baseGain = StatsCalculator.GetForcePerTap(gm.State, gm.Content);
             var value = baseGain * finalMult;
 
+            // Vague Training buff: ×5 Force during the 5s window.
+            if (phase == Saga.Data.CombatPhase.Training && gm.Vague != null && gm.Vague.IsTrainingBuffActive)
+            {
+                value = value * Saga.Data.ElanConstants.VagueTrainingForceMultiplier;
+            }
+
             if (phase == Saga.Data.CombatPhase.Training)
             {
-                // In Training: the value is Force gained. DamageDealer ignores OnTapResolved out of combat.
                 gm.State.force += value;
                 GameEvents.RaiseForceChanged();
             }
-            // In AdversaireActive: DamageDealer applies `value` as damage to currentAdversaireHp.
-            // No Force is added per tap — reward comes from AdversaireDefeated.
+            // In AdversaireActive/CapitaineActive: DamageDealer applies `value` as damage. No Force here.
 
             gm.State.totalTaps++;
             gm.Save?.MarkDirty();

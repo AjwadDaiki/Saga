@@ -67,6 +67,37 @@ namespace Saga.Core
         /// <summary>Per-tap progress toward next adversaire spawn (during Training only). Args: current taps, threshold.</summary>
         public static event Action<int, int> OnAdversaireProgressUpdated;
 
+        // ----- Sprint 5: Élan + Vague AOE -------------------------------
+
+        /// <summary>Per-tick Élan gauge update. Args: current value (0..max), max (typically 100).</summary>
+        public static event Action<float, float> OnElanChanged;
+
+        /// <summary>Fired the moment Élan reaches the cap (transition from below 100 → 100). Drives the Vague button reveal.</summary>
+        public static event Action OnElanFull;
+
+        /// <summary>Fired when the player clicks the Vague button. Args: combat phase when triggered.</summary>
+        public static event Action<CombatPhase> OnVagueTriggered;
+
+        /// <summary>Resolution of the Vague: in Training = the multiplier applied, in Combat = the damage dealt.</summary>
+        public static event Action<BigDouble> OnVagueResolved;
+
+        /// <summary>Toggles the Vague Training buff. True = buff active (×5 Force), false = buff ended.</summary>
+        public static event Action<bool> OnVagueBuffActive;
+
+        // ----- Sprint 5: Capitaines (Boss Mineurs) ----------------------
+
+        /// <summary>Fired when a Capitaine engagement starts (CapitaineIncoming phase).</summary>
+        public static event Action<CapitaineData> OnCapitaineSpawned;
+
+        /// <summary>Fired when the Capitaine's HP crosses a phase threshold. Args: previous phase index, new phase index (0..3 typically).</summary>
+        public static event Action<int, int> OnCapitainePhaseChanged;
+
+        /// <summary>Fired once when the Capitaine enters the enrage phase (~25% HP).</summary>
+        public static event Action OnCapitaineEnraged;
+
+        /// <summary>Fired when the Capitaine dies. Args: the CapitaineData, the Force reward granted.</summary>
+        public static event Action<CapitaineData, BigDouble> OnCapitaineDefeated;
+
         // ----- Raisers --------------------------------------------------
 
         public static void RaiseForceChanged() => OnForceChanged?.Invoke();
@@ -103,5 +134,32 @@ namespace Saga.Core
 
         public static void RaiseAdversaireProgressUpdated(int currentTaps, int threshold)
             => OnAdversaireProgressUpdated?.Invoke(currentTaps, threshold);
+
+        public static void RaiseElanChanged(float current, float max)
+            => OnElanChanged?.Invoke(current, max);
+
+        public static void RaiseElanFull()
+            => OnElanFull?.Invoke();
+
+        public static void RaiseVagueTriggered(CombatPhase phase)
+            => OnVagueTriggered?.Invoke(phase);
+
+        public static void RaiseVagueResolved(BigDouble damageOrBuffApplied)
+            => OnVagueResolved?.Invoke(damageOrBuffApplied);
+
+        public static void RaiseVagueBuffActive(bool active)
+            => OnVagueBuffActive?.Invoke(active);
+
+        public static void RaiseCapitaineSpawned(CapitaineData data)
+            => OnCapitaineSpawned?.Invoke(data);
+
+        public static void RaiseCapitainePhaseChanged(int previous, int next)
+            => OnCapitainePhaseChanged?.Invoke(previous, next);
+
+        public static void RaiseCapitaineEnraged()
+            => OnCapitaineEnraged?.Invoke();
+
+        public static void RaiseCapitaineDefeated(CapitaineData data, BigDouble reward)
+            => OnCapitaineDefeated?.Invoke(data, reward);
     }
 }

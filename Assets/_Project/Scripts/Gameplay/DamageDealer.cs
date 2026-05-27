@@ -27,17 +27,32 @@ namespace Saga.Gameplay
         {
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
-            if (gm.State.currentPhase != CombatPhase.AdversaireActive) return;
-
-            var adversaire = _content?.GetAdversaire(gm.State.currentAdversaireId);
-            if (adversaire == null) return;
             if (damage.Sign() <= 0) return;
+
+            BigDouble maxHp;
+            var phase = gm.State.currentPhase;
+            if (phase == CombatPhase.AdversaireActive)
+            {
+                var adv = _content?.GetAdversaire(gm.State.currentAdversaireId);
+                if (adv == null) return;
+                maxHp = adv.Hp;
+            }
+            else if (phase == CombatPhase.CapitaineActive)
+            {
+                var cap = _content?.GetCapitaine(gm.State.currentCapitaineId);
+                if (cap == null) return;
+                maxHp = cap.Hp;
+            }
+            else
+            {
+                return;
+            }
 
             gm.State.currentAdversaireHp -= damage;
             if (gm.State.currentAdversaireHp.Sign() < 0) gm.State.currentAdversaireHp = new BigDouble(0);
             gm.Save?.MarkDirty();
 
-            GameEvents.RaiseAdversaireDamaged(damage, gm.State.currentAdversaireHp, adversaire.Hp);
+            GameEvents.RaiseAdversaireDamaged(damage, gm.State.currentAdversaireHp, maxHp);
         }
     }
 }

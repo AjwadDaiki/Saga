@@ -45,6 +45,7 @@ namespace Saga.Core
         public Transform CharacterTransform { get; private set; }
         public Transform MannequinTransform { get; private set; }
         public Transform AdversaireTransform { get; private set; }
+        public Transform CapitaineTransform { get; private set; }
 
         private void Awake()
         {
@@ -65,6 +66,7 @@ namespace Saga.Core
             BuildCharacter(worldRoot);
             BuildMannequin(worldRoot);
             BuildAdversaire(worldRoot);
+            BuildCapitaine(worldRoot);
             BuildSlashFxSpawner(worldRoot);
 
             BuildEventSystem();
@@ -81,6 +83,290 @@ namespace Saga.Core
             BuildCombatHud(MainCanvas);
             BuildAdversaireSpawnView(MainCanvas);
             BuildDeathOverlay(MainCanvas);
+
+            // Sprint 5: Élan + Vague + Capitaine
+            BuildElanBarAndVagueButton(MainCanvas);
+            BuildVagueFlashOverlay(MainCanvas);
+            BuildCapitaineIntroOverlay(MainCanvas);
+            BuildCapitaineDeathOverlay(MainCanvas);
+        }
+
+        private void BuildCapitaine(Transform parent)
+        {
+            // Same world position as Adversaire (mutually exclusive). Aura is a child renderer.
+            var go = new GameObject("Capitaine", typeof(CapitaineWorldView));
+            go.transform.SetParent(parent, false);
+            go.transform.position = MannequinPosition;
+
+            // Aura first (child), drawn behind body.
+            var auraGo = new GameObject("Aura", typeof(SpriteRenderer));
+            auraGo.transform.SetParent(go.transform, false);
+            var aura = auraGo.GetComponent<SpriteRenderer>();
+            aura.sortingOrder = 3;
+            aura.color = new Color(1, 1, 1, 0);
+
+            // Body
+            var bodyGo = new GameObject("Body", typeof(SpriteRenderer));
+            bodyGo.transform.SetParent(go.transform, false);
+            var body = bodyGo.GetComponent<SpriteRenderer>();
+            body.sortingOrder = 6;
+            body.color = new Color(1, 1, 1, 0);
+
+            var view = go.GetComponent<CapitaineWorldView>();
+            view.BodyRenderer = body;
+            view.AuraRenderer = aura;
+
+            CapitaineTransform = go.transform;
+        }
+
+        private void BuildElanBarAndVagueButton(Canvas canvas)
+        {
+            // Sprint 5 round-3: layout bands locked in normalized coords, with a real 2% spacer
+            // between the upgrade panel top (0.17) and the Élan row bottom (0.19).
+            //   Bottom 0-2%       : safe area / device home indicator
+            //   2-17%             : Upgrade cards (3 cards)
+            //   17-19%            : spacer
+            //   19-25%            : Élan row (bar + Vague button)
+            //   25-65%            : gameplay zone (character + mannequin + adversaire/capitaine)
+            //   65-100%           : HUD top (Force counter, Combo, Prochain Adversaire, CombatHud)
+            var row = new GameObject("ElanRow", typeof(RectTransform));
+            row.transform.SetParent(canvas.transform, false);
+            var rowRt = (RectTransform)row.transform;
+            rowRt.anchorMin = new Vector2(0.05f, 0.19f);
+            rowRt.anchorMax = new Vector2(0.95f, 0.25f);
+            rowRt.offsetMin = Vector2.zero;
+            rowRt.offsetMax = Vector2.zero;
+
+            // Élan bar (~78% of the row width, on the left)
+            var bar = new GameObject("ElanBar",
+                typeof(RectTransform), typeof(ElanBarView));
+            bar.transform.SetParent(rowRt, false);
+            var barRt = (RectTransform)bar.transform;
+            barRt.anchorMin = new Vector2(0, 0);
+            barRt.anchorMax = new Vector2(0.78f, 1);
+            barRt.offsetMin = Vector2.zero;
+            barRt.offsetMax = Vector2.zero;
+
+            // Bar background
+            var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
+            bgGo.transform.SetParent(barRt, false);
+            var bgRt = (RectTransform)bgGo.transform;
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+            var bgImg = bgGo.GetComponent<Image>();
+            bgImg.color = new Color(0.10f, 0.10f, 0.10f, 0.85f);
+            bgImg.raycastTarget = false;
+
+            // Bar fill (ambre per 05_VISUAL_STYLE)
+            var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fillGo.transform.SetParent(barRt, false);
+            var fillRt = (RectTransform)fillGo.transform;
+            fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
+            fillRt.offsetMin = new Vector2(4, 4); fillRt.offsetMax = new Vector2(-4, -4);
+            var fillImg = fillGo.GetComponent<Image>();
+            fillImg.color = new Color(0.98f, 0.78f, 0.46f, 0.95f);
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fillImg.fillAmount = 0f;
+            fillImg.raycastTarget = false;
+
+            // Centered label
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(barRt, false);
+            var lblRt = (RectTransform)lblGo.transform;
+            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
+            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
+            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
+            lblTmp.alignment = TextAlignmentOptions.Center;
+            lblTmp.color = TextPrimary;
+            lblTmp.fontSize = 32;
+            lblTmp.fontStyle = FontStyles.Bold;
+            lblTmp.text = "ÉLAN 0%";
+            lblTmp.raycastTarget = false;
+
+            var barView = bar.GetComponent<ElanBarView>();
+            barView.FillImage = fillImg;
+            barView.Label = lblTmp;
+            barView.PulseTarget = barRt;
+
+            // Vague button (right ~20% of the row, with a small gap from the bar)
+            var btn = new GameObject("VagueButton",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VagueButtonView));
+            btn.transform.SetParent(rowRt, false);
+            var btnRt = (RectTransform)btn.transform;
+            btnRt.anchorMin = new Vector2(0.80f, 0);
+            btnRt.anchorMax = new Vector2(1f, 1);
+            btnRt.offsetMin = Vector2.zero;
+            btnRt.offsetMax = Vector2.zero;
+
+            var btnImg = btn.GetComponent<Image>();
+            btnImg.color = new Color(0.98f, 0.78f, 0.46f, 0.7f);
+            btnImg.raycastTarget = true;
+
+            var btnGroup = btn.GetComponent<CanvasGroup>();
+            btnGroup.alpha = 0f;
+            btnGroup.blocksRaycasts = false;
+            btnGroup.interactable = false;
+
+            var btnLblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            btnLblGo.transform.SetParent(btnRt, false);
+            var btnLblRt = (RectTransform)btnLblGo.transform;
+            btnLblRt.anchorMin = Vector2.zero; btnLblRt.anchorMax = Vector2.one;
+            btnLblRt.offsetMin = Vector2.zero; btnLblRt.offsetMax = Vector2.zero;
+            var btnLblTmp = btnLblGo.GetComponent<TextMeshProUGUI>();
+            btnLblTmp.alignment = TextAlignmentOptions.Center;
+            btnLblTmp.color = new Color(0.10f, 0.08f, 0.04f, 1f);
+            btnLblTmp.fontSize = 40;
+            btnLblTmp.fontStyle = FontStyles.Bold;
+            btnLblTmp.text = "VAGUE";
+            btnLblTmp.raycastTarget = false;
+
+            var btnView = btn.GetComponent<VagueButtonView>();
+            btnView.Group = btnGroup;
+            btnView.Background = btnImg;
+            btnView.Label = btnLblTmp;
+            btnView.Root = btnRt;
+        }
+
+        private void BuildVagueFlashOverlay(Canvas canvas)
+        {
+            var root = new GameObject("VagueFlash",
+                typeof(RectTransform), typeof(Image), typeof(VagueVisualController));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            // Render behind death overlay but above gameplay.
+            root.transform.SetSiblingIndex(canvas.transform.childCount - 2);
+
+            var img = root.GetComponent<Image>();
+            img.color = new Color(1f, 1f, 1f, 0f);
+            img.raycastTarget = false;
+
+            root.GetComponent<VagueVisualController>().FlashImage = img;
+        }
+
+        private void BuildCapitaineIntroOverlay(Canvas canvas)
+        {
+            var root = new GameObject("CapitaineIntro",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(CapitaineIntroView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            var vignette = root.GetComponent<Image>();
+            vignette.color = new Color(0f, 0f, 0f, 0.6f); // assombrissement subtil
+            vignette.raycastTarget = false;
+
+            var nameGo = new GameObject("Name", typeof(RectTransform), typeof(TextMeshProUGUI));
+            nameGo.transform.SetParent(rt, false);
+            var nameRt = (RectTransform)nameGo.transform;
+            nameRt.anchorMin = new Vector2(0, 0.55f); nameRt.anchorMax = new Vector2(1, 0.7f);
+            nameRt.offsetMin = Vector2.zero; nameRt.offsetMax = Vector2.zero;
+            var nameTmp = nameGo.GetComponent<TextMeshProUGUI>();
+            nameTmp.alignment = TextAlignmentOptions.Center;
+            nameTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f);
+            nameTmp.fontSize = 96;
+            nameTmp.fontStyle = FontStyles.Bold;
+            nameTmp.text = "";
+            nameTmp.raycastTarget = false;
+
+            var subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+            subGo.transform.SetParent(rt, false);
+            var subRt = (RectTransform)subGo.transform;
+            subRt.anchorMin = new Vector2(0, 0.48f); subRt.anchorMax = new Vector2(1, 0.55f);
+            subRt.offsetMin = Vector2.zero; subRt.offsetMax = Vector2.zero;
+            var subTmp = subGo.GetComponent<TextMeshProUGUI>();
+            subTmp.alignment = TextAlignmentOptions.Center;
+            subTmp.color = TextSecondary;
+            subTmp.fontSize = 36;
+            subTmp.text = "";
+            subTmp.raycastTarget = false;
+
+            var citGo = new GameObject("Citation", typeof(RectTransform), typeof(TextMeshProUGUI));
+            citGo.transform.SetParent(rt, false);
+            var citRt = (RectTransform)citGo.transform;
+            citRt.anchorMin = new Vector2(0.1f, 0.36f); citRt.anchorMax = new Vector2(0.9f, 0.46f);
+            citRt.offsetMin = Vector2.zero; citRt.offsetMax = Vector2.zero;
+            var citTmp = citGo.GetComponent<TextMeshProUGUI>();
+            citTmp.alignment = TextAlignmentOptions.Center;
+            citTmp.color = TextPrimary;
+            citTmp.fontSize = 32;
+            citTmp.fontStyle = FontStyles.Italic;
+            citTmp.text = "";
+            citTmp.raycastTarget = false;
+
+            var view = root.GetComponent<CapitaineIntroView>();
+            view.Group = group;
+            view.Vignette = vignette;
+            view.NameLabel = nameTmp;
+            view.SubtitleLabel = subTmp;
+            view.CitationLabel = citTmp;
+        }
+
+        private void BuildCapitaineDeathOverlay(Canvas canvas)
+        {
+            var root = new GameObject("CapitaineDeath",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(CapitaineDeathView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            root.transform.SetAsLastSibling();
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            // Flash image
+            var flashGo = new GameObject("Flash", typeof(RectTransform), typeof(Image));
+            flashGo.transform.SetParent(rt, false);
+            var flashRt = (RectTransform)flashGo.transform;
+            flashRt.anchorMin = Vector2.zero; flashRt.anchorMax = Vector2.one;
+            flashRt.offsetMin = Vector2.zero; flashRt.offsetMax = Vector2.zero;
+            var flashImg = flashGo.GetComponent<Image>();
+            flashImg.color = new Color(1f, 1f, 1f, 0f);
+            flashImg.raycastTarget = false;
+
+            var citGo = new GameObject("Citation", typeof(RectTransform), typeof(TextMeshProUGUI));
+            citGo.transform.SetParent(rt, false);
+            var citRt = (RectTransform)citGo.transform;
+            citRt.anchorMin = new Vector2(0.1f, 0.5f); citRt.anchorMax = new Vector2(0.9f, 0.6f);
+            citRt.offsetMin = Vector2.zero; citRt.offsetMax = Vector2.zero;
+            var citTmp = citGo.GetComponent<TextMeshProUGUI>();
+            citTmp.alignment = TextAlignmentOptions.Center;
+            citTmp.color = TextPrimary;
+            citTmp.fontSize = 38;
+            citTmp.fontStyle = FontStyles.Italic;
+            citTmp.text = "";
+            citTmp.raycastTarget = false;
+
+            var vicGo = new GameObject("Victory", typeof(RectTransform), typeof(TextMeshProUGUI));
+            vicGo.transform.SetParent(rt, false);
+            var vicRt = (RectTransform)vicGo.transform;
+            vicRt.anchorMin = new Vector2(0, 0.38f); vicRt.anchorMax = new Vector2(1, 0.46f);
+            vicRt.offsetMin = Vector2.zero; vicRt.offsetMax = Vector2.zero;
+            var vicTmp = vicGo.GetComponent<TextMeshProUGUI>();
+            vicTmp.alignment = TextAlignmentOptions.Center;
+            vicTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f);
+            vicTmp.fontSize = 84;
+            vicTmp.fontStyle = FontStyles.Bold;
+            vicTmp.text = "VICTOIRE";
+            vicTmp.raycastTarget = false;
+
+            var view = root.GetComponent<CapitaineDeathView>();
+            view.Group = group;
+            view.Flash = flashImg;
+            view.CitationLabel = citTmp;
+            view.VictoryLabel = vicTmp;
         }
 
         private void BuildAdversaire(Transform parent)
@@ -518,12 +804,12 @@ namespace Saga.Core
             rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(0, -160);
-            rt.sizeDelta = new Vector2(900, 240); // taller to accommodate Sprint 3 magnitude size up
+            rt.sizeDelta = new Vector2(700, 160); // Sprint 5 round-2: tighter, font sizes were reduced
 
             var label = go.GetComponent<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.Center;
             label.color = TextPrimary;
-            label.fontSize = 96;
+            label.fontSize = 64; // matches ForceCounterView SizeMid — overwritten on first Refresh anyway
             label.enableAutoSizing = false;
             label.fontStyle = FontStyles.Normal;
             label.text = "0";
@@ -572,11 +858,15 @@ namespace Saga.Core
             go.transform.SetParent(canvas.transform, false);
         }
 
-        private static void BuildTapFxSpawner(Canvas canvas)
+        private void BuildTapFxSpawner(Canvas canvas)
         {
             var go = new GameObject("TapFxSpawner", typeof(TapFxSpawner));
             go.transform.SetParent(canvas.transform, false);
-            go.GetComponent<TapFxSpawner>().Init(canvas);
+            var spawner = go.GetComponent<TapFxSpawner>();
+            spawner.Init(canvas);
+            // Combat "-X" damage numbers spawn from the enemy anchor. Adversaire + Capitaine share
+            // the same world position, so either transform works — we pick Adversaire by convention.
+            spawner.EnemyAnchor = AdversaireTransform;
         }
 
         private static void BuildUpgradePanel(Canvas canvas)
@@ -590,14 +880,16 @@ namespace Saga.Core
                 return;
             }
 
+            // Sprint 5 round-2: switched from absolute (sizeDelta 220px, anchoredPosition 96px)
+            // to normalized anchors so the band stays at 2..17% regardless of aspect ratio.
+            // Previously the panel ate ~29% of vertical in landscape and overlapped the Élan row.
             var panel = new GameObject("UpgradePanel", typeof(RectTransform));
             panel.transform.SetParent(canvas.transform, false);
             var panelRt = (RectTransform)panel.transform;
-            panelRt.anchorMin = new Vector2(0, 0);
-            panelRt.anchorMax = new Vector2(1, 0);
-            panelRt.pivot = new Vector2(0.5f, 0);
-            panelRt.anchoredPosition = new Vector2(0, 96);
-            panelRt.sizeDelta = new Vector2(0, 220);
+            panelRt.anchorMin = new Vector2(0, 0.02f);
+            panelRt.anchorMax = new Vector2(1, 0.17f);
+            panelRt.offsetMin = Vector2.zero;
+            panelRt.offsetMax = Vector2.zero;
 
             var count = upgrades.Count;
             var frac = 1f / count;

@@ -16,6 +16,14 @@ namespace Saga.Data
         /// <summary>~2s celebration: adversaire dies, reward applied, then auto-return to Training.</summary>
         AdversaireVictory = 3,
         /// <summary>Mort temporaire: black overlay + "TU ES MORT" + click-to-resume. -10% Force on resume.</summary>
-        PlayerDeathTemporary = 4
+        PlayerDeathTemporary = 4,
+
+        // Sprint 5 — Capitaines (Boss Mineurs) every 10 adversaires defeated
+        /// <summary>~1.5s cinematic: vignette + name letter-by-letter + citation. Adversaire-style fade-in.</summary>
+        CapitaineIncoming = 5,
+        /// <summary>Active combat with a Capitaine. HP phase thresholds drive bar color, enrage at 25%.</summary>
+        CapitaineActive = 6,
+        /// <summary>~3s cinematic: slow motion + flash + death citation + "VICTOIRE" + loot drop.</summary>
+        CapitaineVictory = 7
     }
 }

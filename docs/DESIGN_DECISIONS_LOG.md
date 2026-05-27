@@ -48,6 +48,44 @@
 
 ---
 
+## 2026-05-27 — Sprint 5: Élan synergy with combo (×2 fill rate when combo active)
+
+**Décision**: Élan gain par tap = `ElanPerTap (5) × (comboTier > 0 ? ElanComboBonusMultiplier (2) : 1)`.
+Pas de combo = +5 Élan/tap (20 taps pour cap). Combo actif = +10 Élan/tap (10 taps pour cap).
+
+**Raison**: Brief Sprint 5 demande "quand combo monte, l'Élan se remplit 2x plus vite" — synergie explicite. Le bonus se déclenche dès tier 1 (3+ taps consécutifs), pas réservé au tier max. Encourage à maintenir le combo activement.
+
+**Conséquence**:
+- `ElanService.RegisterTap(state, comboTier)` testable directement
+- `ElanService.HandleTapResolved` tracker `_currentComboTier` via subscription à `OnComboChanged`
+- Refactor Sprint 6 si on veut différencier par tier (e.g. tier 3 = ×3 fill rate)
+
+---
+
+## 2026-05-27 — Sprint 5: CapitaineSpawner queue + CombatProcessor consume pattern
+
+**Décision**: Le `CapitaineSpawner` listens to `OnAdversaireDefeated`, vérifie `totalAdversairesDefeated % 10 == 0`, et stocke une `_pending CapitaineData`. Le `CombatProcessor` consulte `ConsumePending()` lors de la transition AdversaireVictory → Training et, si non-null, lance `StartCapitaineIncoming` au lieu de revenir à Training.
+
+**Raison**: Évite un coupling direct CapitaineSpawner → CombatProcessor (les responsibilities restent claires). Permet aussi de différer le spawn de quelques frames (entre la défaite de l'adversaire à la fin de sa Victory celebration), ce qui matche l'UX souhaitée (le joueur voit la victoire de l'adversaire puis le Capitaine arrive).
+
+**Conséquence**:
+- `CombatProcessor.AttachCapitaineSpawner(spawner)` injection late par `GameManager` (évite circular dep)
+- Pattern reproductible pour Maîtres Sprint 6 (`MaitreSpawner` listens to capitaines defeated count)
+
+---
+
+## 2026-05-27 — Sprint 5: Capitaine HP partagé avec adversaire (currentAdversaireHp)
+
+**Décision**: Pour Sprint 5, l'HP de la `Capitaine` engagé est stocké dans `GameState.currentAdversaireHp` (le même field utilisé pour les adversaires). `currentCapitaineId` distingue le type. `currentAdversaireId` est mis à null quand un Capitaine est actif.
+
+**Raison**: Évite une duplication de schema (currentAdversaireHp + currentCapitaineHp + un demain pour les Maîtres). Le field "HP de l'ennemi actif" est conceptuellement unique. Le naming `currentAdversaireHp` est legacy Sprint 4 — pourra être renommé `currentEnemyHp` Sprint 7+ lors d'un nettoyage de schema (avec migration v6→v7).
+
+**Conséquence**:
+- `DamageDealer` / `CombatProcessor` font un phase check pour savoir si l'ennemi actif est Adversaire ou Capitaine, puis lookup la maxHp via le bon Content getter
+- `VagueResolver` même pattern
+
+---
+
 ## 2026-05-27 — Sprint 4: Combat phase state machine (CombatProcessor POCO)
 
 **Décision**: Le cycle de combat est modélisé comme une state machine POCO `CombatProcessor`, ticked par `GameTicker` à 10Hz. Les phases (`CombatPhase` enum) sont :

@@ -1,6 +1,7 @@
 using BreakInfinity;
 using DG.Tweening;
 using Saga.Core;
+using Saga.Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,30 +9,40 @@ using UnityEngine.UI;
 namespace Saga.UI
 {
     /// <summary>
-    /// Listens to <see cref="GameEvents.OnTapResolved"/> and spawns floating "+X" numbers
-    /// + a lightweight dust burst at the tap screen position.
+    /// Listens to <see cref="GameEvents.OnTapResolved"/> and spawns the floating number + dust.
     ///
-    /// Implementation note: dust uses 4 UI Image dots that radiate + fade via DOTween,
-    /// not ParticleSystem — works inside ScreenSpaceOverlay Canvas without camera setup,
-    /// and keeps the cost trivial for mobile (4 transforms per tap, GC-light via Destroy).
+    /// Phase-aware (Sprint 5):
+    /// - Training : "+X" ambre at tap screen pos (Force gain feedback)
+    /// - AdversaireActive / CapitaineActive : "-X" rouge at enemy screen pos (damage feedback)
+    ///
+    /// Dust burst spawns at the tap point regardless (tactile feedback always welcome).
     /// </summary>
     [DisallowMultipleComponent]
     public class TapFxSpawner : MonoBehaviour
     {
         private Canvas _canvas;
         private RectTransform _canvasRect;
+        private Transform _enemyAnchor;
 
         // Tunables
         private const float DustDuration = 0.55f;
         private const float DustRadius = 70f;
         private const int DustCount = 5;
 
-        private static readonly Color DustColor = new Color(0.98f, 0.78f, 0.46f, 0.8f); // accent-primary
+        private static readonly Color DustColor = new Color(0.98f, 0.78f, 0.46f, 0.8f);
+        private static readonly Color DamageColor = new Color(0.93f, 0.30f, 0.27f, 1f); // rouge sang
 
         public void Init(Canvas canvas)
         {
             _canvas = canvas;
             _canvasRect = canvas.transform as RectTransform;
+        }
+
+        /// <summary>Set by MainSceneBootstrap so combat damage numbers can spawn at the enemy.</summary>
+        public Transform EnemyAnchor
+        {
+            get => _enemyAnchor;
+            set => _enemyAnchor = value;
         }
 
         private void OnEnable()
@@ -49,17 +60,42 @@ namespace Saga.UI
         private int _currentTier;
         private void HandleComboChanged(int tier, float baseMultiplier) => _currentTier = tier;
 
-        private void HandleTapResolved(BigDouble gain, float multiplier, Vector2 screenPos)
+        private void HandleTapResolved(BigDouble value, float multiplier, Vector2 screenPos)
         {
             if (_canvas == null || _canvasRect == null) return;
-            var local = ScreenToCanvasLocal(screenPos);
-            SpawnFloatingNumber(local, gain, _currentTier);
-            SpawnDust(local);
+
+            var phase = GameManager.Instance?.State?.currentPhase ?? CombatPhase.Training;
+            var isCombat = phase == CombatPhase.AdversaireActive || phase == CombatPhase.CapitaineActive;
+
+            // Floating number — Training "+X" at tap pos, Combat "-X" at enemy pos.
+            if (isCombat && _enemyAnchor != null)
+            {
+                var enemyScreen = WorldToScreenWithCamera(_enemyAnchor.position);
+                var local = ScreenToCanvasLocal(enemyScreen);
+                // Slight jitter so consecutive damage numbers don't stack at the same pixel.
+                local += new Vector2(Random.Range(-40f, 40f), Random.Range(20f, 60f));
+                SpawnFloatingDamage(local, value);
+            }
+            else
+            {
+                var local = ScreenToCanvasLocal(screenPos);
+                SpawnFloatingNumber(local, value, _currentTier);
+            }
+
+            // Dust burst at tap point — same UX in both phases (tactile feedback).
+            var dustLocal = ScreenToCanvasLocal(screenPos);
+            SpawnDust(dustLocal);
+        }
+
+        private static Vector2 WorldToScreenWithCamera(Vector3 worldPos)
+        {
+            var cam = Camera.main;
+            if (cam == null) return Vector2.zero;
+            return cam.WorldToScreenPoint(worldPos);
         }
 
         private Vector2 ScreenToCanvasLocal(Vector2 screenPos)
         {
-            // Camera is null for ScreenSpaceOverlay canvas (per Unity docs).
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPos, null, out var local);
             return local;
         }
@@ -85,6 +121,35 @@ namespace Saga.UI
             view.Group = go.GetComponent<CanvasGroup>();
             view.Init(gain, tier);
             view.Play();
+        }
+
+        private void SpawnFloatingDamage(Vector2 anchored, BigDouble damage)
+        {
+            var go = new GameObject("FloatingDamage",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(FloatingNumberView));
+            go.transform.SetParent(_canvasRect, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = anchored;
+            rt.sizeDelta = new Vector2(300, 80);
+
+            var label = go.GetComponent<TextMeshProUGUI>();
+            label.alignment = TextAlignmentOptions.Center;
+            label.fontSize = 64;
+            label.fontStyle = FontStyles.Bold;
+            label.color = DamageColor;
+            label.text = "-" + Saga.Math.NumberFormatter.Format(damage);
+
+            // Tween directly on this damage label — bypass FloatingNumberView so we keep the red color.
+            var group = go.GetComponent<CanvasGroup>();
+            group.alpha = 1f;
+            var endLocal = new Vector3(anchored.x + Random.Range(-30f, 30f), anchored.y + 140f, rt.localPosition.z);
+
+            UnityEngine.Object.Destroy(go, 0.9f); // belt-and-braces
+            var seq = DOTween.Sequence();
+            seq.Append(rt.DOLocalMove(endLocal, 0.8f).SetEase(Ease.OutCubic).SetTarget(rt));
+            seq.Join(DOTween.To(() => group.alpha, a => { if (group != null) group.alpha = a; }, 0f, 0.8f).SetEase(Ease.InQuad).SetTarget(rt));
         }
 
         private void SpawnDust(Vector2 anchored)
@@ -117,14 +182,13 @@ namespace Saga.UI
             cg.interactable = false;
             cg.blocksRaycasts = false;
 
-            // DOLocalMove + DOTween.To are core DOTween (DOTween.dll), independent of UI module asmdef.
             var endLocal = new Vector3(to.x, to.y, rt.localPosition.z);
+            UnityEngine.Object.Destroy(go, DustDuration + 0.05f);
 
             var seq = DOTween.Sequence();
-            seq.Append(rt.DOLocalMove(endLocal, DustDuration).SetEase(Ease.OutQuad));
-            seq.Join(DOTween.To(() => cg.alpha, a => cg.alpha = a, 0f, DustDuration).SetEase(Ease.InQuad));
-            seq.Join(rt.DOScale(0.4f, DustDuration).SetEase(Ease.InQuad));
-            seq.OnComplete(() => Destroy(go));
+            seq.Append(rt.DOLocalMove(endLocal, DustDuration).SetEase(Ease.OutQuad).SetTarget(rt));
+            seq.Join(DOTween.To(() => cg.alpha, a => { if (cg != null) cg.alpha = a; }, 0f, DustDuration).SetEase(Ease.InQuad).SetTarget(rt));
+            seq.Join(rt.DOScale(0.4f, DustDuration).SetEase(Ease.InQuad).SetTarget(rt));
         }
     }
 }
