@@ -8,17 +8,16 @@ namespace Saga.UI
 {
     /// <summary>
     /// Top-right combo display. Visible only when combo tier > 0.
-    /// Shows "xN.N" — e.g. "x1.2", "x1.5", "x2.0".
-    /// Listens to <see cref="GameEvents.OnComboChanged"/>.
+    /// Shows "xN.N" — the FINAL multiplier including Méditation bonus, not just the base tier.
     /// </summary>
     [DisallowMultipleComponent]
     public class ComboMeterView : MonoBehaviour
     {
-        // Mirror of ComboSystem tier table for display. Keeping it local avoids leaking the table.
-        private static readonly float[] _tierMultipliers = { 1.0f, 1.2f, 1.5f, 2.0f };
-
         [SerializeField] private TextMeshProUGUI _label;
         [SerializeField] private CanvasGroup _group;
+
+        private int _lastTier;
+        private float _lastBaseMult = 1f;
 
         public TextMeshProUGUI Label
         {
@@ -35,26 +34,44 @@ namespace Saga.UI
         private void OnEnable()
         {
             GameEvents.OnComboChanged += HandleComboChanged;
-            HandleComboChanged(0);
+            GameEvents.OnUpgradePurchased += HandleUpgradePurchased;
+            Refresh();
         }
 
         private void OnDisable()
         {
             GameEvents.OnComboChanged -= HandleComboChanged;
+            GameEvents.OnUpgradePurchased -= HandleUpgradePurchased;
         }
 
-        private void HandleComboChanged(int tier)
+        private void HandleComboChanged(int tier, float baseMultiplier)
+        {
+            _lastTier = tier;
+            _lastBaseMult = baseMultiplier;
+            Refresh();
+        }
+
+        private void HandleUpgradePurchased(string upgradeId, int newLevel)
+        {
+            // Méditation purchase tweaks bonus → refresh display even without tier change.
+            Refresh();
+        }
+
+        private void Refresh()
         {
             if (_label == null) return;
-            var multiplier = tier >= 0 && tier < _tierMultipliers.Length
-                ? _tierMultipliers[tier]
-                : 1f;
-            _label.text = "x" + multiplier.ToString("0.0", CultureInfo.InvariantCulture);
 
-            // Fade in/out via CanvasGroup if available.
+            var gm = GameManager.Instance;
+            var bonus = gm != null
+                ? StatsCalculator.GetComboMultiplierBonus(gm.State, gm.Content)
+                : 1f;
+            var finalMult = _lastBaseMult * bonus;
+
+            _label.text = "x" + finalMult.ToString("0.0", CultureInfo.InvariantCulture);
+
             if (_group != null)
             {
-                _group.alpha = tier <= 0 ? 0f : Mathf.Lerp(0.6f, 1f, tier / 3f);
+                _group.alpha = _lastTier <= 0 ? 0f : Mathf.Lerp(0.6f, 1f, _lastTier / 3f);
             }
         }
     }

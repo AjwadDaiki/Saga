@@ -47,7 +47,7 @@ namespace Saga.UI
         }
 
         private int _currentTier;
-        private void HandleComboChanged(int tier) => _currentTier = tier;
+        private void HandleComboChanged(int tier, float baseMultiplier) => _currentTier = tier;
 
         private void HandleTapResolved(BigDouble gain, float multiplier, Vector2 screenPos)
         {

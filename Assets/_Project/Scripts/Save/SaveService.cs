@@ -72,7 +72,7 @@ namespace Saga.Save
         }
 
         /// <summary>
-        /// Load the save file, with backup fallback on corruption.
+        /// Load the save file, with backup fallback on corruption, and apply schema migrations.
         /// Returns a fresh <see cref="GameState"/> if nothing on disk.
         /// </summary>
         public GameState Load()
@@ -86,13 +86,42 @@ namespace Saga.Save
             {
                 var json = File.ReadAllText(_savePath);
                 var loaded = JsonConvert.DeserializeObject<GameState>(json, _settings);
-                return loaded ?? new GameState();
+                return Migrate(loaded ?? new GameState());
             }
             catch (Exception e)
             {
                 Debug.LogError($"[SaveService] Primary save corrupted ({e.Message}), trying backups...");
-                return TryLoadBackup() ?? new GameState();
+                var fromBackup = TryLoadBackup();
+                return fromBackup != null ? Migrate(fromBackup) : new GameState();
             }
+        }
+
+        /// <summary>
+        /// Apply incremental schema migrations. New fields default to safe values;
+        /// renamed/removed fields are mapped explicitly. Migrations are idempotent.
+        /// </summary>
+        private static GameState Migrate(GameState state)
+        {
+            const int currentVersion = 2;
+
+            if (state.saveVersion < 2)
+            {
+                // v1 -> v2: introduced upgradeLevels (Sprint 2).
+                if (state.upgradeLevels == null)
+                {
+                    state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
+                }
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v2 (added upgradeLevels).");
+            }
+
+            // Defensive: always ensure non-null collections post-deserialization.
+            if (state.upgradeLevels == null)
+            {
+                state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
+            }
+
+            state.saveVersion = currentVersion;
+            return state;
         }
 
         private GameState TryLoadBackup()

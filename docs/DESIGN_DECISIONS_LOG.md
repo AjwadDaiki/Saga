@@ -48,6 +48,60 @@
 
 ---
 
+## 2026-05-27 — Sprint 2: Méditation = multiplicative combo bonus (× base tier)
+
+**Décision**: La formule finale du combo multiplier au tap est :
+`final_mult = base_tier_multiplier × (1 + Σ meditationLevel × 0.05)`
+
+Exemples :
+- Tier 3 (x2.0), Méditation level 0 → final = 2.0
+- Tier 3 (x2.0), Méditation level 4 → final = 2.0 × 1.20 = 2.40
+- Tier 1 (x1.2), Méditation level 4 → final = 1.2 × 1.20 = 1.44
+
+**Raison**: 08_ROADMAP Sprint 2 dit "+5% combo multiplier per level" sans préciser additif au cap ou multiplicatif global. Multiplicatif "lifts" toute la courbe combo, ce qui :
+- Fait sentir Méditation toujours (pas juste au cap)
+- Évite que Méditation paraisse useless en early game quand on n'atteint pas tier 3
+- Compose proprement avec Frappe (additif) — Méditation = "skill multiplier", Frappe = "raw force"
+
+Alternatives écartées :
+- Additif au cap : "+0.05 per level au tier max" → invisible avant tier 3, feel weak
+- Multiplicatif sur final tier seulement : trop conditionnel
+- Linéaire interpolation : trop subtil pour communiquer le power-up
+
+**Conséquence**: 
+- `StatsCalculator.GetComboMultiplierBonus()` returns float multiplier (1.0 baseline)
+- TapHandler computes `tierMult × bonus` at each tap
+- ComboMeterView displays the final value (not base tier) so player sees the buff
+
+---
+
+## 2026-05-27 — Sprint 2: ContentDatabase test seam (DI optional injection)
+
+**Décision**: `ContentDatabase` accepts an optional `IEnumerable<UpgradeData>` in its constructor. Null → loads from Resources/Upgrades. Non-null → uses injected. Production GameManager passes nothing → Resources. EditMode tests pass an inline array of `UpgradeData.CreateForTests` instances → no asset roundtrip needed.
+
+**Raison**: Unit-testing UpgradeService and StatsCalculator otherwise requires creating real SO assets in EditMode test setup, then loading via Resources, then cleanup. Heavy and slow. Inline DI is cleaner and matches the 07_ARCHITECTURE.md service mindset.
+
+**Conséquence**: 
+- Production path unchanged (GameManager calls `new ContentDatabase()` → loads from Resources)
+- Tests use `new ContentDatabase(new[] { stub1, stub2 })` directly
+- `UpgradeData.CreateForTests(...)` static factory under `#if UNITY_INCLUDE_TESTS` provides in-memory SO instances. Stripped from production builds.
+
+---
+
+## 2026-05-27 — Sprint 2: SO assets generated via Editor utility (menu item)
+
+**Décision**: Les 3 upgrades de Sprint 2 (Frappe, Disciple, Méditation) sont générés par un Editor utility `Saga.EditorTools.UpgradeAssetsCreator` accessible via menu `Saga > Sprint 2 > Generate Upgrade Assets`. Ajwad clique une fois → 3 `.asset` SOs créés/updates dans `Assets/_Project/Resources/Upgrades/`.
+
+**Raison**: Authorer manuellement les YAML `.asset` requiert le GUID du script `UpgradeData.cs` (généré par Unity au .meta), chicken-and-egg en filesystem-mode. L'Editor utility utilise l'API Unity native (`AssetDatabase.CreateAsset`, `SerializedObject`) qui résout les GUIDs automatiquement. Idempotent (re-run = update in-place).
+
+**Conséquence**:
+- Sprint 2 ships avec code prêt, Ajwad fait 1 clic menu pour activer les upgrades
+- Pattern reproductible Sprint 3+ pour les voies, esprits, régions
+- `Assets/_Project/Editor/Saga.Editor.asmdef` créé pour héberger ce genre d'outils
+- Si MCP `manage_asset` stabilise plus tard, l'utility devient redondante (mais le menu reste un dev tool utile)
+
+---
+
 ## 2026-05-27 — Sprint 1 strategy pivot: use only DOTween core shortcuts (DOLocalMove + DOTween.To), drop UI-module extension dependency
 
 **Décision** (coordinator pivot après 2 itérations infructueuses sur l'asmdef DOTween.Modules) :

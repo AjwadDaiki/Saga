@@ -44,13 +44,14 @@ namespace Saga.Gameplay
             _secondsSinceLastTap = 0f;
 
             var tier = CurrentTier;
+            var mult = Multiplier;
             if (tier != _lastEmittedTier)
             {
                 _lastEmittedTier = tier;
-                GameEvents.RaiseComboChanged(tier);
+                GameEvents.RaiseComboChanged(tier, mult);
             }
 
-            return Multiplier;
+            return mult;
         }
 
         /// <summary>Drive timeout. Call from GameTicker each tick.</summary>
@@ -72,7 +73,7 @@ namespace Saga.Gameplay
             if (_lastEmittedTier != 0)
             {
                 _lastEmittedTier = 0;
-                GameEvents.RaiseComboChanged(0);
+                GameEvents.RaiseComboChanged(0, _tiers[0].Multiplier);
             }
         }
 

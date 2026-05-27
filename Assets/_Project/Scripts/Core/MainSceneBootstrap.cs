@@ -50,6 +50,45 @@ namespace Saga.Core
             BuildComboMeter(MainCanvas);
             BuildTapHandler(MainCanvas);
             BuildTapFxSpawner(MainCanvas);
+            BuildUpgradePanel(MainCanvas);
+        }
+
+        private static void BuildUpgradePanel(Canvas canvas)
+        {
+            var gm = GameManager.Instance;
+            if (gm?.Content == null) return;
+            var upgrades = gm.Content.AllUpgrades;
+            if (upgrades == null || upgrades.Count == 0)
+            {
+                Debug.LogWarning("[MainSceneBootstrap] No upgrades in ContentDatabase — run menu \"Saga > Sprint 2 > Generate Upgrade Assets\" then reload Play.");
+                return;
+            }
+
+            // Panel root: stretched horizontally, anchored to bottom with 96px dock clearance.
+            var panel = new GameObject("UpgradePanel", typeof(RectTransform));
+            panel.transform.SetParent(canvas.transform, false);
+            var panelRt = (RectTransform)panel.transform;
+            panelRt.anchorMin = new Vector2(0, 0);
+            panelRt.anchorMax = new Vector2(1, 0);
+            panelRt.pivot = new Vector2(0.5f, 0);
+            panelRt.anchoredPosition = new Vector2(0, 96);
+            panelRt.sizeDelta = new Vector2(0, 220);
+
+            var count = upgrades.Count;
+            var frac = 1f / count;
+            for (var i = 0; i < count; i++)
+            {
+                var card = new GameObject($"Card_{upgrades[i].UpgradeId}", typeof(RectTransform), typeof(UpgradeCardView));
+                card.transform.SetParent(panelRt, false);
+                var rt = (RectTransform)card.transform;
+                rt.anchorMin = new Vector2(i * frac, 0);
+                rt.anchorMax = new Vector2((i + 1) * frac, 1);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.offsetMin = new Vector2(12, 8);
+                rt.offsetMax = new Vector2(-12, -8);
+
+                card.GetComponent<UpgradeCardView>().Init(upgrades[i]);
+            }
         }
 
         private static void BuildTapFxSpawner(Canvas canvas)

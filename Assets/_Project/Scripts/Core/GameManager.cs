@@ -1,4 +1,5 @@
 using Saga.Data;
+using Saga.Gameplay;
 using Saga.Save;
 using UnityEngine;
 
@@ -9,7 +10,7 @@ namespace Saga.Core
     /// loads (no need to wire it into Boot.unity manually).
     ///
     /// Holds the single mutable <see cref="GameState"/> and exposes core services.
-    /// Future services (Audio, Content, Progression) get plugged in as their sprints land.
+    /// Future services (Audio, Progression) get plugged in as their sprints land.
     /// </summary>
     [DisallowMultipleComponent]
     public class GameManager : MonoBehaviour
@@ -18,6 +19,9 @@ namespace Saga.Core
 
         public GameState State { get; private set; }
         public SaveService Save { get; private set; }
+        public ContentDatabase Content { get; private set; }
+        public UpgradeService Upgrades { get; private set; }
+        public DisciplesProcessor Disciples { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -41,11 +45,13 @@ namespace Saga.Core
 
             Save = new SaveService();
             State = Save.Load();
-            // NOTE: do not overwrite State.lastSession on boot — it represents the previous save
-            // timestamp and is used by offline progression to compute elapsed time. SaveService
-            // will refresh it on every ForceSave.
+            // NOTE: SaveService refreshes State.lastSession on every ForceSave; do not stamp here.
 
-            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | savePath={Save.SavePath}");
+            Content = new ContentDatabase();
+            Upgrades = new UpgradeService(Content);
+            Disciples = new DisciplesProcessor(Content);
+
+            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | savePath={Save.SavePath}");
             GameEvents.RaiseForceChanged();
         }
 

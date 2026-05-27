@@ -30,11 +30,11 @@ namespace Saga.Core
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
-            // Sprint 1 only does throttled save. Sprint 2+ adds:
-            //   DisciplesProcessor.Tick(state, dt);
+            // Sprint 2: passive disciple gain. Sprint 3+ adds:
             //   EspritsProcessor.Tick(state, dt);
             //   voie.passive?.OnTick(state, dt);
-            //   StatsCalculator.Recompute(state);
+            //   StatsCalculator.Recompute(state); (cache invalidation)
+            gm.Disciples?.Tick(gm.State, dt);
             gm.Save?.TickThrottledSave(gm.State, dt);
         }
     }

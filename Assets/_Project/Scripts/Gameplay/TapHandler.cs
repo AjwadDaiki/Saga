@@ -1,4 +1,3 @@
-using BreakInfinity;
 using Saga.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,18 +6,16 @@ using UnityEngine.InputSystem;
 namespace Saga.Gameplay
 {
     /// <summary>
-    /// Captures pointer presses (mouse + touch) anywhere on screen, applies combo multiplier,
-    /// commits gains to <see cref="GameManager.State"/>, raises events for UI/FX.
+    /// Captures pointer presses (mouse + touch) anywhere on screen, applies combo multiplier
+    /// (base tier × Méditation bonus), commits gains to <see cref="GameManager.State"/>,
+    /// raises events for UI/FX.
     ///
-    /// Sprint 1: full-screen tap zone (no upgrade buttons yet). When UI lands in Sprint 2,
-    /// EventSystem filter blocks taps on UI elements automatically.
+    /// Sprint 2: base gain pulled from <see cref="StatsCalculator.GetForcePerTap"/> (Frappe upgrades),
+    /// final combo multiplier = base_tier × <see cref="StatsCalculator.GetComboMultiplierBonus"/>.
     /// </summary>
     [DisallowMultipleComponent]
     public class TapHandler : MonoBehaviour
     {
-        /// <summary>Base gain per tap before combo multiplier. Replaced by upgrades formula in Sprint 2.</summary>
-        public BigDouble BaseGainPerTap { get; set; } = new BigDouble(1);
-
         private InputAction _tapAction;
         private ComboSystem _combo;
 
@@ -50,14 +47,19 @@ namespace Saga.Gameplay
 
         private void OnTapPerformed(InputAction.CallbackContext ctx)
         {
-            // Filter UI clicks once UI buttons exist (Sprint 2+).
+            // Filter UI clicks (upgrade buttons land in Sprint 2 — keep this in place).
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
-            var multiplier = _combo.RegisterTap();
-            var gain = BaseGainPerTap * multiplier;
+            // Base tier × Méditation bonus = effective combo multiplier this tap.
+            var tierMult = _combo.RegisterTap();
+            var bonus = StatsCalculator.GetComboMultiplierBonus(gm.State, gm.Content);
+            var finalMult = tierMult * bonus;
+
+            var baseGain = StatsCalculator.GetForcePerTap(gm.State, gm.Content);
+            var gain = baseGain * finalMult;
 
             gm.State.force += gain;
             gm.State.totalTaps++;
@@ -65,7 +67,7 @@ namespace Saga.Gameplay
 
             GameEvents.RaiseForceChanged();
             var screenPos = Pointer.current != null ? Pointer.current.position.ReadValue() : (Vector2)Input.mousePosition;
-            GameEvents.RaiseTapResolved(gain, multiplier, screenPos);
+            GameEvents.RaiseTapResolved(gain, finalMult, screenPos);
         }
     }
 }
