@@ -28,11 +28,14 @@ namespace Saga.UI
             _seq?.Kill();
             _cg.alpha = 0f;
             transform.localScale = Vector3.one * 0.9f;
+            // Core DOTween.To on CanvasGroup.alpha (the CanvasGroup.DOFade extension lives in the
+            // UI module which isn't referenced by our asmdef — same pattern as FloatingNumberView).
+            var cg = _cg;
             _seq = DOTween.Sequence()
-                .Append(_cg.DOFade(1f, 0.18f))
+                .Append(DOTween.To(() => cg.alpha, a => cg.alpha = a, 1f, 0.18f))
                 .Join(transform.DOScale(1f, 0.22f).SetEase(Ease.OutBack))
                 .AppendInterval(1.1f)
-                .Append(_cg.DOFade(0f, 0.3f))
+                .Append(DOTween.To(() => cg.alpha, a => cg.alpha = a, 0f, 0.3f))
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
     }

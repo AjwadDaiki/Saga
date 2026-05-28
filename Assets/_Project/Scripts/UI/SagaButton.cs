@@ -219,7 +219,7 @@ namespace Saga.UI
             if (Button != null && !Button.interactable) return;
             _pressed = true;
             _pulse?.Kill();
-            if (_face != null) _face.DOAnchorPosY(-_floorPx, 0.06f).SetEase(Ease.OutQuad).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            TweenFaceY(-_floorPx, 0.06f, Ease.OutQuad);
             if (_floor != null) _floor.SetActive(false);
         }
 
@@ -227,9 +227,21 @@ namespace Saga.UI
         {
             if (!_pressed) return;
             _pressed = false;
-            if (_face != null) _face.DOAnchorPosY(0f, 0.10f).SetEase(Ease.OutBack).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            TweenFaceY(0f, 0.10f, Ease.OutBack);
             if (_floor != null) _floor.SetActive(true);
             if (_ready) SetReady(true);
+        }
+
+        // Core DOTween.To on anchoredPosition — the RectTransform.DOAnchorPosY extension lives in the
+        // UI module which our asmdef doesn't reference (same constraint as FloatingNumberView).
+        private void TweenFaceY(float targetY, float duration, Ease ease)
+        {
+            if (_face == null) return;
+            var face = _face;
+            DOTween.To(() => face.anchoredPosition, p => face.anchoredPosition = p,
+                    new Vector2(face.anchoredPosition.x, targetY), duration)
+                .SetEase(ease)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
     }
 }
