@@ -28,8 +28,10 @@ namespace Saga.Core
 
         // -- World layout (orthographic camera, sizes in world units) ----
         private const float CameraOrthoSize = 3.0f; // tighter zoom per Sprint 3 fix #4
-        private static readonly Vector3 CharacterPosition  = new Vector3(-1.8f, -0.6f, 0f);
-        private static readonly Vector3 MannequinPosition  = new Vector3( 3.0f, -0.6f, 0f); // pushed right per Sprint 3 fix #2
+        // Sprint 7.5 portrait pivot: world X positions tightened so character + mannequin both fit
+        // inside a 9:16 ortho frustum (orthoSize 3 → ±1.69 horizontal). Was (-1.8, 3.0) for landscape.
+        private static readonly Vector3 CharacterPosition  = new Vector3(-0.9f, -0.6f, 0f);
+        private static readonly Vector3 MannequinPosition  = new Vector3( 1.1f, -0.6f, 0f);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoBootstrapIfMainScene()
@@ -160,20 +162,21 @@ namespace Saga.Core
 
         private RectTransform BuildElanRow(Canvas canvas)
         {
-            // Sprint 5 round-3 / Sprint 6: layout bands locked in normalized coords.
-            //   Bottom 0-2%       : safe area / device home indicator
-            //   2-17%             : Upgrade cards (3 cards)
-            //   17-19%            : spacer
-            //   19-25%            : Élan row (bar + Vague button + Affronter Maître button)
-            //   25-65%            : gameplay zone (character + mannequin + adversaire/capitaine/maitre)
-            //   65-100%           : HUD top (Force counter, Combo, Prochain Adversaire, CombatHud)
+            // Sprint 7.5 portrait pivot: bands now mirror the 9:16 phone layout.
+            //   0-8%        : bottom safe area (iOS home indicator)
+            //   8-34%       : Upgrade cards (3 cards stacked VERTICALLY)
+            //   34-42%      : Élan row (bar + Vague button + Affronter Maître button)
+            //   42-74%      : gameplay zone (character + mannequin + adversaire/capitaine/maitre)
+            //   74-78%      : Prochain Adversaire bar
+            //   78-92%      : Top HUD (Force counter, Combo, Souffle, Inventaire, CombatHud)
+            //   92-100%     : top safe area (iOS notch)
             //
-            // Sprint 6: row split into 3 — Élan bar (0..0.58), Vague (0.60..0.78), Affronter (0.80..1.0).
+            // Row split inside the band: Élan bar (0..0.58), Vague (0.60..0.78), Affronter (0.80..1.0).
             var row = new GameObject("ElanRow", typeof(RectTransform));
             row.transform.SetParent(canvas.transform, false);
             var rowRt = (RectTransform)row.transform;
-            rowRt.anchorMin = new Vector2(0.05f, 0.19f);
-            rowRt.anchorMax = new Vector2(0.95f, 0.25f);
+            rowRt.anchorMin = new Vector2(0.05f, 0.34f);
+            rowRt.anchorMax = new Vector2(0.95f, 0.42f);
             rowRt.offsetMin = Vector2.zero;
             rowRt.offsetMax = Vector2.zero;
 
@@ -1164,6 +1167,10 @@ namespace Saga.Core
             // Sprint 7: layered character = 3 stacked SpriteRenderers (Body / Armor / Weapon),
             // driven by a single LayeredCharacterRenderer on the root. SaveService.Migrate guarantees
             // equippedBodyId defaults to body_chibi_neutral so the body slot is always visible.
+            //
+            // Sprint 7.5 fix: if the body SpriteLayerSet hasn't been generated yet (Editor utility
+            // not run, or rvros sprites missing), fall back to a runtime placeholder so the player
+            // is never invisible. Logs a warning telling the user how to fix it permanently.
             var go = new GameObject("Character", typeof(LayeredCharacterRenderer), typeof(CharacterView));
             go.transform.SetParent(parent, false);
             go.transform.position = CharacterPosition;
@@ -1188,21 +1195,72 @@ namespace Saga.Core
             renderer.ArmorRenderer = armorSr;
             renderer.WeaponRenderer = weaponSr;
 
-            // Initial layer assignment from GameState (post-Migrate, these IDs always resolve).
             var gm = GameManager.Instance;
             var content = gm?.Content;
             var state = gm?.State;
+
+            // Resolve body layer with safety fallback.
+            SpriteLayerSet bodyLayer = null;
             if (content != null && state != null)
+                bodyLayer = content.GetSpriteLayerSet(state.equippedBodyId);
+            if (bodyLayer == null || bodyLayer.SpriteIdle == null || bodyLayer.SpriteIdle.Length == 0)
             {
-                renderer.SetLayer(EquipmentSlot.Body, content.GetSpriteLayerSet(state.equippedBodyId));
-                renderer.SetLayer(EquipmentSlot.Armor, content.GetSpriteLayerSet(state.equippedArmorId));
-                renderer.SetLayer(EquipmentSlot.Weapon, content.GetSpriteLayerSet(state.equippedWeaponId));
+                Debug.LogWarning("[MainSceneBootstrap] body_chibi_neutral SpriteLayerSet missing or has no idle frames — using runtime placeholder. Run 'Saga > Sprint 7 > Generate Sprite Layer Sets' to populate proper sprites.");
+                bodyLayer = CreatePlaceholderBodyLayerSet();
             }
+
+            renderer.SetLayer(EquipmentSlot.Body, bodyLayer);
+            renderer.SetLayer(EquipmentSlot.Armor, content?.GetSpriteLayerSet(state?.equippedArmorId));
+            renderer.SetLayer(EquipmentSlot.Weapon, content?.GetSpriteLayerSet(state?.equippedWeaponId));
 
             var view = go.GetComponent<CharacterView>();
             view.Renderer = renderer;
 
             CharacterTransform = go.transform;
+        }
+
+        /// <summary>
+        /// Runtime fallback used when the body SpriteLayerSet asset is missing. Produces a
+        /// 64×96 ambre rectangle so the character is at least visible at the canonical
+        /// CharacterPosition. Replaced as soon as the player equips a real body layer set.
+        /// </summary>
+        private static SpriteLayerSet CreatePlaceholderBodyLayerSet()
+        {
+            var sprite = CreatePlaceholderBodySprite();
+            return SpriteLayerSet.CreateRuntime(
+                id: EquipmentConstants.DefaultBodyId,
+                slot: EquipmentSlot.Body,
+                idle: new[] { sprite },
+                displayName: "Corps (placeholder)");
+        }
+
+        private static Sprite CreatePlaceholderBodySprite()
+        {
+            // 64×96 ambre block with a subtle darker outline so the silhouette reads as
+            // "humanoid placeholder" without faking detail.
+            const int w = 64;
+            const int h = 96;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var amber = new Color32(250, 199, 117, 255);     // 0.98, 0.78, 0.46
+            var outline = new Color32(160, 110, 60, 255);
+            var pixels = new Color32[w * h];
+            for (var y = 0; y < h; y++)
+            {
+                for (var x = 0; x < w; x++)
+                {
+                    var isEdge = x == 0 || x == w - 1 || y == 0 || y == h - 1;
+                    pixels[y * w + x] = isEdge ? outline : amber;
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), pixelsPerUnit: 32);
+            sprite.name = "BodyPlaceholderProcedural";
+            return sprite;
         }
 
         private void BuildMannequin(Transform parent)
@@ -1389,13 +1447,13 @@ namespace Saga.Core
             }
 
             // Sprint 5 round-2: switched from absolute (sizeDelta 220px, anchoredPosition 96px)
-            // to normalized anchors so the band stays at 2..17% regardless of aspect ratio.
-            // Previously the panel ate ~29% of vertical in landscape and overlapped the Élan row.
+            // Sprint 7.5 portrait pivot : cards stack VERTICALLY (was a 3-column row in landscape).
+            // Band 8-34% from bottom of screen = ~500px on a 1920 canvas → ~165px per card.
             var panel = new GameObject("UpgradePanel", typeof(RectTransform));
             panel.transform.SetParent(canvas.transform, false);
             var panelRt = (RectTransform)panel.transform;
-            panelRt.anchorMin = new Vector2(0, 0.02f);
-            panelRt.anchorMax = new Vector2(1, 0.17f);
+            panelRt.anchorMin = new Vector2(0.04f, 0.08f);
+            panelRt.anchorMax = new Vector2(0.96f, 0.34f);
             panelRt.offsetMin = Vector2.zero;
             panelRt.offsetMax = Vector2.zero;
 
@@ -1406,11 +1464,13 @@ namespace Saga.Core
                 var card = new GameObject($"Card_{upgrades[i].UpgradeId}", typeof(RectTransform), typeof(UpgradeCardView));
                 card.transform.SetParent(panelRt, false);
                 var rt = (RectTransform)card.transform;
-                rt.anchorMin = new Vector2(i * frac, 0);
-                rt.anchorMax = new Vector2((i + 1) * frac, 1);
+                // Stack top->bottom: card 0 at top, card N-1 at bottom.
+                // Unity anchors: y=1 is top, y=0 is bottom. Card i occupies (1 - (i+1)*frac) .. (1 - i*frac).
+                rt.anchorMin = new Vector2(0, 1f - (i + 1) * frac);
+                rt.anchorMax = new Vector2(1, 1f - i * frac);
                 rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.offsetMin = new Vector2(12, 8);
-                rt.offsetMax = new Vector2(-12, -8);
+                rt.offsetMin = new Vector2(8, 6);
+                rt.offsetMax = new Vector2(-8, -6);
 
                 card.GetComponent<UpgradeCardView>().Init(upgrades[i]);
             }
@@ -1552,11 +1612,12 @@ namespace Saga.Core
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
             btn.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)btn.transform;
-            // Top-right counterpart to the Souffle button (which lives top-left).
-            rt.anchorMin = new Vector2(1f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(1f, 1f);
-            rt.anchoredPosition = new Vector2(-32, -32);
+            // Sprint 7.5 portrait fix: live under the Souffle button (top-left column) so we don't
+            // collide with the ComboMeter that sits at top-right.
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(32, -148);
             rt.sizeDelta = new Vector2(160, 80);
 
             var img = btn.GetComponent<Image>();

@@ -94,6 +94,33 @@ namespace Saga.Data
                 Debug.LogWarning($"[SpriteLayerSet] {name} has no idle frames (will render null in fallback)", this);
         }
 
+        /// <summary>
+        /// Runtime factory used by <c>MainSceneBootstrap</c> when the body SpriteLayerSet is missing
+        /// or has no idle frames — so the player is never invisible. Available in all build configs
+        /// (the test-only <c>CreateForTests</c> below is for unit tests).
+        /// </summary>
+        public static SpriteLayerSet CreateRuntime(string id, EquipmentSlot slot,
+            Sprite[] idle, Sprite[] attack1 = null, Sprite[] attack2 = null, Sprite[] attack3 = null,
+            Sprite[] hurt = null, Sprite[] meditation = null, Sprite[] die = null,
+            double statsBonusForce = 0, float frameDuration = EquipmentConstants.DefaultFrameDuration,
+            string displayName = null)
+        {
+            var s = CreateInstance<SpriteLayerSet>();
+            s._id = id;
+            s._slotType = slot;
+            s._displayName = displayName ?? id;
+            s._spriteIdle = idle ?? Array.Empty<Sprite>();
+            s._spriteAttack1 = attack1 ?? Array.Empty<Sprite>();
+            s._spriteAttack2 = attack2 ?? Array.Empty<Sprite>();
+            s._spriteAttack3 = attack3 ?? Array.Empty<Sprite>();
+            s._spriteHurt = hurt ?? Array.Empty<Sprite>();
+            s._spriteMeditation = meditation ?? Array.Empty<Sprite>();
+            s._spriteDie = die ?? Array.Empty<Sprite>();
+            s._statsBonusForce = statsBonusForce;
+            s._frameDuration = frameDuration;
+            return s;
+        }
+
 #if UNITY_INCLUDE_TESTS
         public static SpriteLayerSet CreateForTests(string id, EquipmentSlot slot, Voie voie, Rarity rarity,
             double statsBonusForce, float statsBonusCrit = 0f, string displayName = null,
