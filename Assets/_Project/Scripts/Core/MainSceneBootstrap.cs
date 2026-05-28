@@ -175,15 +175,20 @@ namespace Saga.Core
             var fi = floor.GetComponent<Image>();
             fi.sprite = PuffySprite.RoundedFill(20); fi.type = Image.Type.Sliced; fi.color = tokens.m3Outline; fi.raycastTarget = false;
 
-            // Icon round, overflowing left.
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(TextMeshProUGUI));
+            // Icon round, overflowing left. Image + glyph on SEPARATE GameObjects (two Graphics on one
+            // GO share a CanvasRenderer → TMP init NRE).
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(pill.transform, false);
             var irt = (RectTransform)icon.transform;
             irt.anchorMin = new Vector2(0, 0.5f); irt.anchorMax = new Vector2(0, 0.5f); irt.pivot = new Vector2(0.5f, 0.5f);
             irt.anchoredPosition = new Vector2(2, 0); irt.sizeDelta = new Vector2(38, 38);
             var iimg = icon.GetComponent<Image>();
             iimg.sprite = PuffySprite.RoundedFill(19); iimg.type = Image.Type.Sliced; iimg.color = iconColor;
-            var iglyph = icon.GetComponent<TextMeshProUGUI>();
+            var iglyphGo = new GameObject("Glyph", typeof(RectTransform), typeof(TextMeshProUGUI));
+            iglyphGo.transform.SetParent(icon.transform, false);
+            var iglyphRt = (RectTransform)iglyphGo.transform;
+            iglyphRt.anchorMin = Vector2.zero; iglyphRt.anchorMax = Vector2.one; iglyphRt.offsetMin = Vector2.zero; iglyphRt.offsetMax = Vector2.zero;
+            var iglyph = iglyphGo.GetComponent<TextMeshProUGUI>();
             iglyph.alignment = TextAlignmentOptions.Center; iglyph.font = tokens.DisplayFont; iglyph.fontSize = 18;
             iglyph.color = tokens.m3OnSurface; iglyph.text = glyph; iglyph.raycastTarget = false;
 
@@ -1397,22 +1402,31 @@ namespace Saga.Core
             bgGo.transform.position = new Vector3(0, 0, 10f);
             var bgSr = bgGo.GetComponent<SpriteRenderer>();
             bgSr.sortingOrder = -10;
+            // Cover the ACTUAL camera frustum (+10% margin), not an arbitrary 13u — covering 13u tall
+            // while the ortho cam only shows 6u was zooming the bg ~2× ("gros plan"). Compute from cam.
+            var cam = Camera.main;
+            var viewH = (cam != null ? cam.orthographicSize : 3f) * 2f;
+            var aspect = (cam != null && cam.aspect > 0.01f) ? cam.aspect : (1080f / 1920f);
+            var viewW = viewH * aspect;
+            var coverW = viewW * 1.12f;
+            var coverH = viewH * 1.12f;
+
             if (illustrated != null)
             {
                 bgSr.sprite = illustrated;
-                // Cover the portrait ortho frustum (orthoSize 3 → 6u tall, ~3.4u wide).
                 var sp = illustrated.bounds.size;
                 if (sp.x > 0.01f && sp.y > 0.01f)
                 {
-                    var scale = Mathf.Max(7f / sp.x, 13f / sp.y); // cover 7×13 world units
+                    var scale = Mathf.Max(coverW / sp.x, coverH / sp.y); // cover-fit (fills, crops overflow)
                     bgGo.transform.localScale = new Vector3(scale, scale, 1f);
                 }
             }
             else
             {
-                // Fallback dusk gradient (fun, coloré — pas de noir plat).
+                // Fallback dusk gradient (fun, coloré — pas de noir plat). 8-wide tex, 256-tall.
                 bgSr.sprite = CreateDuskGradientSprite();
-                bgGo.transform.localScale = new Vector3(8f, 14f, 1f);
+                var sp = bgSr.sprite.bounds.size;
+                bgGo.transform.localScale = new Vector3(coverW / Mathf.Max(0.01f, sp.x), coverH / Mathf.Max(0.01f, sp.y), 1f);
             }
 
             // Overlay gradient subtil haut+bas pour lisibilité de l'UI (léger, garde le fond visible).
@@ -1422,7 +1436,8 @@ namespace Saga.Core
             var ovSr = ovGo.GetComponent<SpriteRenderer>();
             ovSr.sprite = CreateVerticalShadeSprite();
             ovSr.sortingOrder = -9;
-            ovGo.transform.localScale = new Vector3(8f, 14f, 1f);
+            var ovSp = ovSr.sprite.bounds.size;
+            ovGo.transform.localScale = new Vector3(coverW / Mathf.Max(0.01f, ovSp.x), coverH / Mathf.Max(0.01f, ovSp.y), 1f);
 
             // Ambient particles (amber motes drifting up) — garde le côté vivant.
             BuildAmbientParticles(root.transform, tokens);
@@ -1920,15 +1935,20 @@ namespace Saga.Core
             var fi = floor.GetComponent<Image>(); fi.sprite = PuffySprite.RoundedFill(22); fi.type = Image.Type.Sliced;
             fi.color = tokens.m3Outline; fi.raycastTarget = false;
 
-            // Gold icon round débordante (kanji 力 = Force).
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(TextMeshProUGUI));
+            // Gold icon round débordante (kanji 力 = Force). Image + glyph on SEPARATE GameObjects —
+            // a single GO can't host two Graphics (Image + TMP share one CanvasRenderer → TMP init NRE).
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(pill.transform, false);
             var irt = (RectTransform)icon.transform;
             irt.anchorMin = new Vector2(0, 0.5f); irt.anchorMax = new Vector2(0, 0.5f); irt.pivot = new Vector2(0.5f, 0.5f);
             irt.anchoredPosition = new Vector2(2, 0); irt.sizeDelta = new Vector2(42, 42);
             var iimg = icon.GetComponent<Image>(); iimg.sprite = PuffySprite.RoundedFill(21); iimg.type = Image.Type.Sliced;
             iimg.color = tokens.accentPrimary; // or
-            var iglyph = icon.GetComponent<TextMeshProUGUI>();
+            var iglyphGo = new GameObject("Glyph", typeof(RectTransform), typeof(TextMeshProUGUI));
+            iglyphGo.transform.SetParent(icon.transform, false);
+            var iglyphRt = (RectTransform)iglyphGo.transform;
+            iglyphRt.anchorMin = Vector2.zero; iglyphRt.anchorMax = Vector2.one; iglyphRt.offsetMin = Vector2.zero; iglyphRt.offsetMax = Vector2.zero;
+            var iglyph = iglyphGo.GetComponent<TextMeshProUGUI>();
             iglyph.alignment = TextAlignmentOptions.Center; iglyph.font = tokens.DisplayFont; iglyph.fontSize = 20;
             iglyph.color = tokens.m3OnSurface; iglyph.text = "力"; iglyph.raycastTarget = false;
 
