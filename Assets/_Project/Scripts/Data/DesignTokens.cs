@@ -126,8 +126,9 @@ namespace Saga.Data
         public int puffyFloorCard = 5;
 
         // ----- Typography scale (font sizes @ 1080×1920 ref) -----
+        // Renamed fontDisplay → fontSizeDisplay to avoid collision with the TMP_FontAsset fontDisplay slot.
         [Header("Typography Scale")]
-        public int fontDisplay = 48;
+        public int fontSizeDisplay = 48;
         public int fontH1 = 32;
         public int fontH2 = 24;
         public int fontH3 = 20;

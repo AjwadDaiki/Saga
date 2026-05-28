@@ -39,7 +39,7 @@ namespace Saga.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[Saga] {(created ? "Created" : "Updated")} DesignTokens at {AssetPath}. Drop the 3 Google fonts in the font slots: Inter / JetBrains Mono / Cinzel.");
+            Debug.Log($"[Saga] {(created ? "Created" : "Updated")} DesignTokens at {AssetPath}. Run 'Saga > Design > Generate Font Assets + Background' to assign the 3 fonts: Plus Jakarta Sans / Lilita One / JetBrains Mono.");
         }
 
         private static void EnsureFolder(string path)

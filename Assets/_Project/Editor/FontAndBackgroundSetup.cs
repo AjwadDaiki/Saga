@@ -46,13 +46,15 @@ namespace Saga.EditorTools
 
         private static TMP_FontAsset BuildFontAsset(string ttfNameContains, string outName)
         {
-            // Find the .ttf by filename (the Art/Fonts tree has nested download folders).
+            // Find the .ttf by EXACT filename (the Art/Fonts tree has nested download folders +
+            // sibling variants like *-BoldItalic that a Contains() match would wrongly grab).
+            var wanted = ttfNameContains + ".ttf";
             var guids = AssetDatabase.FindAssets("t:Font");
             string ttfPath = null;
             foreach (var g in guids)
             {
                 var p = AssetDatabase.GUIDToAssetPath(g);
-                if (p.Replace(" ", "").Contains(ttfNameContains) && p.EndsWith(".ttf"))
+                if (System.IO.Path.GetFileName(p) == wanted)
                 {
                     ttfPath = p;
                     break;
@@ -60,7 +62,7 @@ namespace Saga.EditorTools
             }
             if (ttfPath == null)
             {
-                Debug.LogError($"[Saga] TTF '{ttfNameContains}' introuvable sous Art/Fonts. Font asset non généré.");
+                Debug.LogError($"[Saga] TTF '{wanted}' introuvable sous Art/Fonts. Font asset non généré.");
                 return null;
             }
 
