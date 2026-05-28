@@ -48,6 +48,48 @@
 
 ---
 
+## 2026-05-28 — Sprint 7 pre-decisions (tranchées par coordinateur post-Sprint-6)
+
+### Roadmap allongée à 14 sprints
+**Décision**: lancement officiel envisagé **octobre 2026** (vs août-septembre prévu initialement). 14 sprints total au lieu de 11-12.
+
+**Raison**: Sprint 7 enrichi (système modulaire des sprites) demande 6-7 jours au lieu de 5. Plus de marge polish + features bonus (carte du monde, esprits compagnons, hub features Daily Ronin) sur les sprints suivants.
+
+**Conséquence**: Sprint 7 = 6-7 jours estimés. Roadmap docs/08_ROADMAP.md à amender côté coordinateur.
+
+### Système modulaire des sprites perso (Sprint 7)
+**Décision**: Le character rendering passe d'un seul sprite atlas (rvros adventurer) à **3 couches layered et interchangeables** :
+- **Corps** : silhouette base + animations (idle, attack, hurt, die, etc.)
+- **Armure** : sprite overlay sur le corps (par voie / stade / Relique)
+- **Arme** : sprite overlay (par voie / Relique / arme communautaire)
+
+Implementation pattern attendu :
+- `Data/SpriteLayerSet.cs` SO (références aux 3 layers + animations sync)
+- `Gameplay/LayeredCharacterRenderer.cs` MonoBehaviour (gère 3 SpriteRenderer enfants, drive en parallèle via le même frame index)
+- `CharacterView` consomme un `SpriteLayerSet` au lieu du single library
+- AdventurerAnimationLibrary devient le "Corps Stade 1 Mendiant", on ajoute des layers Armure + Arme par-dessus
+
+**Raison**: Le brief original (Sprint 4 GAME_DESIGN_v2) parle d'évolution visuelle perso aux Stades 1-6 + custom par voie/Relique. Single-atlas ne scale pas. Modularité = production friendly + ouvre la porte au tier "Armes communautaires" post-MVP (D6 ci-dessous).
+
+**Conséquence**:
+- Sprint 7 effort +1-2 jours
+- 6 nouveaux SpriteLayerSet SOs minimum (1 corps base + 2 armures + 2 armes pour MVP)
+- `MainSceneBootstrap.BuildCharacter` refactor pour spawn 3 SpriteRenderer enfants
+- `SpriteAnimator` peut rester intact (gère 1 renderer) ou être étendu en `LayeredSpriteAnimator` qui sync N renderers
+
+### D6 — Système d'armes communautaires (post-MVP, mois 3-4)
+**Décision**: Une fois le système modulaire en place Sprint 7, le tier "Custom Hero" (armes designées par la communauté) devient implémentable.
+
+**Modèle** (post-MVP roadmap):
+- 3 tiers : Easter Egg (1/10000 drop, stats 1/1/1, descriptions libres), Communauté Standard (drops normaux, stats équilibrées, descriptions mythiques), Officiel (canon HiddenLab)
+- Outil dessin recommandé pour contributeurs : Piskel (gratuit web) ou Aseprite (~20€)
+- Approval pipeline simple (Ajwad valide les soumissions communautaires Tier Standard)
+- Distribution via VPS HiddenLab + JSON manifest
+
+**Statut**: Hors scope Sprint 7. Référencé pour anticiper que l'archi modulaire Sprint 7 doit supporter ce use case sans refactor.
+
+---
+
 ## 2026-05-27 — Sprint 6 pre-decisions (tranchées par coordinateur post-Sprint-5)
 
 ### Q1 — Maîtres visuels (Boss Majeurs)

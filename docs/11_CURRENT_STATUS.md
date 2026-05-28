@@ -4,11 +4,11 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 6 implémenté côté code, **en attente validation in-play par Ajwad** avant squash merge `feat/sprint-6-maitres-prestige-souffle` → `dev` → `main` + tag `v0.6.0`.
+**Phase**: Sprint 6 closed (validé in-play par Ajwad, mergé `dev` + `main`, tagué `v0.6.0`). **Sprint 7 en attente du brief enrichi** (système modulaire des sprites + identité culturelle des voies). Roadmap allongée à 14 sprints, lancement officiel envisagé **octobre 2026**.
 
 **Dernière session**: 2026-05-28, dev Claude (Opus 4.7) sur Claude Code.
 
-**Branche active**: `feat/sprint-6-maitres-prestige-souffle` (pushable, code-complete, tests à exécuter).
+**Branche active**: `dev` (en standby), pas de feat branch active.
 
 ## Sprints terminés
 
@@ -20,113 +20,96 @@
 | 3 | `v0.3.0` | Pixel adventurer + 3 attack variations + stade transition + NumberJuice | ✅ closed |
 | 4 | `v0.4.0` | Combat Active System : Adversaire + chrono + mort temporaire + 5 adversaires | ✅ closed |
 | 5 | `v0.5.0` | Boss Mineurs (8 Capitaines) + Élan + Vague AOE | ✅ closed |
-| 6 | `v0.6.0` (pending) | Maîtres légendaires + Prestige + Souffle | 🟡 implem done, attend validation Ajwad |
+| 6 | `v0.6.0` | Maîtres légendaires (8) + Prestige + Souffle | ✅ closed |
 
-## Sprint 6 — accomplissements clés (à valider en play)
+## Sprint 6 — accomplissements clés (validés en play)
 
-### Système Maîtres légendaires
-- **8 Maîtres SO** (un par voie, mythologies réelles zéro copyright) : Yoshitsune (Samurai), Ragnar Lodbrok (Viking), Sun (Shaolin), Léonidas (Spartiate), Subutaï (Mongol), Salah ad-Din (Sarrasin), Ahuitzotl (Aztèque), Vercingétorix (Gaulois)
-- **HP énormes** 7500-11000, chrono 180s, intro/victory/defeat citations + Relique unique
-- **`MaitreSpawner`** cadence /3 Capitaines → +1 slot d'invocation. Invocation volontaire (pas auto-spawn)
-- **3 nouvelles phases combat** : `MaitreIncoming`, `MaitreActive`, `MaitreVictory`
-- **Cinématique intro Maître** : arena tint + vignette + nom MASSIF + citation 2.5s
-- **Chrono ×2 en enrage** (phase 3, HP < 25%) — punition narrative
-- **`MaitreWorldView`** : sprite procédural 120×180 + aura radiale épaisse (192px, scale 1.5×) + tint par phase
-- **Mort vs Maître** → trigger Prestige automatique
+> "Sprint 6 = LE moment magique du jeu." — Ajwad
 
-### Système Prestige
-- **`PrestigeService`** : formule `echos = max(10, floor(log10(forceMax) × 10))`
-- **Reset matrix** PERSIST/RESET stricte (voir DESIGN_DECISIONS_LOG.md)
-  - PERSIST : `totalEchos`, `relicsOwned`, `titlesUnlocked`, `achievementsUnlocked`, `prestigeCount`, `deathRecords`, `playerCitation`, `lastSouffleTime`
-  - RESET : `force`, `upgradeLevels`, `currentStade`, counters runs, slots, états combat
-- **Cinématique 4-phase** (~17s) : "TU ES MORT" → Voyage Intérieur → Citation finale → Renaissance
-- **Hall des Légendes** : `DeathRecord` ajouté par mort (voie/nom/citation/forceMax/UTC)
-- **Titres "Vaincu par X"** unlock auto + dédup
-
-### Souffle (méditation)
-- **`SouffleService`** state machine 3 états : Idle → Meditating (5s, taps bloqués) → Buffing (30s, ×1.5 Force) → Idle
-- **Cooldown 120s** démarre au début de méditation (PAS fin de buff)
-- **Cooldown PERSISTE au prestige** (compétence apprise)
-- Bouton top-left avec compte à rebours
-
-### UI
-- **`SouffleButtonView`** : bouton top-left, états visuels Idle/Meditating/Buffing/Cooldown
-- **`AffronterMaitreButtonView`** : visible quand slot ≥ 1, scale punch animation sur unlock
-- **`AffronterMaitreModal`** : liste les 8 Maîtres avec portrait procédural + citation + bouton "Affronter"
-- **`CitationInputModal`** : TMP_InputField max 80 chars, Confirm enabled when non-empty, Skip optionnel
-- **`PrestigeCinematicView`** : coroutine 4 phases avec citation prompt-or-edit pattern
-- **`MaitreIntroView`** : cinematic 2.5s arena tint + nom MASSIF + subtitle + citation
-- **`CombatHudView`** : étendu pour écouter `OnMaitreSpawned` + `OnMaitrePhaseChanged`
-
-### Save migration
-- **v6 → v7** : Souffle + Maître fields (lastSouffleTime, souffleBuffActiveUntil, currentMaitreId, currentMaitrePhase, maitreInvocationSlots)
-- **v7 → v8** : Prestige fields (totalEchos, currentRunEchosEarned, currentRunForceMax, playerCitation, relicsOwned/Conserved, titlesUnlocked, achievementsUnlocked, prestigeCount, lastPrestigeAt, deathRecords, playerCitationLockedForRun)
-- Chaîne idempotente + defensive boot resets
-
-### Tests
-- **23 nouveaux tests EditMode** : MaitreData (4), MaitreSpawner (6), PrestigeService (8), SouffleService (7)
-- **Total EditMode** : 91 + 23 = **114 tests** (à confirmer en Test Runner)
+- **Souffle** : meditation 5s + buff ×1.5 Force 30s + cooldown 120s permanent à travers le prestige
+- **3 Capitaines battus** → bouton "Affronter Maître" apparait avec scale punch
+- **Modal Maîtres** : liste des 8 légendaires avec portraits procéduraux + citations d'intro + bouton "Affronter"
+- **Cinematic intro Yoshitsune** : vignette + lettrage MASSIF + citation, 2.5s
+- **Combat Maître** : 180s chrono, phases HP color (vert/jaune/orange/rouge enrage), enrage chrono ×2
+- **Scenario victoire** : drop Relique unique + cinematic "VICTOIRE" doré
+- **Scenario défaite (THE moment)** : cinematic Prestige 17s complète
+  1. **TU ES MORT** (5s) — slow-mo + fade noir + titre MASSIF + defeat citation Maître
+  2. **Voyage Intérieur** (4s) — stats du run + Échos counter animé en doré
+  3. **Citation finale** (5s) — prompt OR edit (max 80 chars)
+  4. **Renaissance** (3s) — fade blanc + Stade 1 reborn + "Tu renais. Que ta prochaine légende soit plus longue."
+- **Reset state matrix** validée : `force=0, upgrades=0, stade=1` mais `totalEchos / reliques / titres / citation / cooldown Souffle` PERSIST
+- **Hall des Légendes** : DeathRecord appended à chaque mort vs Maître (voie, nom, citation, forceMax, UTC)
+- **114 tests EditMode** verts
 
 ## Métriques de projet
 
-- **Sprints closed** : 5/11 (Sprint 6 en attente validation)
-- **Branches** : `feat/sprint-6-maitres-prestige-souffle` active sur `dev`
-- **Tags actuels** : `v0.1.0` → `v0.5.0`
-- **Lignes de code C# runtime (hors lib tierce)** : ~5500 (≈ +1500 Sprint 6)
-- **Tests EditMode** : 114 cases (NumberFormatter 13, ComboSystem 11, UpgradeData 5, StatsCalculator 8, UpgradeService 10, StadeManager 10, AdversaireData 3, AdversaireSpawner 5, CombatProcessor 8, ElanService 6, CapitaineData 3, CapitaineSpawner 5, VagueResolver 4, MaitreData 4, MaitreSpawner 6, PrestigeService 8, SouffleService 7)
+- **Sprints closed** : 6/14
+- **Branches** : main + dev synced à `9cee36e` (tag v0.6.0 à `e9974c9`)
+- **Tags** : `v0.1.0` → `v0.6.0`
+- **Lignes de code C# runtime (hors lib tierce)** : ~5500
+- **Tests EditMode** : 114 cases (NumberFormatter 13, ComboSystem 11, UpgradeData 5, StatsCalculator 8, UpgradeService 10, StadeManager 10, AdversaireData 3, AdversaireSpawner 5, CombatProcessor 8, ElanService 6, CapitaineData 3, CapitaineSpawner 5, VagueResolver 4, MaitreData 4, MaitreSpawner 5-6, PrestigeService 8, SouffleService 6-7)
 - **ScriptableObjects** : 25 (3 upgrades + 1 anim library + 5 adversaires + 8 capitaines + 8 maîtres)
 - **Combat phases implémentées** : 11/11 (Training + Adv×3 + PlayerDeath + Cap×3 + Maître×3)
+- **GameEvents channels** : ~30 (Sprint 7+ candidate pour split par domaine)
 - **Voies tintées** : 9 (None + 8 cultures)
-- **GameEvents channels** : ~30 (split Sprint 7+ candidate)
+- **DeathRecords** : ajoutés au Hall des Légendes (UI surface Sprint 10+)
 
-## ✅ Sprint 6 — checklist Ajwad pour validation
+## ⏸️ Sprint 7 — en attente du brief enrichi
 
-1. **Refocus Unity** (recompile automatique) — vérifier console clean
-2. **Generate Maître SOs** : `Saga > Sprint 6 > Generate Maitre Assets` (crée les 8 SOs dans `Resources/Maitres/`)
-3. **Test Runner > EditMode > Run All** : 114 tests verts attendus
-4. **Play smoke test** :
-   - Boot → tap normal, Force monte, Élan se remplit (régression Sprint 5 OK)
-   - Bouton Souffle top-left clickable → 5s méditation (taps bloqués) → 30s buff ×1.5
-   - Battre 3 Capitaines → bouton "Affronter le Maître" apparait (scale punch)
-   - Click → modal liste 8 Maîtres → "Affronter" sur un (ex: Yoshitsune)
-   - Cinematic intro 2.5s : arena tint + nom MASSIF + citation
-   - Combat actif : phases HP tint progressif vert→jaune→orange→rouge
-   - Enrage phase 3 (HP < 25%) : shake permanent + chrono accélère
-   - **Scénario A** : battre le Maître → "VICTOIRE" + relique ajoutée à `relicsOwned`
-   - **Scénario B** : laisser chrono tomber à 0 → cinématique Prestige 17s complète (TU ES MORT → Voyage Intérieur stats/Échos → Citation prompt (si vide) ou affichage → Renaissance fade white → reprise Training avec totalEchos ↑, prestigeCount = 1, deathRecords[0] présent)
-5. **Reset state test** : après Prestige, vérifier `force = 0`, upgrades vides, stade = 1, mais titres/relics/totalEchos PERSIST
+### Décisions coordinateur déjà loguées (DESIGN_DECISIONS_LOG.md)
+
+1. **Roadmap allongée à 14 sprints**. Lancement officiel envisagé **octobre 2026** (vs août-septembre prévu initialement)
+2. **Système modulaire des sprites** validé pour Sprint 7 (longueur **6-7 jours** au lieu de 5)
+   - 3 couches layered et interchangeables : **Corps + Armure + Arme** (sprites séparés)
+   - Pattern : `SpriteLayerSet` SO, `LayeredCharacterRenderer` MonoBehaviour, `CharacterView` consomme un set au lieu d'un single library
+3. **D6 — Système d'armes communautaires** (post-MVP, mois 3-4) : 3 tiers (Easter Egg / Communauté Standard / Officiel), outil Piskel/Aseprite, distribution VPS HiddenLab. Le système modulaire Sprint 7 doit supporter ce use case sans refactor ultérieur.
+
+### Sprint 7 base technique prête à consommer
+
+Foundations Sprint 6 réutilisables pour Sprint 7 :
+- `CombatProcessor` 11 phases extensible (Stade-driven evolution n'ajoute pas de phases, juste re-skin)
+- `Voie` enum déjà tinté partout (CombatHud HP color, MaitreData arenaBg, etc.)
+- `SpriteAnimator` peut rester ou être étendu en `LayeredSpriteAnimator` (sync N renderers par frame index)
+- `MainSceneBootstrap.BuildCharacter` refactor candidat : spawn 3 SpriteRenderer enfants au lieu d'1
+- `AdventurerAnimationLibrary` (rvros 5 anims) devient le "Corps Stade 1 Mendiant" baseline
+- `SaveService.Migrate` chain prête pour v8→v9 (équipement actif sur perso : armure ID + arme ID dans GameState)
+- Pattern Editor utility `Saga > Sprint N > Generate Y Assets` (5 utilities déjà — Sprint 2/3/4/5/6) — Sprint 7 ajoutera la 6e (Generate Sprite Layer Sets)
+
+### Sprint 7 nouveaux composants attendus (à confirmer au brief)
+
+- `Data/SpriteLayerSet.cs` SO (3 layers : Body / Armor / Weapon)
+- `Data/EquipmentSlot.cs` enum (Armor / Weapon) — Sprint 8+ étend (Helmet, Talisman, etc.)
+- `Gameplay/LayeredCharacterRenderer.cs` MonoBehaviour
+- `Gameplay/EquipmentService.cs` (gère armure équipée + arme équipée, mises à jour visuelles via OnEquipmentChanged event)
+- `UI/EquipmentInventoryView.cs` (Sprint 7 MVP : panneau liste Reliques + bouton équiper/déséquiper)
+- Editor utility : `Saga > Sprint 7 > Generate Sprite Layer Sets` (corps Mendiant + 1-2 armures + 1-2 armes MVP)
+- Refactor : `CharacterView` consomme `SpriteLayerSet` au lieu de `SpriteAnimationLibrary`
+- Refactor : `MaitreData.reliqueStatsBonus` consommé par `EquipmentService` quand équipé
 
 ## Polish items deferred (toujours optionnels)
 
-1. Refactor `MainSceneBootstrap` → scene-authored UI (8 sprints d'affilée, candidate Sprint 7-8)
+1. Refactor `MainSceneBootstrap` → scene-authored UI (9 sprints d'affilée — candidate Sprint 8-9 si on a le temps)
 2. Import fonts Inter + JetBrains Mono + Cinzel/Cormorant (lore) via Font Asset Creator
 3. Slice `10_weaponhit_spritesheet.png` pour slash FX frame-by-frame
 4. Sprite dédié Capitaines + Maîtres (Sprint 11 polish)
-5. Drum hit audio à Phase 1 de la cinématique Prestige (`MaitreData.DrumHitPitch` champ déjà prêt)
-6. Hall des Légendes UI (afficher `deathRecords` quelque part — Sprint 7+ candidate)
-7. UI sélection Reliques à conserver au prestige (Sprint 7+ MVP toutes persistent)
+5. Hall des Légendes UI (Sprint 10 candidate)
+6. UI sélection Reliques à conserver au prestige (Sprint 7+ MVP toutes persistent)
+7. Drum hit audio à Phase 1 cinematic Prestige (`MaitreData.DrumHitPitch` déjà prêt)
 8. Sprint 7+ split `GameEvents.cs` par domaine (CombatEvents, EconomyEvents, ProgressionEvents)
 
-## Prochaine session
+## Prochaine session (Sprint 7)
 
-**Si Sprint 6 validé in-play** :
-- Squash merge `feat/sprint-6-maitres-prestige-souffle` → `dev` → `main`
-- Tag `v0.6.0`
-- Cleanup branch
-- Standby pour brief Sprint 7
+**Quand brief arrive** : système modulaire sprites (Corps + Armure + Arme layered) + identité culturelle des voies. Estimation **6-7 jours**.
 
-**Si bugs détectés en play** :
-- Fix sur la même branche (additional commits)
-- Re-validation puis squash
+**Pré-requis** : brief enrichi du coordinateur avec spécifications détaillées (combien de SpriteLayerSets MVP, quelle voie démarre, comment équiper visuellement, Reliques visuelles ou stats-only Sprint 7).
 
 ## Notes session
 
-- **6e sprint enchaîné**, workflow merge → tag → cleanup hyperbien rodé.
-- 23 nouveaux tests = +25%. Coverage solide sur les 3 services Sprint 6 + MaitreData.
-- `GameEvents.cs` maintenant ~30 events sur ~280 lignes. Split par domaine devient prioritaire Sprint 7.
-- `MainSceneBootstrap.cs` dépasse les 700 lignes (re-mesurer). Refactor scene-authored UI = candidat fort Sprint 7-8.
-- Pattern Editor utility maintenant à 5 utilities (Sprint 2/3/4/5/6).
-- 2 nouvelles migrations save (v6→v7→v8). Chain à 8 migrations cumulées, toujours idempotente.
-- L'ajout de 3 phases Maître + cinématique Prestige sans refactor du CombatProcessor squelette confirme la solidité du pattern état-machine event-driven.
-- Bridge MCP Unity : déconnecté depuis Sprint 4. Filesystem-only continue à scaler.
-- Sprint 6 est **LE** sprint le plus dense narrativement. Code-side est complet ; le vrai test sera la valeur émotionnelle de la cinématique Prestige en play.
+- **6 sprints clos consécutifs**, workflow merge → tag → cleanup hyperrodé. 6 tags propres : `v0.1.0` → `v0.6.0`.
+- Sprint 6 = pic narratif du projet selon Ajwad ("LE moment magique"). La cinematic Prestige 4 phases a tenu sa promesse en play.
+- 114 tests EditMode, tous green-ready. Coverage solide sur tous les services POCO + data layer + state machines.
+- `GameEvents.cs` ~30 events maintenant — split par domaine devient pertinent Sprint 7+ pour clarté.
+- L'état "code-staged-mais-pas-commité" au démarrage de cette session était inhabituel mais récupéré proprement après audit (5 fichiers critiques relus, match tight au brief). Pattern à éviter à l'avenir : commit immédiat après implementation, validation peut se faire sur un commit propre.
+- Pattern Editor utility (`Saga > Sprint N > Generate Y Assets`) maintenant à 5 utilities (Sprint 2/3/4/5/6). Sprint 7 ajoutera la 6e pour les SpriteLayerSets.
+- Bridge MCP Unity tools : disconnect signal en début de session (UnityMCP no longer available). Filesystem-only continue d'être la baseline opérationnelle — 7e sprint d'affilée sans drama.
+- Roadmap allongée à 14 sprints / lancement octobre 2026. 8 sprints restants : Sprint 7 (sprites modulaires) → 8 (esprits) → 9 (carte monde) → 10 (hub features) → 11 (polish) → 12 (beta) → 13-14 (préparation lancement + ajustements).
