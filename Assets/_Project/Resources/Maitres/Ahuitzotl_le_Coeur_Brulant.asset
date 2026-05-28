@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ccf2b8fccd8e54db96ce6dc4201d5e, type: 3}
+  m_Name: Ahuitzotl_le_Coeur_Brulant
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.MaitreData
+  _id: ahuitzotl_le_coeur_brulant
+  _displayName: "Ahuitzotl le C\u0153ur Br\xFBlant"
+  _voie: 7
+  _hp: 11000
+  _rewardForce: 5200
+  _chronoSeconds: 180
+  _phaseThresholds:
+  - 0.75
+  - 0.5
+  - 0.25
+  _phaseColors:
+  - {r: 0.75, g: 0.23, b: 0.17, a: 1}
+  - {r: 0.8, g: 0.2, b: 0.14, a: 1}
+  - {r: 0.85, g: 0.15, b: 0.1, a: 1}
+  - {r: 0.95, g: 0.1, b: 0.06, a: 1}
+  _introCitation: Le soleil exige son tribut.
+  _victoryCitation: "Le soleil t'a accept\xE9."
+  _defeatCitation: Le soleil se nourrit. Tu nourriras.
+  _reliqueUniqueName: Macuahuitl d'Ahuitzotl
+  _reliqueUniqueDescription: "Tranchant comme le silex sacr\xE9."
+  _reliqueStatsBonus: 720
+  _arenaBackgroundColor: {r: 0.75, g: 0.23, b: 0.17, a: 1}
+  _drumHitPitch: 0.9

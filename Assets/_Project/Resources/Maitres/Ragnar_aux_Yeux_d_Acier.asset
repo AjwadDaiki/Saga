@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ccf2b8fccd8e54db96ce6dc4201d5e, type: 3}
+  m_Name: Ragnar_aux_Yeux_d_Acier
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.MaitreData
+  _id: ragnar_aux_yeux_d_acier
+  _displayName: Ragnar aux Yeux d'Acier
+  _voie: 2
+  _hp: 9500
+  _rewardForce: 4500
+  _chronoSeconds: 180
+  _phaseThresholds:
+  - 0.75
+  - 0.5
+  - 0.25
+  _phaseColors:
+  - {r: 0.49, g: 0.65, b: 0.79, a: 1}
+  - {r: 0.4, g: 0.55, b: 0.78, a: 1}
+  - {r: 0.35, g: 0.45, b: 0.7, a: 1}
+  - {r: 0.95, g: 0.18, b: 0.13, a: 1}
+  _introCitation: "Les corbeaux m'ont annonc\xE9. Te voil\xE0 donc."
+  _victoryCitation: Tu auras ta place au Valhalla.
+  _defeatCitation: Les corbeaux n'oublient pas. Ils chanteront pour toi.
+  _reliqueUniqueName: Hache de Ragnar
+  _reliqueUniqueDescription: "Forg\xE9e pour les longues nuits du Nord."
+  _reliqueStatsBonus: 600
+  _arenaBackgroundColor: {r: 0.49, g: 0.65, b: 0.79, a: 1}
+  _drumHitPitch: 0.9

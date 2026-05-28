@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ccf2b8fccd8e54db96ce6dc4201d5e, type: 3}
+  m_Name: Subutai_le_Vent_du_Levant
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.MaitreData
+  _id: subutai_le_vent_du_levant
+  _displayName: "Subuta\xEF le Vent du Levant"
+  _voie: 5
+  _hp: 8500
+  _rewardForce: 4200
+  _chronoSeconds: 180
+  _phaseThresholds:
+  - 0.75
+  - 0.5
+  - 0.25
+  _phaseColors:
+  - {r: 0.72, g: 0.61, b: 0.42, a: 1}
+  - {r: 0.65, g: 0.55, b: 0.38, a: 1}
+  - {r: 0.58, g: 0.48, b: 0.32, a: 1}
+  - {r: 0.95, g: 0.18, b: 0.13, a: 1}
+  _introCitation: Les steppes connaissent ton nom.
+  _victoryCitation: Chevauche loin, et reviens.
+  _defeatCitation: Les steppes se souviennent. Toujours.
+  _reliqueUniqueName: "Arc de Subuta\xEF"
+  _reliqueUniqueDescription: Tire plus loin que l'horizon.
+  _reliqueStatsBonus: 580
+  _arenaBackgroundColor: {r: 0.72, g: 0.61, b: 0.42, a: 1}
+  _drumHitPitch: 0.9
