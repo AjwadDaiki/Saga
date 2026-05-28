@@ -65,7 +65,7 @@ namespace Saga.UI
             {
                 case Variant.Standard:
                     _background.color = t.surfaceMid;
-                    if (_label != null) { _label.color = t.textPrimary; _label.fontStyle = FontStyles.SemiBold; }
+                    if (_label != null) { _label.color = t.textPrimary; _label.fontStyle = FontStyles.Bold; }
                     SetGlow(t.accentPrimary, 0f);
                     StopPulse();
                     break;

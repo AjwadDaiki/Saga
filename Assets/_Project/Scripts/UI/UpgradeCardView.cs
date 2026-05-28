@@ -188,7 +188,7 @@ namespace Saga.UI
                 new Vector2(-16, -10), new Vector2(80, 24),
                 TextAlignmentOptions.TopRight, tokens.fontSmall, tokens.textSecondary, paddingX: 0);
             _levelLabel.font = tokens.NumbersFont;
-            _levelLabel.fontStyle = FontStyles.SemiBold;
+            _levelLabel.fontStyle = FontStyles.Bold;
         }
 
         /// <summary>

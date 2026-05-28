@@ -27,6 +27,7 @@ namespace Saga.UI
         public RectTransform Root { get => _root; set => _root = value; }
 
         private Tween _glow;
+        private Tween _scalePulse;
         private bool _isVisible;
 
         private void Awake()
@@ -80,21 +81,34 @@ namespace Saga.UI
 
             _root.DOKill();
             _root.localScale = Vector3.zero;
-            _root.DOScale(1f, 0.35f).SetEase(Ease.OutBack).SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            _root.DOScale(1f, 0.35f).SetEase(Ease.OutBack)
+                .OnComplete(StartReadyPulse)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
 
-            // Permanent glow pulse on the background while visible.
+            // Sprint 7.5 A5: stronger glow — wider alpha range (up to 1.0) so the CTA clearly reads "READY".
             _glow?.Kill();
             if (_background != null)
             {
-                var baseColor = _background.color;
                 _glow = DOTween.To(
                     () => _background.color.a,
                     a => { if (_background == null) return; var c = _background.color; c.a = a; _background.color = c; },
-                    Mathf.Lerp(baseColor.a, 0.6f, 0.7f),
-                    0.6f
+                    1.0f,
+                    0.7f
                 ).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo)
                  .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
+        }
+
+        private void StartReadyPulse()
+        {
+            if (_root == null) return;
+            _scalePulse?.Kill();
+            _root.localScale = Vector3.one;
+            // Subtle 1.0 ↔ 1.06 breathing so the button feels alive while waiting for the tap.
+            _scalePulse = _root.DOScale(1.06f, 0.8f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void HideWithScale()
@@ -104,6 +118,7 @@ namespace Saga.UI
             _group.blocksRaycasts = false;
             _group.interactable = false;
             _glow?.Kill();
+            _scalePulse?.Kill();
 
             _root.DOKill();
             _root.DOScale(0f, 0.25f).SetEase(Ease.InBack)

@@ -27,6 +27,7 @@ namespace Saga.Gameplay
 
         private int _currentComboTier;
         private Tween _breathTween;
+        private Vector3 _baseScale = Vector3.one;
 
         public LayeredCharacterRenderer Renderer
         {
@@ -34,9 +35,25 @@ namespace Saga.Gameplay
             set => _renderer = value;
         }
 
+        /// <summary>
+        /// Sprint 7.5 fix: set the resting scale the breathing tween animates around. Must be called
+        /// AFTER the GameObject is built (Awake/OnEnable run during construction, before bootstrap can
+        /// set the transform). Restarts the breathing tween so the new base takes effect immediately.
+        /// </summary>
+        public void SetBaseScale(Vector3 baseScale)
+        {
+            _baseScale = baseScale == Vector3.zero ? Vector3.one : baseScale;
+            if (isActiveAndEnabled) StartBreathing();
+            else transform.localScale = _baseScale;
+        }
+
         private void Awake()
         {
             if (_renderer == null) _renderer = GetComponent<LayeredCharacterRenderer>();
+            // Sprint 7.5 fix: capture the bootstrap-applied scale (e.g. 2x) so the breathing
+            // tween animates AROUND it instead of stomping it back to 1.
+            _baseScale = transform.localScale;
+            if (_baseScale == Vector3.zero) _baseScale = Vector3.one;
         }
 
         private void OnEnable()
@@ -102,8 +119,9 @@ namespace Saga.Gameplay
         private void StartBreathing()
         {
             _breathTween?.Kill();
-            transform.localScale = Vector3.one;
-            _breathTween = transform.DOScale(_breathScale, _breathHalfPeriod)
+            transform.localScale = _baseScale;
+            // Breathe between base and base × breathScale so a 2x character still breathes subtly.
+            _breathTween = transform.DOScale(_baseScale * _breathScale, _breathHalfPeriod)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);

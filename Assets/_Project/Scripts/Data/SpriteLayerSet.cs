@@ -90,8 +90,11 @@ namespace Saga.Data
         private void OnValidate()
         {
             if (string.IsNullOrEmpty(_id)) Debug.LogError($"[SpriteLayerSet] {name} missing id", this);
-            if (_spriteIdle == null || _spriteIdle.Length == 0)
-                Debug.LogWarning($"[SpriteLayerSet] {name} has no idle frames (will render null in fallback)", this);
+            // Sprint 7.5: only the Body slot must carry frames (the character is always visible).
+            // Armor/Weapon are stats-only in Sprint 7 MVP (Decision D3) — empty frames are expected and
+            // the renderer falls back to null gracefully, so don't spam the console for them.
+            if (_slotType == EquipmentSlot.Body && (_spriteIdle == null || _spriteIdle.Length == 0))
+                Debug.LogWarning($"[SpriteLayerSet] {name} (Body) has no idle frames — character will render null in fallback", this);
         }
 
         /// <summary>

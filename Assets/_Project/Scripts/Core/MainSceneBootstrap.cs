@@ -31,8 +31,12 @@ namespace Saga.Core
         private const float CameraOrthoSize = 3.0f; // tighter zoom per Sprint 3 fix #4
         // Sprint 7.5 portrait pivot: world X positions tightened so character + mannequin both fit
         // inside a 9:16 ortho frustum (orthoSize 3 → ±1.69 horizontal). Was (-1.8, 3.0) for landscape.
-        private static readonly Vector3 CharacterPosition  = new Vector3(-0.9f, -0.6f, 0f);
-        private static readonly Vector3 MannequinPosition  = new Vector3( 1.1f, -0.6f, 0f);
+        // Y lowered to -1.3 so both stand on the floor strip top (floor centered at -2.3, half-height 1).
+        private static readonly Vector3 CharacterPosition  = new Vector3(-0.95f, -1.3f, 0f);
+        private static readonly Vector3 MannequinPosition  = new Vector3( 1.05f, -1.3f, 0f);
+        // Mannequin sprite is 80×140 @ PPU32 = 2.5×4.375 world. 0.7 scale → ~3.06 tall so the 2× chibi
+        // (≈2 tall) reads at ~65% of its height — the balance Ajwad asked for.
+        private const float MannequinScale = 0.7f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoBootstrapIfMainScene()
@@ -194,12 +198,14 @@ namespace Saga.Core
             barRt.offsetMin = Vector2.zero;
             barRt.offsetMax = Vector2.zero;
 
-            // Glow halo behind the bar — picks up the accent color when fill > 90%.
+            // Glow halo behind the bar — picks up the accent color when fill > 70%.
+            // Sprint 7.5 fix (BUG 3): tight + asymmetric padding so it never bleeds up into the
+            // gameplay zone above the Élan row (extends sideways + down, barely up).
             var glowGo = new GameObject("Glow", typeof(RectTransform), typeof(Image));
             glowGo.transform.SetParent(barRt, false);
             var glowRt = (RectTransform)glowGo.transform;
             glowRt.anchorMin = Vector2.zero; glowRt.anchorMax = Vector2.one;
-            glowRt.offsetMin = new Vector2(-12, -12); glowRt.offsetMax = new Vector2(12, 12);
+            glowRt.offsetMin = new Vector2(-8, -8); glowRt.offsetMax = new Vector2(8, 2);
             var glowImg = glowGo.GetComponent<Image>();
             glowImg.color = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0f);
             glowImg.raycastTarget = false;
@@ -260,7 +266,8 @@ namespace Saga.Core
             btnRt.offsetMax = Vector2.zero;
 
             var btnImg = btn.GetComponent<Image>();
-            btnImg.color = new Color(0.98f, 0.78f, 0.46f, 0.7f);
+            // Sprint 7.5 A5: warm accent_action CTA color (glow pulses its alpha up to 1.0 when ready).
+            btnImg.color = new Color(tokens.accentAction.r, tokens.accentAction.g, tokens.accentAction.b, 0.7f);
             btnImg.raycastTarget = true;
 
             var btnGroup = btn.GetComponent<CanvasGroup>();
@@ -334,6 +341,7 @@ namespace Saga.Core
 
         private void BuildSouffleButton(Canvas canvas)
         {
+            var tokens = DesignTokens.Get();
             var btn = new GameObject("SouffleButton",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(SouffleButtonView));
             btn.transform.SetParent(canvas.transform, false);
@@ -345,8 +353,21 @@ namespace Saga.Core
             rt.anchoredPosition = new Vector2(32, -32);
             rt.sizeDelta = new Vector2(160, 100);
 
+            // Sprint 7.5 A5: "Special" look — surface_mid bg + a 4px voie-colored border frame.
+            // SouffleButtonView uses IPointerClickHandler (not Button) so we can't SagaButton.Wrap it;
+            // we replicate the Special visual manually. Souffle is voie-neutral → use accent_primary border.
+            var border = new GameObject("Border", typeof(RectTransform), typeof(Image));
+            border.transform.SetParent(rt, false);
+            var borderRt = (RectTransform)border.transform;
+            borderRt.anchorMin = Vector2.zero; borderRt.anchorMax = Vector2.one;
+            borderRt.offsetMin = new Vector2(-3, -3); borderRt.offsetMax = new Vector2(3, 3);
+            var borderImg = border.GetComponent<Image>();
+            borderImg.color = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0.55f);
+            borderImg.raycastTarget = false;
+            border.transform.SetAsFirstSibling(); // behind the button fill
+
             var img = btn.GetComponent<Image>();
-            img.color = new Color(0.20f, 0.18f, 0.32f, 0.85f); // cool blueish — meditation vibes
+            img.color = tokens.surfaceMid;
             img.raycastTarget = true;
 
             var group = btn.GetComponent<CanvasGroup>();
@@ -891,12 +912,13 @@ namespace Saga.Core
             var root = new GameObject("AdversaireProgressBar",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireProgressBarView));
             root.transform.SetParent(canvas.transform, false);
+            // Sprint 7.5 fix (BUG 2): sits BELOW the Force counter (14-18% band) so they never overlap.
             var rootRt = (RectTransform)root.transform;
             rootRt.anchorMin = new Vector2(0.5f, 1f);
             rootRt.anchorMax = new Vector2(0.5f, 1f);
             rootRt.pivot = new Vector2(0.5f, 1f);
-            rootRt.anchoredPosition = new Vector2(0, -32);
-            rootRt.sizeDelta = new Vector2(800, 80);
+            rootRt.anchoredPosition = new Vector2(0, -270);
+            rootRt.sizeDelta = new Vector2(940, 64);
 
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = 1f;
@@ -958,8 +980,10 @@ namespace Saga.Core
             rt.anchorMin = new Vector2(0.5f, 1f);
             rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -132);
-            rt.sizeDelta = new Vector2(900, 200);
+            // Sprint 7.5 fix (BUG 2): below the Force counter (which now ends ~-254). Combat HUD and the
+            // Adversaire progress bar are mutually exclusive (combat vs training) so they share this band.
+            rt.anchoredPosition = new Vector2(0, -262);
+            rt.sizeDelta = new Vector2(940, 200);
 
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = 0f;
@@ -1348,11 +1372,10 @@ namespace Saga.Core
             var go = new GameObject("Character", typeof(LayeredCharacterRenderer), typeof(CharacterView));
             go.transform.SetParent(parent, false);
             go.transform.position = CharacterPosition;
-            // Sprint 7.5: 1.5× scale so the chibi reads well at the smaller portrait gameplay band.
-            go.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
 
-            // Ground shadow under the character.
-            BuildGroundShadow(go.transform, scale: new Vector3(0.7f, 0.35f, 1f));
+            // Ground shadow under the character. Built on a child so the parent's CharacterView
+            // breathing scale doesn't squash the shadow with it (child compensates via inverse scale).
+            BuildGroundShadow(go.transform, scale: new Vector3(0.45f, 0.22f, 1f));
 
             var body = new GameObject("Body", typeof(SpriteRenderer));
             body.transform.SetParent(go.transform, false);
@@ -1394,6 +1417,9 @@ namespace Saga.Core
 
             var view = go.GetComponent<CharacterView>();
             view.Renderer = renderer;
+            // Sprint 7.5 fix: set base scale AFTER construction (Awake/OnEnable already ran during
+            // `new GameObject`). 2x so the chibi reads at ~60% of the mannequin height in portrait.
+            view.SetBaseScale(new Vector3(2f, 2f, 1f));
 
             CharacterTransform = go.transform;
         }
@@ -1447,6 +1473,7 @@ namespace Saga.Core
             var go = new GameObject("Mannequin", typeof(SpriteRenderer), typeof(MannequinView));
             go.transform.SetParent(parent, false);
             go.transform.position = MannequinPosition;
+            go.transform.localScale = new Vector3(MannequinScale, MannequinScale, 1f);
 
             var sr = go.GetComponent<SpriteRenderer>();
             sr.sprite = CreateMannequinSprite();
@@ -1454,7 +1481,7 @@ namespace Saga.Core
             sr.sortingOrder = 5;
 
             // Sprint 7.5: subtle ground shadow + gentle sway DOTween so the dojo feels alive.
-            BuildGroundShadow(go.transform, scale: new Vector3(1.0f, 0.6f, 1f), yOffset: 0.02f);
+            BuildGroundShadow(go.transform, scale: new Vector3(1.3f, 0.7f, 1f), yOffset: 0.02f);
 
             // Slow ±2° rotation, infinite yoyo. SetLink ensures the tween dies with the GO.
             go.transform.rotation = Quaternion.Euler(0, 0, -2f);
@@ -1644,14 +1671,15 @@ namespace Saga.Core
             lblRt.anchorMin = new Vector2(0.5f, 1f);
             lblRt.anchorMax = new Vector2(0.5f, 1f);
             lblRt.pivot = new Vector2(0.5f, 1f);
-            lblRt.anchoredPosition = new Vector2(0, -110);
-            lblRt.sizeDelta = new Vector2(400, 28);
+            // Sprint 7.5 fix (BUG 2): top HUD band 6-14%. Label above the big number.
+            lblRt.anchoredPosition = new Vector2(0, -118);
+            lblRt.sizeDelta = new Vector2(400, 26);
             var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
             lblTmp.alignment = TextAlignmentOptions.Center;
             lblTmp.color = tokens.textSecondary;
             lblTmp.font = tokens.PrimaryFont;
             lblTmp.fontSize = tokens.fontCaption;
-            lblTmp.fontStyle = FontStyles.SemiBold;
+            lblTmp.fontStyle = FontStyles.Bold;
             lblTmp.text = "FORCE";
             lblTmp.characterSpacing = 8f;
             lblTmp.raycastTarget = false;
@@ -1663,8 +1691,9 @@ namespace Saga.Core
             rt.anchorMin = new Vector2(0.5f, 1f);
             rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -140);
-            rt.sizeDelta = new Vector2(900, 140);
+            // Sprint 7.5 fix (BUG 2): big number just under the FORCE label, well above the Adv bar (-270).
+            rt.anchoredPosition = new Vector2(0, -144);
+            rt.sizeDelta = new Vector2(940, 110);
 
             var label = go.GetComponent<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.Center;
@@ -1936,7 +1965,7 @@ namespace Saga.Core
             lblTmp.color = tokens.textPrimary;
             lblTmp.font = tokens.PrimaryFont;
             lblTmp.fontSize = tokens.fontH3;
-            lblTmp.fontStyle = FontStyles.SemiBold;
+            lblTmp.fontStyle = FontStyles.Bold;
             lblTmp.text = "INVENTAIRE";
             lblTmp.raycastTarget = false;
 

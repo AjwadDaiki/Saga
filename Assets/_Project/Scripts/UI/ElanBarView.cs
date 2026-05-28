@@ -52,7 +52,8 @@ namespace Saga.UI
             if (_glowImage != null)
             {
                 // Glow ramps up over 70..100% so the player sees the bar "charge" visually.
-                var glow = Mathf.SmoothStep(0f, 0.45f, Mathf.InverseLerp(0.7f, 1f, ratio));
+                // Capped at 0.35 (Sprint 7.5 BUG 3) so it stays subtle and doesn't dominate the band.
+                var glow = Mathf.SmoothStep(0f, 0.35f, Mathf.InverseLerp(0.7f, 1f, ratio));
                 var c = _glowImage.color;
                 _glowImage.color = new Color(c.r, c.g, c.b, glow);
             }
