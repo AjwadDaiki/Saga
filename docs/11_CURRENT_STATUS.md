@@ -4,11 +4,11 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 6 closed (validé in-play par Ajwad, mergé `dev` + `main`, tagué `v0.6.0`). **Sprint 7 en attente du brief enrichi** (système modulaire des sprites + identité culturelle des voies). Roadmap allongée à 14 sprints, lancement officiel envisagé **octobre 2026**.
+**Phase**: Sprint 7 implémenté (feat branch `feat/sprint-7-voies-modulaire`). Système modulaire sprites + Voies + Equipment + Inventaire + Reliques équipables. En attente de validation in-play par Ajwad avant merge `dev` → tag `v0.7.0`. Roadmap toujours alignée 14 sprints, lancement officiel octobre 2026.
 
 **Dernière session**: 2026-05-28, dev Claude (Opus 4.7) sur Claude Code.
 
-**Branche active**: `dev` (en standby), pas de feat branch active.
+**Branche active**: `feat/sprint-7-voies-modulaire` (depuis `dev`).
 
 ## Sprints terminés
 
@@ -21,6 +21,7 @@
 | 4 | `v0.4.0` | Combat Active System : Adversaire + chrono + mort temporaire + 5 adversaires | ✅ closed |
 | 5 | `v0.5.0` | Boss Mineurs (8 Capitaines) + Élan + Vague AOE | ✅ closed |
 | 6 | `v0.6.0` | Maîtres légendaires (8) + Prestige + Souffle | ✅ closed |
+| 7 | `v0.7.0` (pending) | Sprites modulaires (Body/Armor/Weapon) + 8 Voies + EquipmentService + Inventaire + Reliques équipables | 🟡 implémenté, en attente play validation |
 
 ## Sprint 6 — accomplissements clés (validés en play)
 
@@ -43,18 +44,39 @@
 
 ## Métriques de projet
 
-- **Sprints closed** : 6/14
-- **Branches** : main + dev synced à `9cee36e` (tag v0.6.0 à `e9974c9`)
-- **Tags** : `v0.1.0` → `v0.6.0`
-- **Lignes de code C# runtime (hors lib tierce)** : ~5500
-- **Tests EditMode** : 114 cases (NumberFormatter 13, ComboSystem 11, UpgradeData 5, StatsCalculator 8, UpgradeService 10, StadeManager 10, AdversaireData 3, AdversaireSpawner 5, CombatProcessor 8, ElanService 6, CapitaineData 3, CapitaineSpawner 5, VagueResolver 4, MaitreData 4, MaitreSpawner 5-6, PrestigeService 8, SouffleService 6-7)
-- **ScriptableObjects** : 25 (3 upgrades + 1 anim library + 5 adversaires + 8 capitaines + 8 maîtres)
+- **Sprints closed** : 6/14 (Sprint 7 implémenté, en attente play validation + tag)
+- **Branches** : main + dev synced à `9cee36e` (tag v0.6.0 à `e9974c9`) ; `feat/sprint-7-voies-modulaire` active
+- **Tags** : `v0.1.0` → `v0.6.0` (Sprint 7 → `v0.7.0` à venir)
+- **Lignes de code C# runtime (hors lib tierce)** : ~6300
+- **Tests EditMode** : 130 cases (114 préexistants + 16 Sprint 7 : EquipmentService 6 + SpriteLayerSet 3 + LayeredCharacterRenderer 4 + MaitreReliqueDrop 3)
+- **ScriptableObjects** : 42 (3 upgrades + 1 anim library + 5 adversaires + 8 capitaines + 8 maîtres + 9 sprite layer sets MVP + 8 reliques layer sets + 8 voies = 25 + 17 = 42)
 - **Combat phases implémentées** : 11/11 (Training + Adv×3 + PlayerDeath + Cap×3 + Maître×3)
 - **GameEvents channels** : ~30 (Sprint 7+ candidate pour split par domaine)
 - **Voies tintées** : 9 (None + 8 cultures)
 - **DeathRecords** : ajoutés au Hall des Légendes (UI surface Sprint 10+)
 
-## ⏸️ Sprint 7 — en attente du brief enrichi
+## Sprint 7 — accomplissements (en attente validation play)
+
+> "C'est LE sprint qui rend SAGA scalable." — Coordinateur
+
+- **`SpriteLayerSet` SO** : 1 corps + 3 armures + 5 armes MVP (8 weapons-slot reliques de Maître supplémentaires = 9+8=17 SOs au total). Champs : id, slot, voie, rarity, idle/attack1/2/3/hurt/meditation/die arrays, statsBonusForce (BigDouble), statsBonusCrit (float), iconSprite, frameDuration. Factory `CreateForTests`.
+- **`VoieData` SO** : 8 voies (Samurai/Viking/Wuxia/Spartiate/Mongol/Saladin/Aztec/Gaulois). Couleurs main+accent, intro citation, description, bonus description (mécaniques portées par GameState, voir `voiesMastered`).
+- **`LayeredCharacterRenderer`** : 3 SpriteRenderer enfants (Body z=0 / Armor z=1 / Weapon z=2). Une seule horloge (Body = autoritative). Looping : idle, meditation. One-shots : attack1/2/3, hurt, die. Fallback chain : requested anim → layer idle → null. Static helper `IsLooping(anim)`.
+- **`CharacterView` refactor** : remplace `SpriteAnimator` legacy. Listen OnTapResolved/OnComboChanged/OnStadeChanged/OnSouffleStarted/Ended/OnEquipmentChanged. Pendant Souffle, joue meditation puis revient à idle. Breath DOScale avec SetLink.
+- **`EquipmentService` POCO** : AddToInventory (idempotent) / Equip (refuse wrong-slot ou non-owned) / Unequip (refuse Body, qui est toujours équipé) / GetEquipped / GetTotalStatsBonus (somme Force de tous les slots). Raise OnEquipmentChanged + OnItemAddedToInventory.
+- **`StatsCalculator.GetForcePerTap`** : intègre désormais `GetEquipmentForceBonus` (pure read GameState → ContentDatabase IDs).
+- **`ContentDatabase`** : ajout `_layerSetsById` + `_voiesByEnum` + arrays + `AllSpriteLayerSets` + `AllVoies` + `GetSpriteLayerSet(id)` + `GetVoie(enum)`. Constructor 6-arg avec auto-load Resources/SpriteLayerSets et Resources/Voies.
+- **`GameState` v9** : nouveaux champs `inventoryLayerSetIds` (List<string>), `equippedBodyId` (default `body_chibi_neutral`), `equippedArmorId`, `equippedWeaponId`, `voieSelectedId`, `voiesMastered` (List<string>). Migration v8→v9 garante body default toujours présent en inventaire.
+- **`SaveService.Migrate`** : currentVersion = 9. Migration idempotente + defensive boot reset (citation, élan, souffle buff actif).
+- **3 Editor utilities** : `Saga > Sprint 7 > Generate Sprite Layer Sets`, `Generate Voie Assets`, `Generate Maitre Relique Layer Sets` (wire les 8 reliques weapon-slot sur les MaitreData existants).
+- **UI Inventaire** : modal procédural plein écran avec sections Body/Armor/Weapon, équipé en tête, click "Équiper". Bouton `INVENTAIRE` top-right (symétrique au `SOUFFLE` top-left). Subscribe OnEquipmentChanged + OnItemAddedToInventory pour rebuild live.
+- **Reliques Maître drop** : CombatProcessor.OnMaitreDefeated grant `ReliqueSpriteLayerSetId` → inventaire via EquipmentService. Stats-only Sprint 7 (D3) ; visuelles Sprint 8+.
+- **Prestige persistence matrix élargie (Sprint 7)** : inventoryLayerSetIds, equippedBodyId/Armor/Weapon, voieSelectedId, voiesMastered PERSIST. Gear et voie sont des échelles long-terme, pas run-scoped.
+- **MainSceneBootstrap.BuildCharacter** refactor : crée Body+Armor+Weapon enfants + LayeredCharacterRenderer + CharacterView, layer assignment initial depuis GameState.
+- **GameEvents Sprint 7** : OnEquipmentChanged(slot, next, previous), OnItemAddedToInventory(layer), OnVoieSelected(prev, next), OnVoieMastered(voie).
+- **16 tests EditMode** ajoutés : EquipmentServiceTests (6), SpriteLayerSetTests (3), LayeredCharacterRendererTests (4), MaitreReliqueDropTests (3). Total : **130 cases**.
+
+## ⏸️ Sprint 7 — brief consommé
 
 ### Décisions coordinateur déjà loguées (DESIGN_DECISIONS_LOG.md)
 

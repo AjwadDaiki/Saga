@@ -533,6 +533,56 @@ avec `EchosMinReward = 10` et `EchosFormulaBase = 10`. La valeur d'entrée est `
 
 ---
 
+## 2026-05-28 — Sprint 7: Système layered sprite à 3 couches (Body / Armor / Weapon)
+
+**Décision**: Le personnage est rendu par 3 `SpriteRenderer` enfants stackés (Body z=0, Armor z=1, Weapon z=2), pilotés par un seul `LayeredCharacterRenderer` MonoBehaviour. Une seule horloge — le Body layer — fournit le frame index, les 3 renderers se synchronisent sur ce même index. Une couche manquant l'animation demandée tombe sur son `SpriteIdle` (et donc null si vide). Looping policy : idle + meditation, one-shots : attack1/2/3/hurt/die.
+
+**Raison**: Unity Animator est trop rigide pour hot-swap d'animations par slot (les state graphs sont per-clip, pas per-layer). Un driver custom permet à n'importe quel slot d'omettre n'importe quelle anim ; la fallback chain garde le perso visible même si l'art Sprint 7 ne couvre que le Body. Le pattern scale au D6 (système d'armes communautaires post-MVP) sans refactor — chaque nouveau set est juste un nouvel asset `SpriteLayerSet` chargé dynamiquement.
+
+**Conséquence**: `BuildCharacter` crée 3 enfants + LayeredCharacterRenderer + CharacterView. Sprint 7 MVP : seul le Body porte des frames rvros ; Armor + Weapon sont stats-only (D3) avec sprite arrays vides. Sprint 8+ wire l'art layered. `SpriteAnimator` legacy reste pour compat mais n'est plus instancié par `BuildCharacter`.
+
+---
+
+## 2026-05-28 — Sprint 7: Equipment persiste à travers le Prestige
+
+**Décision**: Les nouveaux champs Sprint 7 (`inventoryLayerSetIds`, `equippedBodyId`, `equippedArmorId`, `equippedWeaponId`, `voieSelectedId`, `voiesMastered`) **PERSISTENT** à travers le Prestige. `PrestigeService.CompletePrestige` ne les touche pas, et un commentaire explicite l'indique.
+
+**Raison**: SAGA n'est pas un roguelike — la progression d'équipement et de voies est un ladder long-terme, pas une carotte par-run. Le joueur qui drop une Lame de Yoshitsune au Maître garde son skin + ses stats à travers tous les prestiges suivants. Cohérent avec `relicsOwned` (Sprint 6) qui persistait déjà. La RESET matrix reste run-scoped (force, upgrades, stade, élan, chrono).
+
+**Conséquence**: Au prestige, le perso renait Stade 1 avec son équipement intact. Si plus tard on veut "vendre" une relique pour des Échos bonus, c'est une feature opt-in via UI dédié, pas un reset automatique.
+
+---
+
+## 2026-05-28 — Sprint 7: Voie de démarrage = Samouraï (Décision D2 coordinateur)
+
+**Décision**: Tous les nouveaux saves démarrent avec `voieSelectedId = ""` (string vide). Sprint 7 MVP n'expose pas encore d'UI de sélection — la Voie Samouraï est le starter implicite parce que l'unique armure légendaire Sprint 7 est `armor_kimono_yamato` (Samurai) et l'unique katana voie-tinté est `weapon_katana_samurai`. La voie effective du joueur dérive donc de son équipement Sprint 7, pas d'un choix explicite.
+
+**Raison**: Coordinateur a tranché Samurai pour son universalité culturelle ("japon = entrée mainstream pour un public mobile occidental"). MVP UI de sélection reportée Sprint 8+ quand on aura 8 sets complets par voie. Pendant Sprint 7, on évite de demander un choix au joueur sur quelque chose dont les conséquences mécaniques ne sont pas encore implémentées (bonus de voie = Sprint 8+).
+
+**Conséquence**: `VoieData` SO existe pour les 8 voies mais aucun champ GameState n'est lu pour les bonus actifs Sprint 7. Le `voieSelectedId` reste dormant — il sera consommé Sprint 8+ par un futur `VoieBonusCalculator`.
+
+---
+
+## 2026-05-28 — Sprint 7: Reliques de Maître = stats-only Sprint 7, visuelles Sprint 8+ (Décision D3)
+
+**Décision**: Les 8 reliques de Maître sont créées comme `SpriteLayerSet` weapon-slot dès Sprint 7 (avec stats, rarity Mythique, voie tintée). MAIS les sprite arrays restent vides — la relique se voit dans l'inventaire et boost les stats, mais ne change pas le rendu du perso quand équipée. Le visuel layered relique attendra Sprint 8 quand l'art layered sera disponible.
+
+**Raison**: Le coordinateur a vu que faire l'art layered de 8 reliques uniques en Sprint 7 explosait le budget de 6-7 jours. Découper en deux : le système de drop + équip est fonctionnel + testé Sprint 7, l'art layered est un swap-in Sprint 8 sans changer de code (juste populer les sprite arrays via Editor utility).
+
+**Conséquence**: `MaitreReliqueLayerSetsCreator` ne wire pas de sprite frames. `CombatProcessor.OnMaitreDefeated` grant la relique via `EquipmentService.AddToInventory(state, data.ReliqueSpriteLayerSetId)`. Le bonus stats (500-720 Force selon le Maître) est immédiatement actif si le joueur équipe la relique. Sprint 8+ : un patch des SO en place suffit pour activer le visuel — pas de refactor service nécessaire.
+
+---
+
+## 2026-05-28 — Sprint 7: Body slot non-déséquipable
+
+**Décision**: `EquipmentService.Unequip(EquipmentSlot.Body)` retourne `false` et log un warning. Le slot Body est toujours équipé — par défaut, `body_chibi_neutral` (forcé en inventaire par `SaveService.Migrate`).
+
+**Raison**: Un perso sans body = renderer null = écran vide. C'est un cas dégénéré qu'on bloque au niveau du service. Le pattern "default toujours équipé" évite l'edge case "j'ai déséquipé tout puis fermé le jeu, je reload avec un perso invisible".
+
+**Conséquence**: L'UI Inventaire affiche le bouton "Équipé" disabled sur le body actuel. Sprint 8+ quand on aura plusieurs body skins (transformations Stade-based ?), le mécanisme reste — c'est juste que `Equip(otherBody)` remplacera le body courant, jamais le clear.
+
+---
+
 ## Template pour nouvelles entrées
 
 ```

@@ -99,6 +99,10 @@ namespace Saga.Core
             BuildAffronterMaitreButton(elanRow, affronterModal);
             BuildMaitreIntroOverlay(MainCanvas);
             BuildPrestigeCinematicOverlay(MainCanvas, citationModal);
+
+            // Sprint 7: Inventaire
+            var inventoryModal = BuildEquipmentInventoryModal(MainCanvas);
+            BuildInventaireButton(MainCanvas, inventoryModal);
         }
 
         private void BuildMaitre(Transform parent)
@@ -1157,19 +1161,46 @@ namespace Saga.Core
 
         private void BuildCharacter(Transform parent)
         {
-            var go = new GameObject("Character", typeof(SpriteRenderer), typeof(SpriteAnimator), typeof(CharacterView));
+            // Sprint 7: layered character = 3 stacked SpriteRenderers (Body / Armor / Weapon),
+            // driven by a single LayeredCharacterRenderer on the root. SaveService.Migrate guarantees
+            // equippedBodyId defaults to body_chibi_neutral so the body slot is always visible.
+            var go = new GameObject("Character", typeof(LayeredCharacterRenderer), typeof(CharacterView));
             go.transform.SetParent(parent, false);
             go.transform.position = CharacterPosition;
 
-            var sr = go.GetComponent<SpriteRenderer>();
-            sr.sortingOrder = 5;
+            var body = new GameObject("Body", typeof(SpriteRenderer));
+            body.transform.SetParent(go.transform, false);
+            var bodySr = body.GetComponent<SpriteRenderer>();
+            bodySr.sortingOrder = 5;
 
-            var anim = go.GetComponent<SpriteAnimator>();
-            anim.Renderer = sr;
-            anim.Library = Resources.Load<SpriteAnimationLibrary>("Animations/AdventurerAnimationLibrary");
+            var armor = new GameObject("Armor", typeof(SpriteRenderer));
+            armor.transform.SetParent(go.transform, false);
+            var armorSr = armor.GetComponent<SpriteRenderer>();
+            armorSr.sortingOrder = 6;
+
+            var weapon = new GameObject("Weapon", typeof(SpriteRenderer));
+            weapon.transform.SetParent(go.transform, false);
+            var weaponSr = weapon.GetComponent<SpriteRenderer>();
+            weaponSr.sortingOrder = 7;
+
+            var renderer = go.GetComponent<LayeredCharacterRenderer>();
+            renderer.BodyRenderer = bodySr;
+            renderer.ArmorRenderer = armorSr;
+            renderer.WeaponRenderer = weaponSr;
+
+            // Initial layer assignment from GameState (post-Migrate, these IDs always resolve).
+            var gm = GameManager.Instance;
+            var content = gm?.Content;
+            var state = gm?.State;
+            if (content != null && state != null)
+            {
+                renderer.SetLayer(EquipmentSlot.Body, content.GetSpriteLayerSet(state.equippedBodyId));
+                renderer.SetLayer(EquipmentSlot.Armor, content.GetSpriteLayerSet(state.equippedArmorId));
+                renderer.SetLayer(EquipmentSlot.Weapon, content.GetSpriteLayerSet(state.equippedWeaponId));
+            }
 
             var view = go.GetComponent<CharacterView>();
-            view.Animator = anim;
+            view.Renderer = renderer;
 
             CharacterTransform = go.transform;
         }
@@ -1437,6 +1468,115 @@ namespace Saga.Core
             view.Background = bg;
             view.Title = titleLabel;
             view.Subtitle = subLabel;
+        }
+
+        // -------- Sprint 7: Inventaire ----------------------------------
+
+        private EquipmentInventoryModal BuildEquipmentInventoryModal(Canvas canvas)
+        {
+            var root = new GameObject("EquipmentInventoryModal",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(EquipmentInventoryModal));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            root.transform.SetAsLastSibling();
+
+            var bg = root.GetComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.85f);
+            bg.raycastTarget = true;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false;
+
+            // Title.
+            var title = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+            title.transform.SetParent(rt, false);
+            var titleRt = (RectTransform)title.transform;
+            titleRt.anchorMin = new Vector2(0, 0.88f); titleRt.anchorMax = new Vector2(1, 0.95f);
+            titleRt.offsetMin = Vector2.zero; titleRt.offsetMax = Vector2.zero;
+            var titleTmp = title.GetComponent<TextMeshProUGUI>();
+            titleTmp.alignment = TextAlignmentOptions.Center;
+            titleTmp.color = new Color(0.98f, 0.85f, 0.55f, 1f);
+            titleTmp.fontSize = 42;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.text = "INVENTAIRE";
+            titleTmp.raycastTarget = false;
+
+            // List container with vertical layout.
+            var listContainer = new GameObject("List",
+                typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            listContainer.transform.SetParent(rt, false);
+            var listRt = (RectTransform)listContainer.transform;
+            listRt.anchorMin = new Vector2(0.07f, 0.13f); listRt.anchorMax = new Vector2(0.93f, 0.85f);
+            listRt.offsetMin = Vector2.zero; listRt.offsetMax = Vector2.zero;
+            var vlg = listContainer.GetComponent<VerticalLayoutGroup>();
+            vlg.spacing = 10;
+            vlg.padding = new RectOffset(8, 8, 8, 8);
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            // Reculer button (bottom).
+            var back = new GameObject("Reculer",
+                typeof(RectTransform), typeof(Image), typeof(Button));
+            back.transform.SetParent(rt, false);
+            var brt = (RectTransform)back.transform;
+            brt.anchorMin = new Vector2(0.5f, 0.02f); brt.anchorMax = new Vector2(0.5f, 0.10f);
+            brt.pivot = new Vector2(0.5f, 0.5f);
+            brt.sizeDelta = new Vector2(180, 0);
+            back.GetComponent<Image>().color = new Color(0.35f, 0.30f, 0.25f, 1f);
+            var brl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            brl.transform.SetParent(back.transform, false);
+            var brlRt = (RectTransform)brl.transform;
+            brlRt.anchorMin = Vector2.zero; brlRt.anchorMax = Vector2.one;
+            brlRt.offsetMin = Vector2.zero; brlRt.offsetMax = Vector2.zero;
+            var brlTmp = brl.GetComponent<TextMeshProUGUI>();
+            brlTmp.alignment = TextAlignmentOptions.Center;
+            brlTmp.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+            brlTmp.fontSize = 22;
+            brlTmp.fontStyle = FontStyles.Bold;
+            brlTmp.text = "Reculer";
+            brlTmp.raycastTarget = false;
+
+            var modal = root.GetComponent<EquipmentInventoryModal>();
+            modal.Group = group;
+            modal.ListContainer = listRt;
+            back.GetComponent<Button>().onClick.AddListener(modal.Close);
+
+            return modal;
+        }
+
+        private void BuildInventaireButton(Canvas canvas, EquipmentInventoryModal modal)
+        {
+            var btn = new GameObject("InventaireButton",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
+            btn.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)btn.transform;
+            // Top-right counterpart to the Souffle button (which lives top-left).
+            rt.anchorMin = new Vector2(1f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(1f, 1f);
+            rt.anchoredPosition = new Vector2(-32, -32);
+            rt.sizeDelta = new Vector2(160, 80);
+
+            var img = btn.GetComponent<Image>();
+            img.color = new Color(0.30f, 0.26f, 0.18f, 0.92f);
+            img.raycastTarget = true;
+
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(rt, false);
+            var lblRt = (RectTransform)lblGo.transform;
+            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
+            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
+            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
+            lblTmp.alignment = TextAlignmentOptions.Center;
+            lblTmp.color = new Color(0.98f, 0.95f, 0.85f, 1f);
+            lblTmp.fontSize = 22;
+            lblTmp.fontStyle = FontStyles.Bold;
+            lblTmp.text = "INVENTAIRE";
+            lblTmp.raycastTarget = false;
+
+            btn.GetComponent<Button>().onClick.AddListener(modal.Open);
         }
     }
 }

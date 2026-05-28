@@ -11,7 +11,8 @@ namespace Saga.Core
     /// Sprint 4: <see cref="AdversaireData"/> from Resources/Adversaires/.
     /// Sprint 5: <see cref="CapitaineData"/> from Resources/Capitaines/.
     /// Sprint 6: <see cref="MaitreData"/> from Resources/Maitres/.
-    /// Sprint 7+ migrate to Addressables.
+    /// Sprint 7: <see cref="SpriteLayerSet"/> from Resources/SpriteLayerSets/ and <see cref="VoieData"/> from Resources/Voies/.
+    /// Sprint 8+ migrate to Addressables.
     ///
     /// Test seam: pass explicit collections (e.g. via *.CreateForTests factories)
     /// to bypass Resources scanning in EditMode tests.
@@ -22,22 +23,30 @@ namespace Saga.Core
         private readonly Dictionary<string, AdversaireData> _adversairesById = new Dictionary<string, AdversaireData>();
         private readonly Dictionary<string, CapitaineData> _capitainesById = new Dictionary<string, CapitaineData>();
         private readonly Dictionary<string, MaitreData> _maitresById = new Dictionary<string, MaitreData>();
+        private readonly Dictionary<string, SpriteLayerSet> _layerSetsById = new Dictionary<string, SpriteLayerSet>();
+        private readonly Dictionary<Voie, VoieData> _voiesByEnum = new Dictionary<Voie, VoieData>();
         private UpgradeData[] _orderedUpgrades = System.Array.Empty<UpgradeData>();
         private AdversaireData[] _orderedAdversaires = System.Array.Empty<AdversaireData>();
         private CapitaineData[] _orderedCapitaines = System.Array.Empty<CapitaineData>();
         private MaitreData[] _orderedMaitres = System.Array.Empty<MaitreData>();
+        private SpriteLayerSet[] _orderedLayerSets = System.Array.Empty<SpriteLayerSet>();
+        private VoieData[] _orderedVoies = System.Array.Empty<VoieData>();
 
         public IReadOnlyList<UpgradeData> AllUpgrades => _orderedUpgrades;
         public IReadOnlyList<AdversaireData> AllAdversaires => _orderedAdversaires;
         public IReadOnlyList<CapitaineData> AllCapitaines => _orderedCapitaines;
         public IReadOnlyList<MaitreData> AllMaitres => _orderedMaitres;
+        public IReadOnlyList<SpriteLayerSet> AllSpriteLayerSets => _orderedLayerSets;
+        public IReadOnlyList<VoieData> AllVoies => _orderedVoies;
 
-        public ContentDatabase() : this(null, null, null, null) { }
+        public ContentDatabase() : this(null, null, null, null, null, null) { }
 
         public ContentDatabase(IEnumerable<UpgradeData> upgrades,
             IEnumerable<AdversaireData> adversaires = null,
             IEnumerable<CapitaineData> capitaines = null,
-            IEnumerable<MaitreData> maitres = null)
+            IEnumerable<MaitreData> maitres = null,
+            IEnumerable<SpriteLayerSet> layerSets = null,
+            IEnumerable<VoieData> voies = null)
         {
             if (upgrades != null)
                 RegisterUpgrades(upgrades, sourceLabel: "injected");
@@ -58,6 +67,16 @@ namespace Saga.Core
                 RegisterMaitres(maitres, sourceLabel: "injected");
             else
                 RegisterMaitres(Resources.LoadAll<MaitreData>("Maitres"), sourceLabel: "Resources/Maitres");
+
+            if (layerSets != null)
+                RegisterSpriteLayerSets(layerSets, sourceLabel: "injected");
+            else
+                RegisterSpriteLayerSets(Resources.LoadAll<SpriteLayerSet>("SpriteLayerSets"), sourceLabel: "Resources/SpriteLayerSets");
+
+            if (voies != null)
+                RegisterVoies(voies, sourceLabel: "injected");
+            else
+                RegisterVoies(Resources.LoadAll<VoieData>("Voies"), sourceLabel: "Resources/Voies");
         }
 
         public UpgradeData GetUpgrade(string id)
@@ -78,6 +97,16 @@ namespace Saga.Core
         public MaitreData GetMaitre(string id)
         {
             return id != null && _maitresById.TryGetValue(id, out var m) ? m : null;
+        }
+
+        public SpriteLayerSet GetSpriteLayerSet(string id)
+        {
+            return id != null && _layerSetsById.TryGetValue(id, out var s) ? s : null;
+        }
+
+        public VoieData GetVoie(Voie voie)
+        {
+            return _voiesByEnum.TryGetValue(voie, out var v) ? v : null;
         }
 
         private void RegisterUpgrades(IEnumerable<UpgradeData> upgrades, string sourceLabel)
@@ -146,6 +175,40 @@ namespace Saga.Core
                 _maitresById[m.Id] = m;
             }
             Debug.Log($"[ContentDatabase] Registered {_maitresById.Count} maitres from {sourceLabel}.");
+        }
+
+        private void RegisterSpriteLayerSets(IEnumerable<SpriteLayerSet> layerSets, string sourceLabel)
+        {
+            _orderedLayerSets = layerSets?.Where(s => s != null).ToArray() ?? System.Array.Empty<SpriteLayerSet>();
+            _layerSetsById.Clear();
+            foreach (var s in _orderedLayerSets)
+            {
+                if (string.IsNullOrEmpty(s.Id)) continue;
+                if (_layerSetsById.ContainsKey(s.Id))
+                {
+                    Debug.LogWarning($"[ContentDatabase] Duplicate SpriteLayerSet id '{s.Id}' in {s.name} — keeping first.");
+                    continue;
+                }
+                _layerSetsById[s.Id] = s;
+            }
+            Debug.Log($"[ContentDatabase] Registered {_layerSetsById.Count} sprite layer sets from {sourceLabel}.");
+        }
+
+        private void RegisterVoies(IEnumerable<VoieData> voies, string sourceLabel)
+        {
+            _orderedVoies = voies?.Where(v => v != null).ToArray() ?? System.Array.Empty<VoieData>();
+            _voiesByEnum.Clear();
+            foreach (var v in _orderedVoies)
+            {
+                if (v.VoieEnum == Voie.None) continue;
+                if (_voiesByEnum.ContainsKey(v.VoieEnum))
+                {
+                    Debug.LogWarning($"[ContentDatabase] Duplicate VoieData enum '{v.VoieEnum}' in {v.name} — keeping first.");
+                    continue;
+                }
+                _voiesByEnum[v.VoieEnum] = v;
+            }
+            Debug.Log($"[ContentDatabase] Registered {_voiesByEnum.Count} voies from {sourceLabel}.");
         }
     }
 }

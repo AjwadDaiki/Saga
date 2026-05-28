@@ -32,6 +32,7 @@ namespace Saga.Core
         public VagueResolver Vague { get; private set; }
         public SouffleService Souffle { get; private set; }
         public PrestigeService Prestige { get; private set; }
+        public EquipmentService Equipment { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -71,6 +72,7 @@ namespace Saga.Core
             Vague = new VagueResolver(Content);
             Souffle = new SouffleService();
             Prestige = new PrestigeService();
+            Equipment = new EquipmentService(Content);
 
             // Route per-tap progress to the spawner. DamageDealer, ElanService, VagueResolver,
             // CapitaineSpawner, MaitreSpawner all subscribe themselves in their constructors.
