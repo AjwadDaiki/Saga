@@ -2,7 +2,8 @@
     "name": "Saga.Editor",
     "rootNamespace": "Saga.EditorTools",
     "references": [
-        "Saga.Runtime"
+        "Saga.Runtime",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
