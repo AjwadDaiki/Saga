@@ -43,6 +43,12 @@ namespace Saga.Gameplay
                 if (cap == null) return;
                 maxHp = cap.Hp;
             }
+            else if (phase == CombatPhase.MaitreActive)
+            {
+                var m = _content?.GetMaitre(gm.State.currentMaitreId);
+                if (m == null) return;
+                maxHp = m.Hp;
+            }
             else
             {
                 return;

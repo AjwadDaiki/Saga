@@ -24,6 +24,14 @@ namespace Saga.Data
         /// <summary>Active combat with a Capitaine. HP phase thresholds drive bar color, enrage at 25%.</summary>
         CapitaineActive = 6,
         /// <summary>~3s cinematic: slow motion + flash + death citation + "VICTOIRE" + loot drop.</summary>
-        CapitaineVictory = 7
+        CapitaineVictory = 7,
+
+        // Sprint 6 — Maîtres légendaires (volontary invocation via "Affronter le Maître" button)
+        /// <summary>~2.5s cinematic: vignette épaisse + drum hit + arena tint + name MASSIVE + citation.</summary>
+        MaitreIncoming = 8,
+        /// <summary>Active combat with a Maître. HP phases + 25% enrage (tint rouge + chrono accelerate + shake).</summary>
+        MaitreActive = 9,
+        /// <summary>~3s cinematic: slow-mo + flash + victory citation + "VICTOIRE LÉGENDAIRE" + Relique drop.</summary>
+        MaitreVictory = 10
     }
 }

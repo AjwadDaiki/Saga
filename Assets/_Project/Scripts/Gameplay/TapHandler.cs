@@ -64,14 +64,15 @@ namespace Saga.Gameplay
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
-            // Sprint 5: phase gating. Only Training, AdversaireActive, CapitaineActive accept taps.
-            //   - *Incoming / Victory / PlayerDeathTemporary = cinematic phases, no input.
-            // Same combo math runs either way (so combo doesn't reset crossing phases).
+            // Sprint 6: phase gating expanded with MaitreActive. Sprint 5 added CapitaineActive.
+            // Taps are also blocked while Souffle is in the Meditating phase (player is mid-medit).
             var phase = gm.State.currentPhase;
             var phaseAccepts = phase == Saga.Data.CombatPhase.Training
                             || phase == Saga.Data.CombatPhase.AdversaireActive
-                            || phase == Saga.Data.CombatPhase.CapitaineActive;
+                            || phase == Saga.Data.CombatPhase.CapitaineActive
+                            || phase == Saga.Data.CombatPhase.MaitreActive;
             if (!phaseAccepts) return;
+            if (gm.Souffle != null && gm.Souffle.IsMeditating) return;
 
             var tierMult = _combo.RegisterTap();
             var bonus = StatsCalculator.GetComboMultiplierBonus(gm.State, gm.Content);
@@ -86,12 +87,20 @@ namespace Saga.Gameplay
                 value = value * Saga.Data.ElanConstants.VagueTrainingForceMultiplier;
             }
 
+            // Souffle buff: ×1.5 Force (Training only — combat damage isn't boosted by Souffle Sprint 6).
+            if (phase == Saga.Data.CombatPhase.Training && gm.Souffle != null && gm.Souffle.IsBuffActive)
+            {
+                value = value * Saga.Data.SouffleConstants.BuffForceMultiplier;
+            }
+
             if (phase == Saga.Data.CombatPhase.Training)
             {
                 gm.State.force += value;
+                // Track max force for prestige Échos calc.
+                if (gm.State.force > gm.State.currentRunForceMax) gm.State.currentRunForceMax = gm.State.force;
                 GameEvents.RaiseForceChanged();
             }
-            // In AdversaireActive/CapitaineActive: DamageDealer applies `value` as damage. No Force here.
+            // In AdversaireActive/CapitaineActive/MaitreActive: DamageDealer applies `value` as damage. No Force here.
 
             gm.State.totalTaps++;
             gm.Save?.MarkDirty();

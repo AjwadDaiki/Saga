@@ -386,6 +386,111 @@ Window: 1.5s entre 2 taps consécutifs. Si dépassé, reset à 0.
 
 ---
 
+## 2026-05-28 — Sprint 6: Matrice PERSIST/RESET au Prestige
+
+**Décision**: Au prestige (mort vs Maître), répartition stricte des champs `GameState`:
+
+**RESET (run-scoped)**:
+- `force`, `upgradeLevels`, `currentStade`
+- `totalAdversairesDefeated`, `totalCapitainesDefeated`
+- `maitreInvocationSlots`, `currentRunEchosEarned`, `currentRunForceMax`
+- `currentElan`, `chronoRemaining`, `tapsTowardsNextAdversaire`
+- `currentAdversaireId/Hp`, `currentCapitaineId/Phase`, `currentMaitreId/Phase`
+- `playerCitationLockedForRun`
+
+**PERSIST (carrière)**:
+- `totalEchos` (currency méta)
+- `relicsOwned`, `relicsConserved` (Sprint 6 MVP = toutes persistent, Sprint 7+ ajoutera UI de sélection)
+- `titlesUnlocked`, `achievementsUnlocked`
+- `prestigeCount`, `lastPrestigeAt`
+- `deathRecords` (Hall des Légendes)
+- `playerCitation` (héritage)
+- `lastSouffleTime` (skill apprise, cf décision Sprint 5 séparée)
+
+**Raison**: La distinction "ce que tu réapprendrais d'un nouveau corps" (compétence, force, niveau) vs "ce qui te suit comme légende" (titres, reliques, citations, Échos) crée un arc narratif cohérent avec la vision "humain devenu mythe". Une mort efface la chair pas la mémoire collective.
+
+**Conséquence**: `PrestigeService.TriggerPrestige` (sauvegarde immédiate) + `PrestigeService.CompletePrestige` (reset à la fin de cinématique). `SaveService.Migrate` v7→v8 ajoute défaultivement les listes vides + counter à zéro pour migrer les saves d'avant prestige. Testé par `PrestigeServiceTests.CompletePrestige_Resets_Run_Fields` + `CompletePrestige_Preserves_Persist_Fields`.
+
+---
+
+## 2026-05-28 — Sprint 6: Souffle 3-state machine + cooldown PERSISTENT
+
+**Décision**: Le service Souffle implémente une state machine 3 états:
+```
+Idle ──TryStartMeditation()──> Meditating ──5s──> Buffing ──30s──> Idle
+                          ↑                                            │
+                          └──── cooldown 120s déduit du moment TryStart ┘
+```
+- **Pendant Meditating**: taps bloqués (`TapHandler` checke `IsMeditating`)
+- **Pendant Buffing**: ×1.5 Force/tap (training phase uniquement, pas en combat actif)
+- **Cooldown** : démarre au moment du `TryStartMeditation` (PAS à la fin du buff). Total cooldown 120s ⟹ 120 - 35 = ~85s effectifs après fin du buff.
+- **Cooldown persiste au prestige** : `lastSouffleTime` est PERSIST. Une compétence apprise ne se désapprend pas.
+
+**Raison**: Le pattern 3-state évite les chevauchements ambigus (méditer pendant le buff actif). Le cooldown qui démarre au début, pas à la fin du buff, est plus généreux pour le joueur (la "fenêtre offensive" 30s n'est pas une pénalité de cooldown). Le caractère persistent du cooldown matche la décision Sprint 5 (DESIGN_DECISIONS_LOG entry "Souffle cooldown permanent").
+
+**Conséquence**: `SouffleService.cs` POCO + Tick driven by `GameTicker`. `OnSouffleStarted/Ended/BuffStarted/BuffEnded/CooldownUpdated` events. Testé par `SouffleServiceTests` (7 cases couvrant transitions + cooldown countdown + gate sur cooldown).
+
+---
+
+## 2026-05-28 — Sprint 6: Échos formula log10 × 10 avec floor + minReward
+
+**Décision**: Formule de récompense au prestige:
+```
+echos = max(EchosMinReward, floor(log10(forceMax) × EchosFormulaBase))
+```
+avec `EchosMinReward = 10` et `EchosFormulaBase = 10`. La valeur d'entrée est `currentRunForceMax` (max ratchet par tick, jamais décroît dans un run).
+
+**Raison**: log10 garde le rythme idle classique (chaque ordre de grandeur de force = +10 Échos). MinReward évite la frustration "0 Échos pour avoir essayé". Utiliser le max plutôt que la valeur courante évite le pseudo-exploit "dépenser tout en upgrades avant le prestige pour 'cacher' la force atteinte".
+
+**Conséquence**: `PrestigeService.CalculateEchosForCurrentRun` exposé pour le preview (UI), idempotent. `GameTicker` met à jour `currentRunForceMax` chaque tick si `force > currentRunForceMax`. Testé par `PrestigeServiceTests.CalculateEchos_*` (3 cases).
+
+---
+
+## 2026-05-28 — Sprint 6: Invocation Maître = volontaire + slot-based cadence /3
+
+**Décision**: Pas d'auto-spawn de Maître. Le joueur clique sur "Affronter le Maître" (apparait quand `maitreInvocationSlots ≥ 1`) puis choisit dans une modal lequel des 8 affronter. Slots accumulés:
+- Chaque `PrestigeConstants.CapitainesPerMaitreSlot` (= 3) Capitaines vaincus → +1 slot
+- Slots reset à 0 au prestige
+- Invocation consomme 1 slot (decrement)
+
+**Raison**: Le Maître est l'événement narratif majeur du run. Le rendre volontaire donne au joueur le poids de "je suis prêt à risquer ma mort", indispensable pour que la mort vs Maître ait du sens (≠ spawn surprise). La cadence /3 Capitaines maintient le rythme (un Maître toutes les ~3 minutes de combat actif au mid-game) sans forcer.
+
+**Conséquence**: `MaitreSpawner` listen `OnCapitaineDefeated`, increment slot + raise `OnMaitreUnlocked`. `AffronterMaitreButtonView` affiche + animation scale punch sur unlock. `AffronterMaitreModal` liste les Maîtres disponibles avec citation + bouton "Affronter". `MaitreSpawner.TryInvokeMaitre` gate (slot, phase, id) puis `CombatProcessor.StartMaitreIncoming`. Testé par `MaitreSpawnerTests` (6 cases).
+
+---
+
+## 2026-05-28 — Sprint 6: Citation joueur — pattern prompt-or-edit
+
+**Décision**: La citation finale du joueur (max 80 chars, `PrestigeConstants.PlayerCitationMaxLength`) suit ce flow:
+- **Au début d'un run** (post-prestige ou première session): si `playerCitation` vide, modal optionnel "Écris ta première phrase…" (skippable). Stocké dans `GameState.playerCitation` (PERSIST).
+- **À la mort vs Maître**: dans la cinématique Phase 3, si la citation est vide ⟹ modal NON-skippable "Écris ta dernière phrase…". Sinon, citation existante affichée (Sprint 7+ ajoutera "Modifier" inline).
+
+**Raison**: Une citation imposée briserait le ton (joueur qui veut juste jouer). Une citation absente à la mort serait un trou narratif (que dit Yoshitsune sur ta tombe ?). Le pattern résout les deux: la mort force l'écriture si tu n'as rien écrit. La citation existante est portée run après run = "ton héritage qui te suit".
+
+**Conséquence**: `CitationInputModal.cs` accepte `allowSkip` + `Action<string>` callback. `PrestigeCinematicView.RunCinematic` await la modal entre Phase 3 fade-in et display. `GameState.playerCitation` est PERSIST. `playerCitationLockedForRun` empêche re-prompt dans le même run.
+
+---
+
+## 2026-05-28 — Sprint 6: Reuse OnCapitaineEnraged pour Maître MVP
+
+**Décision**: Au lieu d'ajouter `OnMaitreEnraged`, le `CombatProcessor` re-raise `OnCapitaineEnraged` quand le Maître passe en phase 3 (HP < 25%). `MaitreWorldView` et autres views écoutent ce même event.
+
+**Raison**: Le pattern enrage est identique (shake permanent, tint, chrono ×2). Dupliquer l'event multiplie les listeners sans bénéfice. Sprint 7+ pourra splitter si les comportements divergent (ex: Maître enrage = onde de choc unique).
+
+**Conséquence**: `GameEvents.OnCapitaineEnraged` doublement subscrit (`CapitaineWorldView` + `MaitreWorldView`). Les handlers gate sur `GameState.currentPhase` pour éviter de réagir hors-contexte (le `MaitreWorldView` ignore l'enrage si phase ≠ `MaitreActive`).
+
+---
+
+## 2026-05-28 — Sprint 6: Maître chrono accélération ×2 en enrage
+
+**Décision**: Quand le Maître passe en phase 3 (enrage, HP < 25%), le chrono décrémente à 2× vitesse. `MaitreEnrageChronoMultiplier = 2f` dans `CombatProcessor`.
+
+**Raison**: Le Maître a HP énormes (8-11k). En phase 3, le joueur est proche de la victoire — l'enrage doit punir, pas être un coup symbolique. ×2 sur le chrono restant force le joueur à finir ou mourir. Plus dramatique que ×1.5 (déjà utilisé par Capitaine au Sprint 5), Maître mérite le pire.
+
+**Conséquence**: `CombatProcessor.TickMaitreActive` checke `currentMaitrePhase == 3` et multiplie `dt` par 2 avant décrémentation. La mort vs Maître par chrono déclenche `OnPlayerDeathFromMaitre` → `PrestigeService.TriggerPrestige`.
+
+---
+
 ## Template pour nouvelles entrées
 
 ```

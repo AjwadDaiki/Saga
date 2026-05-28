@@ -102,7 +102,7 @@ namespace Saga.Save
         /// </summary>
         private static GameState Migrate(GameState state)
         {
-            const int currentVersion = 6;
+            const int currentVersion = 8;
 
             if (state.saveVersion < 2)
             {
@@ -150,21 +150,58 @@ namespace Saga.Save
                 Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v6 (added Capitaine fields).");
             }
 
+            if (state.saveVersion < 7)
+            {
+                // v6 -> v7: Souffle + Maître engagement state (Sprint 6).
+                state.lastSouffleTime = 0f;
+                state.souffleBuffActiveUntil = -1f;
+                state.currentMaitreId = null;
+                state.currentMaitrePhase = 0;
+                state.maitreInvocationSlots = 0;
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v7 (Souffle + Maître engagement).");
+            }
+
+            if (state.saveVersion < 8)
+            {
+                // v7 -> v8: Prestige currency + Hall des Légendes + citation + relics + titles (Sprint 6).
+                if (state.totalEchos.Equals(default(BreakInfinity.BigDouble))) state.totalEchos = new BreakInfinity.BigDouble(0);
+                state.currentRunEchosEarned = new BreakInfinity.BigDouble(0);
+                if (state.currentRunForceMax.Equals(default(BreakInfinity.BigDouble))) state.currentRunForceMax = state.force;
+                if (state.playerCitation == null) state.playerCitation = string.Empty;
+                state.playerCitationLockedForRun = false;
+                if (state.relicsOwned == null) state.relicsOwned = new System.Collections.Generic.List<string>();
+                if (state.relicsConserved == null) state.relicsConserved = new System.Collections.Generic.List<string>();
+                if (state.titlesUnlocked == null) state.titlesUnlocked = new System.Collections.Generic.List<string>();
+                if (state.achievementsUnlocked == null) state.achievementsUnlocked = new System.Collections.Generic.List<string>();
+                if (state.deathRecords == null) state.deathRecords = new System.Collections.Generic.List<Saga.Data.DeathRecord>();
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v8 (Prestige + Hall des Légendes).");
+            }
+
             // Defensive: always ensure non-null collections + valid scalars post-deserialization.
             if (state.upgradeLevels == null)
-            {
                 state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
-            }
+            if (state.relicsOwned == null) state.relicsOwned = new System.Collections.Generic.List<string>();
+            if (state.relicsConserved == null) state.relicsConserved = new System.Collections.Generic.List<string>();
+            if (state.titlesUnlocked == null) state.titlesUnlocked = new System.Collections.Generic.List<string>();
+            if (state.achievementsUnlocked == null) state.achievementsUnlocked = new System.Collections.Generic.List<string>();
+            if (state.deathRecords == null) state.deathRecords = new System.Collections.Generic.List<Saga.Data.DeathRecord>();
+            if (state.playerCitation == null) state.playerCitation = string.Empty;
             if (state.currentStade <= 0) state.currentStade = 1;
+
             // Always boot in Training to avoid loading mid-combat with a stale chrono / dangling enemy ref.
-            // Sprint 5+ may persist combat state intentionally if a player quits mid-fight.
             state.currentPhase = Saga.Data.CombatPhase.Training;
             state.currentAdversaireId = null;
             state.currentCapitaineId = null;
             state.currentCapitainePhase = 0;
+            state.currentMaitreId = null;
+            state.currentMaitrePhase = 0;
             state.chronoRemaining = 0f;
             // Élan resets to 0 on boot (decay model — no point persisting a partial gauge).
             state.currentElan = 0f;
+            // Souffle: cooldown is persistent but buff active flag resets on boot (player wasn't tapping during quit).
+            state.souffleBuffActiveUntil = -1f;
+            // playerCitationLockedForRun resets so a fresh boot lets the player re-prompt at next death.
+            state.playerCitationLockedForRun = false;
 
             state.saveVersion = currentVersion;
             return state;

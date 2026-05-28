@@ -10,6 +10,7 @@ namespace Saga.Core
     /// Sprint 2: <see cref="UpgradeData"/> from Resources/Upgrades/.
     /// Sprint 4: <see cref="AdversaireData"/> from Resources/Adversaires/.
     /// Sprint 5: <see cref="CapitaineData"/> from Resources/Capitaines/.
+    /// Sprint 6: <see cref="MaitreData"/> from Resources/Maitres/.
     /// Sprint 7+ migrate to Addressables.
     ///
     /// Test seam: pass explicit collections (e.g. via *.CreateForTests factories)
@@ -20,19 +21,23 @@ namespace Saga.Core
         private readonly Dictionary<string, UpgradeData> _upgradesById = new Dictionary<string, UpgradeData>();
         private readonly Dictionary<string, AdversaireData> _adversairesById = new Dictionary<string, AdversaireData>();
         private readonly Dictionary<string, CapitaineData> _capitainesById = new Dictionary<string, CapitaineData>();
+        private readonly Dictionary<string, MaitreData> _maitresById = new Dictionary<string, MaitreData>();
         private UpgradeData[] _orderedUpgrades = System.Array.Empty<UpgradeData>();
         private AdversaireData[] _orderedAdversaires = System.Array.Empty<AdversaireData>();
         private CapitaineData[] _orderedCapitaines = System.Array.Empty<CapitaineData>();
+        private MaitreData[] _orderedMaitres = System.Array.Empty<MaitreData>();
 
         public IReadOnlyList<UpgradeData> AllUpgrades => _orderedUpgrades;
         public IReadOnlyList<AdversaireData> AllAdversaires => _orderedAdversaires;
         public IReadOnlyList<CapitaineData> AllCapitaines => _orderedCapitaines;
+        public IReadOnlyList<MaitreData> AllMaitres => _orderedMaitres;
 
-        public ContentDatabase() : this(null, null, null) { }
+        public ContentDatabase() : this(null, null, null, null) { }
 
         public ContentDatabase(IEnumerable<UpgradeData> upgrades,
             IEnumerable<AdversaireData> adversaires = null,
-            IEnumerable<CapitaineData> capitaines = null)
+            IEnumerable<CapitaineData> capitaines = null,
+            IEnumerable<MaitreData> maitres = null)
         {
             if (upgrades != null)
                 RegisterUpgrades(upgrades, sourceLabel: "injected");
@@ -48,6 +53,11 @@ namespace Saga.Core
                 RegisterCapitaines(capitaines, sourceLabel: "injected");
             else
                 RegisterCapitaines(Resources.LoadAll<CapitaineData>("Capitaines"), sourceLabel: "Resources/Capitaines");
+
+            if (maitres != null)
+                RegisterMaitres(maitres, sourceLabel: "injected");
+            else
+                RegisterMaitres(Resources.LoadAll<MaitreData>("Maitres"), sourceLabel: "Resources/Maitres");
         }
 
         public UpgradeData GetUpgrade(string id)
@@ -63,6 +73,11 @@ namespace Saga.Core
         public CapitaineData GetCapitaine(string id)
         {
             return id != null && _capitainesById.TryGetValue(id, out var c) ? c : null;
+        }
+
+        public MaitreData GetMaitre(string id)
+        {
+            return id != null && _maitresById.TryGetValue(id, out var m) ? m : null;
         }
 
         private void RegisterUpgrades(IEnumerable<UpgradeData> upgrades, string sourceLabel)
@@ -114,6 +129,23 @@ namespace Saga.Core
                 _capitainesById[c.Id] = c;
             }
             Debug.Log($"[ContentDatabase] Registered {_capitainesById.Count} capitaines from {sourceLabel}.");
+        }
+
+        private void RegisterMaitres(IEnumerable<MaitreData> maitres, string sourceLabel)
+        {
+            _orderedMaitres = maitres?.Where(m => m != null).ToArray() ?? System.Array.Empty<MaitreData>();
+            _maitresById.Clear();
+            foreach (var m in _orderedMaitres)
+            {
+                if (string.IsNullOrEmpty(m.Id)) continue;
+                if (_maitresById.ContainsKey(m.Id))
+                {
+                    Debug.LogWarning($"[ContentDatabase] Duplicate MaitreId '{m.Id}' in {m.name} — keeping first.");
+                    continue;
+                }
+                _maitresById[m.Id] = m;
+            }
+            Debug.Log($"[ContentDatabase] Registered {_maitresById.Count} maitres from {sourceLabel}.");
         }
     }
 }

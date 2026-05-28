@@ -26,9 +26,12 @@ namespace Saga.Core
         public CombatProcessor Combat { get; private set; }
         public AdversaireSpawner Adversaires { get; private set; }
         public CapitaineSpawner Capitaines { get; private set; }
+        public MaitreSpawner Maitres { get; private set; }
         public DamageDealer Damage { get; private set; }
         public ElanService Elan { get; private set; }
         public VagueResolver Vague { get; private set; }
+        public SouffleService Souffle { get; private set; }
+        public PrestigeService Prestige { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -61,16 +64,22 @@ namespace Saga.Core
             Combat = new CombatProcessor(Content);
             Adversaires = new AdversaireSpawner(Content, Combat);
             Capitaines = new CapitaineSpawner(Content);
+            Maitres = new MaitreSpawner(Content);
             Combat.AttachCapitaineSpawner(Capitaines);
             Damage = new DamageDealer(Content);
             Elan = new ElanService();
             Vague = new VagueResolver(Content);
+            Souffle = new SouffleService();
+            Prestige = new PrestigeService();
 
-            // Route per-tap progress to the spawner. DamageDealer, ElanService, VagueResolver
-            // subscribe themselves in their constructors.
+            // Route per-tap progress to the spawner. DamageDealer, ElanService, VagueResolver,
+            // CapitaineSpawner, MaitreSpawner all subscribe themselves in their constructors.
             GameEvents.OnTapResolved += HandleTapForSpawner;
 
-            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | adv(registered/killed)={Content.AllAdversaires.Count}/{State.totalAdversairesDefeated} | cap(registered/killed)={Content.AllCapitaines.Count}/{State.totalCapitainesDefeated} | savePath={Save.SavePath}");
+            // Initialize currentRunForceMax if it's behind the actual force (e.g. fresh state).
+            if (State.currentRunForceMax < State.force) State.currentRunForceMax = State.force;
+
+            Debug.Log($"GameManager OK | force={State.force} | taps={State.totalTaps} | upgrades={State.upgradeLevels.Count} | adv={Content.AllAdversaires.Count}/{State.totalAdversairesDefeated} | cap={Content.AllCapitaines.Count}/{State.totalCapitainesDefeated} | maitres={Content.AllMaitres.Count} | echos={State.totalEchos} | prestiges={State.prestigeCount} | savePath={Save.SavePath}");
             GameEvents.RaiseForceChanged();
             GameEvents.RaiseElanChanged(State.currentElan, Saga.Data.ElanConstants.ElanMax);
         }

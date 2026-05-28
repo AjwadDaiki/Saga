@@ -98,6 +98,45 @@ namespace Saga.Core
         /// <summary>Fired when the Capitaine dies. Args: the CapitaineData, the Force reward granted.</summary>
         public static event Action<CapitaineData, BigDouble> OnCapitaineDefeated;
 
+        // ----- Sprint 6: Souffle (meditation buff) ----------------------
+
+        /// <summary>Fired when the player enters the 5s meditation window (taps blocked).</summary>
+        public static event Action OnSouffleStarted;
+
+        /// <summary>Fired at the end of the meditation window (right before buff starts).</summary>
+        public static event Action OnSouffleEnded;
+
+        /// <summary>Fired at the start of the post-meditation buff. Args: buff duration seconds.</summary>
+        public static event Action<float> OnSouffleBuffStarted;
+
+        /// <summary>Fired when the buff expires.</summary>
+        public static event Action OnSouffleBuffEnded;
+
+        /// <summary>Per-tick cooldown update. Args: seconds remaining, total cooldown.</summary>
+        public static event Action<float, float> OnSouffleCooldownUpdated;
+
+        // ----- Sprint 6: Maîtres (Boss Majeurs) -------------------------
+
+        /// <summary>Fired when the player unlocks a new Maître invocation slot (every X Capitaines defeated).</summary>
+        public static event Action OnMaitreUnlocked;
+
+        /// <summary>Fired when the player invokes a Maître (CapitaineIncoming/Active flow begins).</summary>
+        public static event Action<MaitreData> OnMaitreSpawned;
+
+        /// <summary>Fired when the Maître's HP crosses a phase threshold. Args: previous phase, new phase.</summary>
+        public static event Action<int, int> OnMaitrePhaseChanged;
+
+        /// <summary>Fired when the player defeats the Maître. Args: MaitreData, Force reward.</summary>
+        public static event Action<MaitreData, BigDouble> OnMaitreDefeated;
+
+        // ----- Sprint 6: Prestige ---------------------------------------
+
+        /// <summary>Fired when prestige starts (player died vs a Maître). Args: defeating Maître, Échos earned.</summary>
+        public static event Action<MaitreData, BigDouble> OnPrestigeTriggered;
+
+        /// <summary>Fired when the prestige cinematic completes and gameplay resumes at stade 1.</summary>
+        public static event Action OnPrestigeCompleted;
+
         // ----- Raisers --------------------------------------------------
 
         public static void RaiseForceChanged() => OnForceChanged?.Invoke();
@@ -161,5 +200,22 @@ namespace Saga.Core
 
         public static void RaiseCapitaineDefeated(CapitaineData data, BigDouble reward)
             => OnCapitaineDefeated?.Invoke(data, reward);
+
+        public static void RaiseSouffleStarted() => OnSouffleStarted?.Invoke();
+        public static void RaiseSouffleEnded() => OnSouffleEnded?.Invoke();
+        public static void RaiseSouffleBuffStarted(float duration) => OnSouffleBuffStarted?.Invoke(duration);
+        public static void RaiseSouffleBuffEnded() => OnSouffleBuffEnded?.Invoke();
+        public static void RaiseSouffleCooldownUpdated(float remaining, float total)
+            => OnSouffleCooldownUpdated?.Invoke(remaining, total);
+
+        public static void RaiseMaitreUnlocked() => OnMaitreUnlocked?.Invoke();
+        public static void RaiseMaitreSpawned(MaitreData data) => OnMaitreSpawned?.Invoke(data);
+        public static void RaiseMaitrePhaseChanged(int prev, int next) => OnMaitrePhaseChanged?.Invoke(prev, next);
+        public static void RaiseMaitreDefeated(MaitreData data, BigDouble reward)
+            => OnMaitreDefeated?.Invoke(data, reward);
+
+        public static void RaisePrestigeTriggered(MaitreData defeatedBy, BigDouble echos)
+            => OnPrestigeTriggered?.Invoke(defeatedBy, echos);
+        public static void RaisePrestigeCompleted() => OnPrestigeCompleted?.Invoke();
     }
 }

@@ -13,7 +13,7 @@ namespace Saga.Data
     public class GameState
     {
         /// <summary>Schema version. Bump on breaking change. Migration handled by SaveService.</summary>
-        public int saveVersion = 6;
+        public int saveVersion = 8;
 
         // -- Currencies (BigDouble — protect against 1e15+ ceiling) -------
         public BigDouble force;
@@ -62,7 +62,46 @@ namespace Saga.Data
         /// <summary>Current Capitaine HP phase: 0 = full, 1 = &lt;75%, 2 = &lt;50%, 3 = &lt;25% (enrage).</summary>
         public int currentCapitainePhase;
 
-        // Sprint 6+ : aggregates expanded as systems come online
-        // (Maîtres, voies, esprits, regions, prestige level, lore, etc.)
+        // -- Souffle (Sprint 6) -------------------------------------------
+        /// <summary>UTC seconds-since-startup of the last Souffle trigger. Used to compute cooldown.</summary>
+        public float lastSouffleTime;
+        /// <summary>Game-time timestamp until which the Souffle buff is active (set to negative when no buff).</summary>
+        public float souffleBuffActiveUntil = -1f;
+
+        // -- Maîtres (Sprint 6) -------------------------------------------
+        /// <summary>Id of the currently engaged Maître (null outside MaitreIncoming/Active/Victory).</summary>
+        public string currentMaitreId;
+        /// <summary>Current Maître HP phase: 0 = full, 1 = &lt;75%, 2 = &lt;50%, 3 = &lt;25% (enrage).</summary>
+        public int currentMaitrePhase;
+        /// <summary>Available Maître invocation slots. Increments per <c>CapitainesPerMaitreSlot</c> kills.</summary>
+        public int maitreInvocationSlots;
+
+        // -- Prestige (Sprint 6) ------------------------------------------
+        /// <summary>Total Échos accumulated across runs. PERSISTS through prestige.</summary>
+        public BigDouble totalEchos;
+        /// <summary>Échos earned in the current run (resets at prestige). For preview before the player triggers prestige.</summary>
+        public BigDouble currentRunEchosEarned;
+        /// <summary>Highest Force value reached in the current run — feeds the Échos formula at prestige.</summary>
+        public BigDouble currentRunForceMax;
+        /// <summary>Player's chosen final citation (max 80 chars per PrestigeConstants).</summary>
+        public string playerCitation = string.Empty;
+        /// <summary>True once the citation was confirmed / edited at death for the current run.</summary>
+        public bool playerCitationLockedForRun;
+        /// <summary>IDs of unique Reliques owned (one per Maître defeated). PERSISTS through prestige.</summary>
+        public List<string> relicsOwned = new List<string>();
+        /// <summary>IDs of Reliques the player chose to conserve into the next run. Sprint 6 MVP: all relics persist; Sprint 7+ adds selection UI.</summary>
+        public List<string> relicsConserved = new List<string>();
+        /// <summary>Titles unlocked across all runs ("Vaincu par Yoshitsune", etc.). PERSISTS.</summary>
+        public List<string> titlesUnlocked = new List<string>();
+        /// <summary>Achievement IDs unlocked. PERSISTS (Sprint 10 will render them).</summary>
+        public List<string> achievementsUnlocked = new List<string>();
+        /// <summary>Number of prestiges completed. PERSISTS.</summary>
+        public int prestigeCount;
+        /// <summary>Timestamp of the most recent prestige.</summary>
+        public DateTime lastPrestigeAt;
+        /// <summary>Hall des Légendes — one record per death vs a Maître. PERSISTS.</summary>
+        public List<DeathRecord> deathRecords = new List<DeathRecord>();
+
+        // Sprint 7+ : voies, esprits, regions, lore fragments, etc.
     }
 }

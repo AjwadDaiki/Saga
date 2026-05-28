@@ -37,9 +37,12 @@ namespace Saga.Gameplay
     {
         public const float IncomingCinematicSeconds = 1.0f;
         public const float CapitaineIncomingSeconds = 1.5f;
+        public const float MaitreIncomingSeconds = 2.5f;
         public const float VictoryCelebrationSeconds = 2.0f;
         public const float CapitaineVictorySeconds = 3.0f;
+        public const float MaitreVictorySeconds = 3.5f;
         public const float DeathForcePenalty = 0.10f;
+        public const float MaitreEnrageChronoMultiplier = 2f; // chrono runs 2× faster at enrage
 
         private readonly ContentDatabase _content;
         private CapitaineSpawner _capitaineSpawner;
@@ -84,6 +87,23 @@ namespace Saga.Gameplay
 
             TransitionTo(state, CombatPhase.CapitaineIncoming);
             GameEvents.RaiseCapitaineSpawned(data);
+        }
+
+        public void StartMaitreIncoming(GameState state, MaitreData data)
+        {
+            if (state == null || data == null) return;
+
+            state.currentMaitreId = data.Id;
+            state.currentAdversaireId = null;
+            state.currentCapitaineId = null;
+            state.currentAdversaireHp = data.Hp; // shared HP field for the engaged enemy
+            state.chronoRemaining = data.ChronoSeconds;
+            state.currentMaitrePhase = 0;
+            _activeChronoTotal = data.ChronoSeconds;
+            _phaseTimer = MaitreIncomingSeconds;
+
+            TransitionTo(state, CombatPhase.MaitreIncoming);
+            GameEvents.RaiseMaitreSpawned(data);
         }
 
         public void ResolveDeathTemporary(GameState state)
@@ -147,11 +167,75 @@ namespace Saga.Gameplay
                     }
                     break;
 
+                case CombatPhase.MaitreIncoming:
+                    _phaseTimer -= dt;
+                    if (_phaseTimer <= 0f) TransitionTo(state, CombatPhase.MaitreActive);
+                    break;
+
+                case CombatPhase.MaitreActive:
+                    // Chrono accelerates at enrage (phase 3).
+                    var chronoMultiplier = state.currentMaitrePhase >= 3 ? MaitreEnrageChronoMultiplier : 1f;
+                    state.chronoRemaining -= dt * chronoMultiplier;
+                    GameEvents.RaiseChronoUpdated(state.chronoRemaining, _activeChronoTotal);
+                    UpdateMaitrePhase(state);
+                    if (state.currentAdversaireHp.Sign() <= 0) OnMaitreDefeated(state);
+                    else if (state.chronoRemaining <= 0f) OnPlayerDeathFromMaitre(state);
+                    break;
+
+                case CombatPhase.MaitreVictory:
+                    _phaseTimer -= dt;
+                    if (_phaseTimer <= 0f)
+                    {
+                        ClearCombatState(state);
+                        TransitionTo(state, CombatPhase.Training);
+                    }
+                    break;
+
                 case CombatPhase.PlayerDeathTemporary:
                 case CombatPhase.Training:
                 default:
                     break;
             }
+        }
+
+        private void UpdateMaitrePhase(GameState state)
+        {
+            var maitre = _content?.GetMaitre(state.currentMaitreId);
+            if (maitre == null) return;
+            var maxHp = maitre.Hp.ToDouble();
+            if (maxHp <= 0) return;
+            var ratio = state.currentAdversaireHp.ToDouble() / maxHp;
+            var newPhase = maitre.ComputePhase(ratio);
+            if (newPhase == state.currentMaitrePhase) return;
+            var prev = state.currentMaitrePhase;
+            state.currentMaitrePhase = newPhase;
+            GameManager.Instance?.Save?.MarkDirty();
+            GameEvents.RaiseMaitrePhaseChanged(prev, newPhase);
+            if (newPhase == maitre.PhaseThresholds.Length) GameEvents.RaiseCapitaineEnraged();
+            // Note: re-use OnCapitaineEnraged event for now (Sprint 6 MVP). Could add OnMaitreEnraged if needed.
+        }
+
+        private void OnMaitreDefeated(GameState state)
+        {
+            var data = _content?.GetMaitre(state.currentMaitreId);
+            var reward = data != null ? data.RewardForce : new BigDouble(0);
+
+            state.force += reward;
+            // Track the relic drop. Sprint 6 MVP: just record the Maître ID.
+            if (data != null && !state.relicsOwned.Contains(data.Id)) state.relicsOwned.Add(data.Id);
+            GameEvents.RaiseForceChanged();
+            if (data != null) GameEvents.RaiseMaitreDefeated(data, reward);
+
+            _phaseTimer = MaitreVictorySeconds;
+            TransitionTo(state, CombatPhase.MaitreVictory);
+        }
+
+        private void OnPlayerDeathFromMaitre(GameState state)
+        {
+            state.chronoRemaining = 0f;
+            var data = _content?.GetMaitre(state.currentMaitreId);
+            // Hand off to PrestigeService — it transitions phase + raises OnPrestigeTriggered.
+            GameManager.Instance?.Prestige?.TriggerPrestige(state, data);
         }
 
         private void UpdateCapitainePhase(GameState state)
@@ -214,7 +298,9 @@ namespace Saga.Gameplay
         {
             state.currentAdversaireId = null;
             state.currentCapitaineId = null;
+            state.currentMaitreId = null;
             state.currentCapitainePhase = 0;
+            state.currentMaitrePhase = 0;
             state.currentAdversaireHp = default;
             state.chronoRemaining = 0f;
         }

@@ -52,8 +52,10 @@ namespace Saga.UI
             GameEvents.OnPhaseChanged += HandlePhaseChanged;
             GameEvents.OnAdversaireSpawned += HandleAdversaireSpawned;
             GameEvents.OnCapitaineSpawned += HandleCapitaineSpawned;
+            GameEvents.OnMaitreSpawned += HandleMaitreSpawned;
             GameEvents.OnAdversaireDamaged += HandleDamaged;
             GameEvents.OnCapitainePhaseChanged += HandleCapitainePhaseChanged;
+            GameEvents.OnMaitrePhaseChanged += HandleMaitrePhaseChanged;
             GameEvents.OnChronoUpdated += HandleChrono;
         }
 
@@ -62,8 +64,10 @@ namespace Saga.UI
             GameEvents.OnPhaseChanged -= HandlePhaseChanged;
             GameEvents.OnAdversaireSpawned -= HandleAdversaireSpawned;
             GameEvents.OnCapitaineSpawned -= HandleCapitaineSpawned;
+            GameEvents.OnMaitreSpawned -= HandleMaitreSpawned;
             GameEvents.OnAdversaireDamaged -= HandleDamaged;
             GameEvents.OnCapitainePhaseChanged -= HandleCapitainePhaseChanged;
+            GameEvents.OnMaitrePhaseChanged -= HandleMaitrePhaseChanged;
             GameEvents.OnChronoUpdated -= HandleChrono;
         }
 
@@ -75,10 +79,30 @@ namespace Saga.UI
                        || next == CombatPhase.AdversaireVictory
                        || next == CombatPhase.CapitaineIncoming
                        || next == CombatPhase.CapitaineActive
-                       || next == CombatPhase.CapitaineVictory;
+                       || next == CombatPhase.CapitaineVictory
+                       || next == CombatPhase.MaitreIncoming
+                       || next == CombatPhase.MaitreActive
+                       || next == CombatPhase.MaitreVictory;
             var target = visible ? 1f : 0f;
             DOTween.To(() => _group.alpha, a => _group.alpha = a, target, 0.25f).SetEase(Ease.OutQuad)
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+        }
+
+        private void HandleMaitreSpawned(MaitreData data)
+        {
+            if (data == null) return;
+            _maxHp = data.Hp;
+            if (_nameLabel != null) _nameLabel.text = data.DisplayName.ToUpperInvariant();
+            if (_hpFill != null) _hpFill.color = HpCapitainePhases[0]; // reuse phase palette
+            UpdateHpDisplay(data.Hp, data.Hp);
+            UpdateChronoDisplay(data.ChronoSeconds);
+        }
+
+        private void HandleMaitrePhaseChanged(int prev, int next)
+        {
+            if (_hpFill == null) return;
+            var idx = Mathf.Clamp(next, 0, HpCapitainePhases.Length - 1);
+            _hpFill.color = HpCapitainePhases[idx];
         }
 
         private void HandleAdversaireSpawned(AdversaireData data)

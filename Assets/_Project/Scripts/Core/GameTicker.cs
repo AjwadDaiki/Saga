@@ -30,8 +30,8 @@ namespace Saga.Core
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
-            // Sprint 5: combat lifecycle + stade transitions + disciple passives + Élan + Vague buff timer.
-            // Sprint 6+ adds:
+            // Sprint 6: combat + stade + disciple passives + Élan + Vague + Souffle.
+            // Sprint 7+ adds:
             //   EspritsProcessor.Tick(state, dt);
             //   voie.passive?.OnTick(state, dt);
             //   StatsCalculator.Recompute(state); (cache invalidation)
@@ -40,6 +40,13 @@ namespace Saga.Core
             gm.Combat?.Tick(gm.State, dt);
             gm.Elan?.Tick(gm.State, dt);
             gm.Vague?.Tick(gm.State, dt);
+            gm.Souffle?.Tick(gm.State, dt);
+
+            // Track currentRunForceMax — feeds Prestige Échos formula. Updated each tick to capture
+            // passive Disciples gains, Vague Training spikes, etc.
+            if (gm.State.force > gm.State.currentRunForceMax)
+                gm.State.currentRunForceMax = gm.State.force;
+
             gm.Save?.TickThrottledSave(gm.State, dt);
         }
     }

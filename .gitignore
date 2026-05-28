@@ -85,3 +85,7 @@ Thumbs.db
 # Raw source assets — curated subsets imported into Assets/_Project/Art/
 downloads/
 
+
+# Unity crash recovery folder (auto-generated, not source)
+/Assets/_Recovery/
+/Assets/_Recovery.meta

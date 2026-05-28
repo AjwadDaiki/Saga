@@ -46,6 +46,7 @@ namespace Saga.Core
         public Transform MannequinTransform { get; private set; }
         public Transform AdversaireTransform { get; private set; }
         public Transform CapitaineTransform { get; private set; }
+        public Transform MaitreTransform { get; private set; }
 
         private void Awake()
         {
@@ -67,6 +68,7 @@ namespace Saga.Core
             BuildMannequin(worldRoot);
             BuildAdversaire(worldRoot);
             BuildCapitaine(worldRoot);
+            BuildMaitre(worldRoot);
             BuildSlashFxSpawner(worldRoot);
 
             BuildEventSystem();
@@ -85,10 +87,43 @@ namespace Saga.Core
             BuildDeathOverlay(MainCanvas);
 
             // Sprint 5: Élan + Vague + Capitaine
-            BuildElanBarAndVagueButton(MainCanvas);
+            var elanRow = BuildElanRow(MainCanvas);
             BuildVagueFlashOverlay(MainCanvas);
             BuildCapitaineIntroOverlay(MainCanvas);
             BuildCapitaineDeathOverlay(MainCanvas);
+
+            // Sprint 6: Souffle + Maître + Prestige
+            BuildSouffleButton(MainCanvas);
+            var citationModal = BuildCitationInputModal(MainCanvas);
+            var affronterModal = BuildAffronterMaitreModal(MainCanvas);
+            BuildAffronterMaitreButton(elanRow, affronterModal);
+            BuildMaitreIntroOverlay(MainCanvas);
+            BuildPrestigeCinematicOverlay(MainCanvas, citationModal);
+        }
+
+        private void BuildMaitre(Transform parent)
+        {
+            var go = new GameObject("Maitre", typeof(MaitreWorldView));
+            go.transform.SetParent(parent, false);
+            go.transform.position = MannequinPosition;
+
+            var auraGo = new GameObject("Aura", typeof(SpriteRenderer));
+            auraGo.transform.SetParent(go.transform, false);
+            var aura = auraGo.GetComponent<SpriteRenderer>();
+            aura.sortingOrder = 3;
+            aura.color = new Color(1, 1, 1, 0);
+
+            var bodyGo = new GameObject("Body", typeof(SpriteRenderer));
+            bodyGo.transform.SetParent(go.transform, false);
+            var body = bodyGo.GetComponent<SpriteRenderer>();
+            body.sortingOrder = 6;
+            body.color = new Color(1, 1, 1, 0);
+
+            var view = go.GetComponent<MaitreWorldView>();
+            view.BodyRenderer = body;
+            view.AuraRenderer = aura;
+
+            MaitreTransform = go.transform;
         }
 
         private void BuildCapitaine(Transform parent)
@@ -119,16 +154,17 @@ namespace Saga.Core
             CapitaineTransform = go.transform;
         }
 
-        private void BuildElanBarAndVagueButton(Canvas canvas)
+        private RectTransform BuildElanRow(Canvas canvas)
         {
-            // Sprint 5 round-3: layout bands locked in normalized coords, with a real 2% spacer
-            // between the upgrade panel top (0.17) and the Élan row bottom (0.19).
+            // Sprint 5 round-3 / Sprint 6: layout bands locked in normalized coords.
             //   Bottom 0-2%       : safe area / device home indicator
             //   2-17%             : Upgrade cards (3 cards)
             //   17-19%            : spacer
-            //   19-25%            : Élan row (bar + Vague button)
-            //   25-65%            : gameplay zone (character + mannequin + adversaire/capitaine)
+            //   19-25%            : Élan row (bar + Vague button + Affronter Maître button)
+            //   25-65%            : gameplay zone (character + mannequin + adversaire/capitaine/maitre)
             //   65-100%           : HUD top (Force counter, Combo, Prochain Adversaire, CombatHud)
+            //
+            // Sprint 6: row split into 3 — Élan bar (0..0.58), Vague (0.60..0.78), Affronter (0.80..1.0).
             var row = new GameObject("ElanRow", typeof(RectTransform));
             row.transform.SetParent(canvas.transform, false);
             var rowRt = (RectTransform)row.transform;
@@ -137,13 +173,13 @@ namespace Saga.Core
             rowRt.offsetMin = Vector2.zero;
             rowRt.offsetMax = Vector2.zero;
 
-            // Élan bar (~78% of the row width, on the left)
+            // Élan bar (left ~58% of the row)
             var bar = new GameObject("ElanBar",
                 typeof(RectTransform), typeof(ElanBarView));
             bar.transform.SetParent(rowRt, false);
             var barRt = (RectTransform)bar.transform;
             barRt.anchorMin = new Vector2(0, 0);
-            barRt.anchorMax = new Vector2(0.78f, 1);
+            barRt.anchorMax = new Vector2(0.58f, 1);
             barRt.offsetMin = Vector2.zero;
             barRt.offsetMax = Vector2.zero;
 
@@ -190,13 +226,13 @@ namespace Saga.Core
             barView.Label = lblTmp;
             barView.PulseTarget = barRt;
 
-            // Vague button (right ~20% of the row, with a small gap from the bar)
+            // Vague button (middle 60-78% of the row)
             var btn = new GameObject("VagueButton",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VagueButtonView));
             btn.transform.SetParent(rowRt, false);
             var btnRt = (RectTransform)btn.transform;
-            btnRt.anchorMin = new Vector2(0.80f, 0);
-            btnRt.anchorMax = new Vector2(1f, 1);
+            btnRt.anchorMin = new Vector2(0.60f, 0);
+            btnRt.anchorMax = new Vector2(0.78f, 1);
             btnRt.offsetMin = Vector2.zero;
             btnRt.offsetMax = Vector2.zero;
 
@@ -227,6 +263,447 @@ namespace Saga.Core
             btnView.Background = btnImg;
             btnView.Label = btnLblTmp;
             btnView.Root = btnRt;
+
+            return rowRt;
+        }
+
+        // -- Sprint 6 builders -------------------------------------------
+
+        private void BuildAffronterMaitreButton(RectTransform elanRow, AffronterMaitreModal modal)
+        {
+            if (elanRow == null) return;
+            var btn = new GameObject("AffronterMaitreButton",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(AffronterMaitreButtonView));
+            btn.transform.SetParent(elanRow, false);
+            var rt = (RectTransform)btn.transform;
+            rt.anchorMin = new Vector2(0.80f, 0);
+            rt.anchorMax = new Vector2(1f, 1);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            var img = btn.GetComponent<Image>();
+            img.color = new Color(0.85f, 0.65f, 0.28f, 0.6f); // gold-ish — distinct from Vague's ambre
+            img.raycastTarget = true;
+
+            var group = btn.GetComponent<CanvasGroup>();
+            group.alpha = 0f; group.blocksRaycasts = false; group.interactable = false;
+
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(rt, false);
+            var lblRt = (RectTransform)lblGo.transform;
+            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
+            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
+            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
+            lblTmp.alignment = TextAlignmentOptions.Center;
+            lblTmp.color = new Color(0.10f, 0.08f, 0.04f, 1f);
+            lblTmp.fontSize = 22;
+            lblTmp.fontStyle = FontStyles.Bold;
+            lblTmp.text = "AFFRONTER\nUN MAÎTRE";
+            lblTmp.raycastTarget = false;
+
+            var view = btn.GetComponent<AffronterMaitreButtonView>();
+            view.Group = group;
+            view.Background = img;
+            view.Label = lblTmp;
+            view.Root = rt;
+            view.Modal = modal;
+        }
+
+        private void BuildSouffleButton(Canvas canvas)
+        {
+            var btn = new GameObject("SouffleButton",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(SouffleButtonView));
+            btn.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)btn.transform;
+            // Top-left anchor, 24px from top + 24px from left
+            rt.anchorMin = new Vector2(0, 1f);
+            rt.anchorMax = new Vector2(0, 1f);
+            rt.pivot = new Vector2(0, 1f);
+            rt.anchoredPosition = new Vector2(32, -32);
+            rt.sizeDelta = new Vector2(160, 100);
+
+            var img = btn.GetComponent<Image>();
+            img.color = new Color(0.20f, 0.18f, 0.32f, 0.85f); // cool blueish — meditation vibes
+            img.raycastTarget = true;
+
+            var group = btn.GetComponent<CanvasGroup>();
+            group.alpha = 1f;
+            group.interactable = true;
+            group.blocksRaycasts = true;
+
+            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(rt, false);
+            var lblRt = (RectTransform)lblGo.transform;
+            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
+            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
+            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
+            lblTmp.alignment = TextAlignmentOptions.Center;
+            lblTmp.color = new Color(0.98f, 0.98f, 0.98f, 1f);
+            lblTmp.fontSize = 22;
+            lblTmp.fontStyle = FontStyles.Bold;
+            lblTmp.text = "SOUFFLE";
+            lblTmp.raycastTarget = false;
+
+            var view = btn.GetComponent<SouffleButtonView>();
+            view.Group = group;
+            view.Background = img;
+            view.Label = lblTmp;
+            view.Root = rt;
+        }
+
+        private AffronterMaitreModal BuildAffronterMaitreModal(Canvas canvas)
+        {
+            var root = new GameObject("AffronterMaitreModal",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(AffronterMaitreModal));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            root.transform.SetAsLastSibling();
+
+            var bg = root.GetComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.85f);
+            bg.raycastTarget = true;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false;
+
+            // Title
+            var title = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+            title.transform.SetParent(rt, false);
+            var titleRt = (RectTransform)title.transform;
+            titleRt.anchorMin = new Vector2(0, 0.85f); titleRt.anchorMax = new Vector2(1, 0.93f);
+            titleRt.offsetMin = Vector2.zero; titleRt.offsetMax = Vector2.zero;
+            var titleTmp = title.GetComponent<TextMeshProUGUI>();
+            titleTmp.alignment = TextAlignmentOptions.Center;
+            titleTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f);
+            titleTmp.fontSize = 48;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.text = "CHOISIS TON MAÎTRE";
+            titleTmp.raycastTarget = false;
+
+            // Scrollable list container — simple VerticalLayoutGroup since we have at most 8 entries
+            var listContainer = new GameObject("List",
+                typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            listContainer.transform.SetParent(rt, false);
+            var listRt = (RectTransform)listContainer.transform;
+            listRt.anchorMin = new Vector2(0.1f, 0.15f); listRt.anchorMax = new Vector2(0.9f, 0.82f);
+            listRt.offsetMin = Vector2.zero; listRt.offsetMax = Vector2.zero;
+            var vlg = listContainer.GetComponent<VerticalLayoutGroup>();
+            vlg.spacing = 12;
+            vlg.padding = new RectOffset(8, 8, 8, 8);
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            // Reculer button (bottom)
+            var back = new GameObject("Reculer",
+                typeof(RectTransform), typeof(Image), typeof(Button));
+            back.transform.SetParent(rt, false);
+            var backRt = (RectTransform)back.transform;
+            backRt.anchorMin = new Vector2(0.5f, 0.05f); backRt.anchorMax = new Vector2(0.5f, 0.05f);
+            backRt.pivot = new Vector2(0.5f, 0.5f);
+            backRt.anchoredPosition = new Vector2(0, 30);
+            backRt.sizeDelta = new Vector2(220, 50);
+            back.GetComponent<Image>().color = new Color(0.20f, 0.20f, 0.20f, 0.9f);
+            var backLblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            backLblGo.transform.SetParent(back.transform, false);
+            var blRt = (RectTransform)backLblGo.transform;
+            blRt.anchorMin = Vector2.zero; blRt.anchorMax = Vector2.one;
+            blRt.offsetMin = Vector2.zero; blRt.offsetMax = Vector2.zero;
+            var blTmp = backLblGo.GetComponent<TextMeshProUGUI>();
+            blTmp.alignment = TextAlignmentOptions.Center;
+            blTmp.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+            blTmp.fontSize = 22;
+            blTmp.text = "Reculer";
+            blTmp.raycastTarget = false;
+
+            var view = root.GetComponent<AffronterMaitreModal>();
+            view.Group = group;
+            view.ListContainer = listRt;
+            back.GetComponent<Button>().onClick.AddListener(view.Close);
+
+            return view;
+        }
+
+        private CitationInputModal BuildCitationInputModal(Canvas canvas)
+        {
+            var root = new GameObject("CitationInputModal",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(CitationInputModal));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            root.transform.SetAsLastSibling();
+
+            var bg = root.GetComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.9f);
+            bg.raycastTarget = true;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false;
+
+            // Panel container
+            var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(rt, false);
+            var panelRt = (RectTransform)panel.transform;
+            panelRt.anchorMin = new Vector2(0.5f, 0.5f); panelRt.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRt.pivot = new Vector2(0.5f, 0.5f);
+            panelRt.sizeDelta = new Vector2(720, 360);
+            panel.GetComponent<Image>().color = new Color(0.12f, 0.10f, 0.08f, 0.96f);
+
+            // Title
+            var title = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+            title.transform.SetParent(panel.transform, false);
+            var titleRt = (RectTransform)title.transform;
+            titleRt.anchorMin = new Vector2(0, 0.78f); titleRt.anchorMax = new Vector2(1, 0.95f);
+            titleRt.offsetMin = Vector2.zero; titleRt.offsetMax = Vector2.zero;
+            var titleTmp = title.GetComponent<TextMeshProUGUI>();
+            titleTmp.alignment = TextAlignmentOptions.Center;
+            titleTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f);
+            titleTmp.fontSize = 28;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.text = "Écris ta dernière phrase…";
+            titleTmp.raycastTarget = false;
+
+            // InputField TMP
+            var inputGo = new GameObject("Input",
+                typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+            inputGo.transform.SetParent(panel.transform, false);
+            var inputRt = (RectTransform)inputGo.transform;
+            inputRt.anchorMin = new Vector2(0.05f, 0.42f); inputRt.anchorMax = new Vector2(0.95f, 0.72f);
+            inputRt.offsetMin = Vector2.zero; inputRt.offsetMax = Vector2.zero;
+            inputGo.GetComponent<Image>().color = new Color(0.05f, 0.04f, 0.03f, 1f);
+
+            // Input internal text + placeholder children (TMP_InputField needs them)
+            var textArea = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
+            textArea.transform.SetParent(inputRt, false);
+            var taRt = (RectTransform)textArea.transform;
+            taRt.anchorMin = Vector2.zero; taRt.anchorMax = Vector2.one;
+            taRt.offsetMin = new Vector2(12, 6); taRt.offsetMax = new Vector2(-12, -6);
+
+            var placeholderGo = new GameObject("Placeholder",
+                typeof(RectTransform), typeof(TextMeshProUGUI));
+            placeholderGo.transform.SetParent(textArea.transform, false);
+            var phRt = (RectTransform)placeholderGo.transform;
+            phRt.anchorMin = Vector2.zero; phRt.anchorMax = Vector2.one;
+            phRt.offsetMin = Vector2.zero; phRt.offsetMax = Vector2.zero;
+            var phTmp = placeholderGo.GetComponent<TextMeshProUGUI>();
+            phTmp.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+            phTmp.fontStyle = FontStyles.Italic;
+            phTmp.fontSize = 24;
+            phTmp.text = "(80 caractères max)";
+            phTmp.raycastTarget = false;
+
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textGo.transform.SetParent(textArea.transform, false);
+            var txRt = (RectTransform)textGo.transform;
+            txRt.anchorMin = Vector2.zero; txRt.anchorMax = Vector2.one;
+            txRt.offsetMin = Vector2.zero; txRt.offsetMax = Vector2.zero;
+            var txTmp = textGo.GetComponent<TextMeshProUGUI>();
+            txTmp.color = new Color(0.98f, 0.98f, 0.98f, 1f);
+            txTmp.fontSize = 24;
+            txTmp.raycastTarget = false;
+
+            var input = inputGo.GetComponent<TMP_InputField>();
+            input.textViewport = (RectTransform)textArea.transform;
+            input.textComponent = txTmp;
+            input.placeholder = phTmp;
+
+            // Confirm button
+            var confirm = new GameObject("Confirm",
+                typeof(RectTransform), typeof(Image), typeof(Button));
+            confirm.transform.SetParent(panel.transform, false);
+            var crt = (RectTransform)confirm.transform;
+            crt.anchorMin = new Vector2(0.5f, 0.08f); crt.anchorMax = new Vector2(0.5f, 0.08f);
+            crt.pivot = new Vector2(0.5f, 0.5f);
+            crt.anchoredPosition = new Vector2(0, 30);
+            crt.sizeDelta = new Vector2(220, 50);
+            confirm.GetComponent<Image>().color = new Color(0.98f, 0.78f, 0.46f, 0.95f);
+            var cLblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            cLblGo.transform.SetParent(confirm.transform, false);
+            var cLblRt = (RectTransform)cLblGo.transform;
+            cLblRt.anchorMin = Vector2.zero; cLblRt.anchorMax = Vector2.one;
+            cLblRt.offsetMin = Vector2.zero; cLblRt.offsetMax = Vector2.zero;
+            var cLblTmp = cLblGo.GetComponent<TextMeshProUGUI>();
+            cLblTmp.alignment = TextAlignmentOptions.Center;
+            cLblTmp.color = new Color(0.05f, 0.04f, 0.02f, 1f);
+            cLblTmp.fontSize = 22;
+            cLblTmp.fontStyle = FontStyles.Bold;
+            cLblTmp.text = "Confirmer";
+            cLblTmp.raycastTarget = false;
+
+            var view = root.GetComponent<CitationInputModal>();
+            view.Group = group;
+            view.TitleLabel = titleTmp;
+            view.Input = input;
+            view.ConfirmButton = confirm.GetComponent<Button>();
+
+            return view;
+        }
+
+        private void BuildMaitreIntroOverlay(Canvas canvas)
+        {
+            var root = new GameObject("MaitreIntro",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(MaitreIntroView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false;
+
+            // Arena tint underlay (color from MaitreData.ArenaBackgroundColor)
+            var arenaGo = new GameObject("ArenaTint", typeof(RectTransform), typeof(Image));
+            arenaGo.transform.SetParent(rt, false);
+            var arenaRt = (RectTransform)arenaGo.transform;
+            arenaRt.anchorMin = Vector2.zero; arenaRt.anchorMax = Vector2.one;
+            arenaRt.offsetMin = Vector2.zero; arenaRt.offsetMax = Vector2.zero;
+            var arenaImg = arenaGo.GetComponent<Image>();
+            arenaImg.color = new Color(0, 0, 0, 0.4f);
+            arenaImg.raycastTarget = false;
+
+            // Vignette (darker frame)
+            var vignetteGo = new GameObject("Vignette", typeof(RectTransform), typeof(Image));
+            vignetteGo.transform.SetParent(rt, false);
+            var vRt = (RectTransform)vignetteGo.transform;
+            vRt.anchorMin = Vector2.zero; vRt.anchorMax = Vector2.one;
+            vRt.offsetMin = Vector2.zero; vRt.offsetMax = Vector2.zero;
+            var vImg = vignetteGo.GetComponent<Image>();
+            vImg.color = new Color(0f, 0f, 0f, 0.75f);
+            vImg.raycastTarget = false;
+
+            // Name MASSIVE
+            var nameGo = new GameObject("Name", typeof(RectTransform), typeof(TextMeshProUGUI));
+            nameGo.transform.SetParent(rt, false);
+            var nameRt = (RectTransform)nameGo.transform;
+            nameRt.anchorMin = new Vector2(0, 0.55f); nameRt.anchorMax = new Vector2(1, 0.72f);
+            nameRt.offsetMin = Vector2.zero; nameRt.offsetMax = Vector2.zero;
+            var nameTmp = nameGo.GetComponent<TextMeshProUGUI>();
+            nameTmp.alignment = TextAlignmentOptions.Center;
+            nameTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f);
+            nameTmp.fontSize = 110;
+            nameTmp.fontStyle = FontStyles.Bold;
+            nameTmp.text = "";
+            nameTmp.raycastTarget = false;
+
+            var subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+            subGo.transform.SetParent(rt, false);
+            var subRt = (RectTransform)subGo.transform;
+            subRt.anchorMin = new Vector2(0, 0.48f); subRt.anchorMax = new Vector2(1, 0.55f);
+            subRt.offsetMin = Vector2.zero; subRt.offsetMax = Vector2.zero;
+            var subTmp = subGo.GetComponent<TextMeshProUGUI>();
+            subTmp.alignment = TextAlignmentOptions.Center;
+            subTmp.color = TextSecondary;
+            subTmp.fontSize = 38;
+            subTmp.text = "";
+            subTmp.raycastTarget = false;
+
+            var citGo = new GameObject("Citation", typeof(RectTransform), typeof(TextMeshProUGUI));
+            citGo.transform.SetParent(rt, false);
+            var citRt = (RectTransform)citGo.transform;
+            citRt.anchorMin = new Vector2(0.1f, 0.36f); citRt.anchorMax = new Vector2(0.9f, 0.46f);
+            citRt.offsetMin = Vector2.zero; citRt.offsetMax = Vector2.zero;
+            var citTmp = citGo.GetComponent<TextMeshProUGUI>();
+            citTmp.alignment = TextAlignmentOptions.Center;
+            citTmp.color = TextPrimary;
+            citTmp.fontSize = 32;
+            citTmp.fontStyle = FontStyles.Italic;
+            citTmp.text = "";
+            citTmp.raycastTarget = false;
+
+            var view = root.GetComponent<MaitreIntroView>();
+            view.Group = group;
+            view.Vignette = vImg;
+            view.ArenaTint = arenaImg;
+            view.NameLabel = nameTmp;
+            view.SubtitleLabel = subTmp;
+            view.CitationLabel = citTmp;
+        }
+
+        private void BuildPrestigeCinematicOverlay(Canvas canvas, CitationInputModal citationModal)
+        {
+            var root = new GameObject("PrestigeCinematic",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(PrestigeCinematicView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            root.transform.SetAsLastSibling();
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false;
+
+            // Fade image (covers everything; alpha controlled by cinematic)
+            var fadeGo = new GameObject("Fade", typeof(RectTransform), typeof(Image));
+            fadeGo.transform.SetParent(rt, false);
+            var fadeRt = (RectTransform)fadeGo.transform;
+            fadeRt.anchorMin = Vector2.zero; fadeRt.anchorMax = Vector2.one;
+            fadeRt.offsetMin = Vector2.zero; fadeRt.offsetMax = Vector2.zero;
+            var fadeImg = fadeGo.GetComponent<Image>();
+            fadeImg.color = new Color(0f, 0f, 0f, 0f);
+            fadeImg.raycastTarget = false;
+
+            // Title "TU ES MORT"
+            var title = AddCinematicLabel(rt, "Title",
+                new Vector2(0, 0.55f), new Vector2(1, 0.72f),
+                new Color(0.6f, 0.05f, 0.05f, 1f), 128, FontStyles.Bold);
+            var subtitle = AddCinematicLabel(rt, "Subtitle",
+                new Vector2(0, 0.48f), new Vector2(1, 0.55f),
+                TextSecondary, 36, FontStyles.Normal);
+            var maitreCit = AddCinematicLabel(rt, "MaitreCitation",
+                new Vector2(0.1f, 0.40f), new Vector2(0.9f, 0.47f),
+                TextPrimary, 30, FontStyles.Italic);
+
+            var statsLine = AddCinematicLabel(rt, "StatsLine",
+                new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.60f),
+                TextPrimary, 28, FontStyles.Normal);
+            var echos = AddCinematicLabel(rt, "EchosLabel",
+                new Vector2(0, 0.30f), new Vector2(1, 0.40f),
+                new Color(0.98f, 0.78f, 0.46f, 1f), 60, FontStyles.Bold);
+
+            var heritage = AddCinematicLabel(rt, "Heritage",
+                new Vector2(0, 0.60f), new Vector2(1, 0.66f),
+                TextSecondary, 28, FontStyles.Normal);
+            var playerCit = AddCinematicLabel(rt, "PlayerCitation",
+                new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.58f),
+                new Color(0.95f, 0.94f, 0.91f, 1f), 36, FontStyles.Italic);
+
+            var renaissance = AddCinematicLabel(rt, "Renaissance",
+                new Vector2(0.05f, 0.45f), new Vector2(0.95f, 0.55f),
+                new Color(0.1f, 0.08f, 0.04f, 1f), 38, FontStyles.Italic);
+
+            var view = root.GetComponent<PrestigeCinematicView>();
+            view.Root = group;
+            view.FadeImage = fadeImg;
+            view.Title = title;
+            view.Subtitle = subtitle;
+            view.MaitreCitation = maitreCit;
+            view.StatsLine = statsLine;
+            view.EchosLabel = echos;
+            view.HeritageLabel = heritage;
+            view.PlayerCitation = playerCit;
+            view.RenaissanceLabel = renaissance;
+            view.CitationModal = citationModal;
+        }
+
+        private static TextMeshProUGUI AddCinematicLabel(Transform parent, string name,
+            Vector2 anchorMin, Vector2 anchorMax, Color color, float fontSize, FontStyles style)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = anchorMin; rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            var tmp = go.GetComponent<TextMeshProUGUI>();
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = color;
+            tmp.fontSize = fontSize;
+            tmp.fontStyle = style;
+            tmp.text = "";
+            tmp.raycastTarget = false;
+            go.SetActive(false);
+            return tmp;
         }
 
         private void BuildVagueFlashOverlay(Canvas canvas)
