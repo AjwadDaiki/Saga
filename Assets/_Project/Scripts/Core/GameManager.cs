@@ -1,3 +1,4 @@
+using Saga.Audio;
 using Saga.Data;
 using Saga.Gameplay;
 using Saga.Save;
@@ -33,6 +34,8 @@ namespace Saga.Core
         public SouffleService Souffle { get; private set; }
         public PrestigeService Prestige { get; private set; }
         public EquipmentService Equipment { get; private set; }
+        public AudioService Audio { get; private set; }
+        public HapticService Haptic { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -73,6 +76,18 @@ namespace Saga.Core
             Souffle = new SouffleService();
             Prestige = new PrestigeService();
             Equipment = new EquipmentService(Content);
+
+            // Sprint 7.5: audio + haptic services. AudioSource lives on the GameManager GO so
+            // PlayOneShot survives scene reloads (DontDestroyOnLoad above).
+            var audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            Audio = new AudioService(audioSource);
+            Haptic = new HapticService();
+            var audioBindings = gameObject.AddComponent<AudioBindings>();
+            audioBindings.Init(Audio);
+            var hapticBindings = gameObject.AddComponent<HapticBindings>();
+            hapticBindings.Init(Haptic);
 
             // Route per-tap progress to the spawner. DamageDealer, ElanService, VagueResolver,
             // CapitaineSpawner, MaitreSpawner all subscribe themselves in their constructors.

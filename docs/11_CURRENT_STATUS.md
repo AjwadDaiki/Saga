@@ -4,11 +4,11 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 7 implémenté (feat branch `feat/sprint-7-voies-modulaire`). Système modulaire sprites + Voies + Equipment + Inventaire + Reliques équipables. En attente de validation in-play par Ajwad avant merge `dev` → tag `v0.7.0`. Roadmap toujours alignée 14 sprints, lancement officiel octobre 2026.
+**Phase**: Sprint 7 + Sprint 7.5 implémentés (feat branch `feat/sprint-7.5-polish-mobile-pro` empilée sur `feat/sprint-7-voies-modulaire`). Sprint 7 = modulaire sprites + Voies + Equipment + Inventaire + Reliques. Sprint 7.5 = design system mobile pro (DesignTokens SO, background dojo, mannequin redesign, ForceCounter polish, Élan bar glow, cards glass morphism, SagaButton, AudioService procédural, HapticService). En attente validation in-play avant merge `dev` → tag `v0.7.5` (skip v0.7.0 separate, on tag direct la version polish).
 
 **Dernière session**: 2026-05-28, dev Claude (Opus 4.7) sur Claude Code.
 
-**Branche active**: `feat/sprint-7-voies-modulaire` (depuis `dev`).
+**Branche active**: `feat/sprint-7.5-polish-mobile-pro` (depuis `feat/sprint-7-voies-modulaire`).
 
 ## Sprints terminés
 
@@ -21,7 +21,8 @@
 | 4 | `v0.4.0` | Combat Active System : Adversaire + chrono + mort temporaire + 5 adversaires | ✅ closed |
 | 5 | `v0.5.0` | Boss Mineurs (8 Capitaines) + Élan + Vague AOE | ✅ closed |
 | 6 | `v0.6.0` | Maîtres légendaires (8) + Prestige + Souffle | ✅ closed |
-| 7 | `v0.7.0` (pending) | Sprites modulaires (Body/Armor/Weapon) + 8 Voies + EquipmentService + Inventaire + Reliques équipables | 🟡 implémenté, en attente play validation |
+| 7 | `v0.7.0` (skipped) | Sprites modulaires (Body/Armor/Weapon) + 8 Voies + EquipmentService + Inventaire + Reliques équipables | 🟡 implémenté, mergé dans 7.5 |
+| 7.5 | `v0.7.5` (pending) | Design system mobile pro 2026 : DesignTokens SO + background dojo (gradient + particles + plancher) + mannequin redesign 3-sections + SagaButton unified + Cards glass morphism + ForceCounter polish + AudioService procédural + HapticService | 🟡 implémenté, en attente play validation |
 
 ## Sprint 6 — accomplissements clés (validés en play)
 

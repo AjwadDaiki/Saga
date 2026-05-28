@@ -1,3 +1,4 @@
+using DG.Tweening;
 using Saga.Data;
 using Saga.Gameplay;
 using Saga.UI;
@@ -66,6 +67,7 @@ namespace Saga.Core
 
             EnsureMainCamera();
             var worldRoot = new GameObject("WorldRoot").transform;
+            BuildAmbientBackground(worldRoot); // Sprint 7.5: 3-layer dojo background (gradient + particles + floor)
             BuildCharacter(worldRoot);
             BuildMannequin(worldRoot);
             BuildAdversaire(worldRoot);
@@ -180,6 +182,8 @@ namespace Saga.Core
             rowRt.offsetMin = Vector2.zero;
             rowRt.offsetMax = Vector2.zero;
 
+            var tokens = DesignTokens.Get();
+
             // Élan bar (left ~58% of the row)
             var bar = new GameObject("ElanBar",
                 typeof(RectTransform), typeof(ElanBarView));
@@ -190,6 +194,16 @@ namespace Saga.Core
             barRt.offsetMin = Vector2.zero;
             barRt.offsetMax = Vector2.zero;
 
+            // Glow halo behind the bar — picks up the accent color when fill > 90%.
+            var glowGo = new GameObject("Glow", typeof(RectTransform), typeof(Image));
+            glowGo.transform.SetParent(barRt, false);
+            var glowRt = (RectTransform)glowGo.transform;
+            glowRt.anchorMin = Vector2.zero; glowRt.anchorMax = Vector2.one;
+            glowRt.offsetMin = new Vector2(-12, -12); glowRt.offsetMax = new Vector2(12, 12);
+            var glowImg = glowGo.GetComponent<Image>();
+            glowImg.color = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0f);
+            glowImg.raycastTarget = false;
+
             // Bar background
             var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
             bgGo.transform.SetParent(barRt, false);
@@ -197,24 +211,24 @@ namespace Saga.Core
             bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
             bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
             var bgImg = bgGo.GetComponent<Image>();
-            bgImg.color = new Color(0.10f, 0.10f, 0.10f, 0.85f);
+            bgImg.color = tokens.surfaceLow;
             bgImg.raycastTarget = false;
 
-            // Bar fill (ambre per 05_VISUAL_STYLE)
+            // Bar fill — gradient effect via accent_action (warm orange base).
             var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(barRt, false);
             var fillRt = (RectTransform)fillGo.transform;
             fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
             fillRt.offsetMin = new Vector2(4, 4); fillRt.offsetMax = new Vector2(-4, -4);
             var fillImg = fillGo.GetComponent<Image>();
-            fillImg.color = new Color(0.98f, 0.78f, 0.46f, 0.95f);
+            fillImg.color = tokens.accentAction;
             fillImg.type = Image.Type.Filled;
             fillImg.fillMethod = Image.FillMethod.Horizontal;
             fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
             fillImg.fillAmount = 0f;
             fillImg.raycastTarget = false;
 
-            // Centered label
+            // Centered label — JetBrains Mono Bold for the numeric percentage.
             var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             lblGo.transform.SetParent(barRt, false);
             var lblRt = (RectTransform)lblGo.transform;
@@ -222,8 +236,9 @@ namespace Saga.Core
             lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
             var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
             lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = TextPrimary;
-            lblTmp.fontSize = 32;
+            lblTmp.color = tokens.textPrimary;
+            lblTmp.font = tokens.NumbersFont;
+            lblTmp.fontSize = 28;
             lblTmp.fontStyle = FontStyles.Bold;
             lblTmp.text = "ÉLAN 0%";
             lblTmp.raycastTarget = false;
@@ -232,8 +247,9 @@ namespace Saga.Core
             barView.FillImage = fillImg;
             barView.Label = lblTmp;
             barView.PulseTarget = barRt;
+            barView.GlowImage = glowImg;
 
-            // Vague button (middle 60-78% of the row)
+            // Vague button (middle 60-78% of the row) — Primary CTA variant (gradient + pulse).
             var btn = new GameObject("VagueButton",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VagueButtonView));
             btn.transform.SetParent(rowRt, false);
@@ -1157,9 +1173,167 @@ namespace Saga.Core
             cam.orthographic = true;
             cam.orthographicSize = CameraOrthoSize;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = BgDojo;
+            // Sprint 7.5: use bg_deep (#0a0a0a) so the radial gradient on top has somewhere to fade into.
+            cam.backgroundColor = DesignTokens.Get().bgDeep;
             cam.nearClipPlane = -10f;
             cam.farClipPlane = 100f;
+        }
+
+        /// <summary>
+        /// Sprint 7.5 ambient background — 3 visual layers built in world space, behind everything.
+        ///   z=10 : radial gradient quad (procedural, dark center, deeper at edges — adds depth)
+        ///   z=9  : floor strip (procedural, dark wood gradient at the bottom — grounds the scene)
+        ///   z=8  : ambient ParticleSystem (subtle amber motes drifting up — "dojo qui respire")
+        /// All purely procedural so no art assets are required.
+        /// </summary>
+        private void BuildAmbientBackground(Transform parent)
+        {
+            var tokens = DesignTokens.Get();
+            var root = new GameObject("Ambient");
+            root.transform.SetParent(parent, false);
+
+            // Layer 1 — radial gradient backdrop.
+            var bgGo = new GameObject("BgGradient", typeof(SpriteRenderer));
+            bgGo.transform.SetParent(root.transform, false);
+            bgGo.transform.position = new Vector3(0, 0, 10f);
+            var bgSr = bgGo.GetComponent<SpriteRenderer>();
+            bgSr.sprite = CreateRadialGradientSprite(tokens.bgMain, tokens.bgDeep);
+            bgSr.sortingOrder = -10;
+            // Stretch to cover the ortho frustum + a little extra so we never see clear color edges.
+            // orthoSize 3 → 6 unit tall. width 6 × 16/9 / 2 ≈ 5.34. We use 8×14 unit cover.
+            bgGo.transform.localScale = new Vector3(8f, 14f, 1f);
+
+            // Layer 2 — floor strip.
+            var floorGo = new GameObject("Floor", typeof(SpriteRenderer));
+            floorGo.transform.SetParent(root.transform, false);
+            floorGo.transform.position = new Vector3(0, -2.3f, 9f);
+            var floorSr = floorGo.GetComponent<SpriteRenderer>();
+            floorSr.sprite = CreateFloorSprite();
+            floorSr.sortingOrder = -8;
+            floorGo.transform.localScale = new Vector3(7f, 1f, 1f);
+
+            // Layer 3 — ambient particles (amber motes drifting up).
+            BuildAmbientParticles(root.transform, tokens);
+        }
+
+        private static void BuildAmbientParticles(Transform parent, DesignTokens tokens)
+        {
+            var go = new GameObject("AmbientParticles", typeof(ParticleSystem));
+            go.transform.SetParent(parent, false);
+            go.transform.position = new Vector3(0, -2.5f, 8f);
+
+            var ps = go.GetComponent<ParticleSystem>();
+            var main = ps.main;
+            main.duration = 8f;
+            main.loop = true;
+            main.startLifetime = 6f;
+            main.startSpeed = 0.25f;
+            main.startSize = 0.04f;
+            main.startColor = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0.13f);
+            main.maxParticles = 40;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startRotation = 0f;
+            main.gravityModifier = -0.02f; // very slight upward drift
+
+            var emission = ps.emission;
+            emission.rateOverTime = 4.5f; // ~25-30 particles in flight at a time
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(5.5f, 0.2f, 1f); // emit along a horizontal strip at the bottom
+
+            // Fade in then out across lifetime.
+            var color = ps.colorOverLifetime;
+            color.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(
+                new[] {
+                    new GradientColorKey(tokens.accentPrimary, 0f),
+                    new GradientColorKey(tokens.accentPrimary, 1f)
+                },
+                new[] {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(0.15f, 0.3f),
+                    new GradientAlphaKey(0.10f, 0.7f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            color.color = grad;
+
+            // Renderer settings.
+            var r = ps.GetComponent<ParticleSystemRenderer>();
+            r.sortingOrder = -7;
+            r.material = new Material(Shader.Find("Sprites/Default"));
+        }
+
+        /// <summary>Procedural radial gradient sprite (256×256) — bright center, dark edges.</summary>
+        private static Sprite CreateRadialGradientSprite(Color center, Color edge)
+        {
+            const int size = 256;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            var pixels = new Color32[size * size];
+            var maxDist = size * 0.5f * 1.2f; // soft falloff
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var dx = x - size * 0.5f;
+                    var dy = y - size * 0.5f;
+                    var d = Mathf.Sqrt(dx * dx + dy * dy);
+                    var t = Mathf.Clamp01(d / maxDist);
+                    // Ease out so the bright center has more presence.
+                    t = t * t;
+                    var c = Color.Lerp(center, edge, t);
+                    pixels[y * size + x] = c;
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            var s = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), pixelsPerUnit: 32);
+            s.name = "RadialGradientBg";
+            return s;
+        }
+
+        /// <summary>
+        /// Procedural floor sprite: vertical gradient from dark wood to almost-black, with subtle
+        /// vertical plank divisions. 256×64.
+        /// </summary>
+        private static Sprite CreateFloorSprite()
+        {
+            const int w = 256, h = 64;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var top = new Color32(42, 26, 16, 255);     // #2a1a10
+            var bottom = new Color32(26, 14, 8, 255);    // #1a0e08
+            var plank = new Color32(18, 10, 6, 255);
+            var pixels = new Color32[w * h];
+            // 6 planks
+            for (var y = 0; y < h; y++)
+            {
+                var t = 1f - (y / (float)h); // y=0 bottom -> t=1, y=h-1 top -> t=~0
+                var rowColor = new Color32(
+                    (byte)Mathf.Lerp(bottom.r, top.r, 1f - t),
+                    (byte)Mathf.Lerp(bottom.g, top.g, 1f - t),
+                    (byte)Mathf.Lerp(bottom.b, top.b, 1f - t),
+                    255);
+                for (var x = 0; x < w; x++)
+                {
+                    // Subtle plank divisions every ~42px.
+                    var isDivider = (x % 42) < 2;
+                    pixels[y * w + x] = isDivider ? plank : rowColor;
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), pixelsPerUnit: 32);
+            s.name = "FloorProcedural";
+            return s;
         }
 
         private void BuildCharacter(Transform parent)
@@ -1174,6 +1348,11 @@ namespace Saga.Core
             var go = new GameObject("Character", typeof(LayeredCharacterRenderer), typeof(CharacterView));
             go.transform.SetParent(parent, false);
             go.transform.position = CharacterPosition;
+            // Sprint 7.5: 1.5× scale so the chibi reads well at the smaller portrait gameplay band.
+            go.transform.localScale = new Vector3(1.5f, 1.5f, 1f);
+
+            // Ground shadow under the character.
+            BuildGroundShadow(go.transform, scale: new Vector3(0.7f, 0.35f, 1f));
 
             var body = new GameObject("Body", typeof(SpriteRenderer));
             body.transform.SetParent(go.transform, false);
@@ -1271,10 +1450,36 @@ namespace Saga.Core
 
             var sr = go.GetComponent<SpriteRenderer>();
             sr.sprite = CreateMannequinSprite();
-            sr.color = Color.white; // sprite carries the wood tone
+            sr.color = Color.white;
             sr.sortingOrder = 5;
 
+            // Sprint 7.5: subtle ground shadow + gentle sway DOTween so the dojo feels alive.
+            BuildGroundShadow(go.transform, scale: new Vector3(1.0f, 0.6f, 1f), yOffset: 0.02f);
+
+            // Slow ±2° rotation, infinite yoyo. SetLink ensures the tween dies with the GO.
+            go.transform.rotation = Quaternion.Euler(0, 0, -2f);
+            go.transform.DORotate(new Vector3(0, 0, 2f), 2.4f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetLink(go, LinkBehaviour.KillOnDestroy);
+
             MannequinTransform = go.transform;
+        }
+
+        /// <summary>
+        /// Adds a soft elliptical shadow at the feet of a world entity. Sorted just above the floor
+        /// (-7) and below all character/mannequin/adversaire renderers (5+).
+        /// </summary>
+        private static SpriteRenderer BuildGroundShadow(Transform parent, Vector3 scale, float yOffset = 0f)
+        {
+            var go = new GameObject("Shadow", typeof(SpriteRenderer));
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0, yOffset, 0.1f);
+            go.transform.localScale = scale;
+            var sr = go.GetComponent<SpriteRenderer>();
+            sr.sprite = CreateShadowSprite();
+            sr.sortingOrder = -5; // above floor (-8/-7), below characters (5+)
+            return sr;
         }
 
         private void BuildSlashFxSpawner(Transform parent)
@@ -1287,51 +1492,117 @@ namespace Saga.Core
         }
 
         /// <summary>
-        /// Procedural wooden-post placeholder (40×80 px, brown). Sprint 4+ replace with proper art.
-        /// Sprint 3 fix #2: bumped from 16×40 → 40×80 for visibility.
+        /// Sprint 7.5 mannequin redesign — 3 distinct sections (head sphere / torso cylinder / wider socle)
+        /// with cordage rings, dark wood gradient and subtle edge shadow. 80×140 procedural.
         /// </summary>
         private static Sprite CreateMannequinSprite()
         {
-            const int w = 40, h = 80;
+            const int w = 80, h = 140;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
             {
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
             };
             var pixels = new Color32[w * h];
-            var wood = new Color32((byte)(MannequinWood.r * 255), (byte)(MannequinWood.g * 255), (byte)(MannequinWood.b * 255), 255);
-            var darker = new Color32((byte)(wood.r * 0.7f), (byte)(wood.g * 0.7f), (byte)(wood.b * 0.7f), 255);
-            var darkest = new Color32((byte)(wood.r * 0.5f), (byte)(wood.g * 0.5f), (byte)(wood.b * 0.5f), 255);
+
+            // Wood palette (dark base, lighter highlights along the centerline).
+            var woodBase = new Color32(58, 42, 24, 255);    // #3a2a18
+            var woodLight = new Color32(90, 64, 40, 255);   // #5a4028 — center highlight
+            var woodDark = new Color32(34, 22, 12, 255);    // edge shadow
+            var cord = new Color32(15, 9, 5, 255);          // pitch black cordage
+
+            // Section heights (from bottom).
+            const int socleTop = 22;   // 0..22  : socle (wider)
+            const int torsoTop = 100;  // 22..100 : torso (medium cylinder)
+            // 100..140 : head (narrowest, capped silhouette)
+
             for (var y = 0; y < h; y++)
             {
                 for (var x = 0; x < w; x++)
                 {
-                    // Wider base (bottom 12px), narrower mid, capped top.
-                    var inBase = y < 10;
-                    var inCap  = y > h - 12;
-                    var inMid  = !inBase && !inCap;
+                    var dx = Mathf.Abs(x - w * 0.5f);
 
-                    var distFromCenter = Mathf.Abs(x - w * 0.5f);
-                    var insideMidSilhouette = distFromCenter < w * 0.32f;  // narrower
-                    var insideBaseSilhouette = distFromCenter < w * 0.48f; // wider
-                    var insideCapSilhouette  = distFromCenter < w * 0.40f;
+                    float halfWidth;
+                    if (y < socleTop)
+                    {
+                        // Socle: widest at the bottom, tapers slightly up.
+                        var t = y / (float)socleTop;
+                        halfWidth = Mathf.Lerp(0.40f, 0.32f, t) * w;
+                    }
+                    else if (y < torsoTop)
+                    {
+                        // Torso: medium cylinder with a very subtle barrel.
+                        var t = (y - socleTop) / (float)(torsoTop - socleTop);
+                        halfWidth = (0.26f + 0.02f * Mathf.Sin(t * Mathf.PI)) * w;
+                    }
+                    else
+                    {
+                        // Head: smaller sphere capped on top.
+                        var t = (y - torsoTop) / (float)(h - torsoTop);
+                        // Half-circle outline.
+                        var r = 0.22f * w;
+                        var dyHead = (y - torsoTop) - r * 0.6f;
+                        var dist = Mathf.Sqrt(dx * dx + dyHead * dyHead);
+                        if (dist > r) { pixels[y * w + x] = new Color32(0, 0, 0, 0); continue; }
+                        halfWidth = w; // already inside the circle test
+                    }
 
-                    var inside = (inMid && insideMidSilhouette) || (inBase && insideBaseSilhouette) || (inCap && insideCapSilhouette);
-                    if (!inside) { pixels[y * w + x] = new Color32(0, 0, 0, 0); continue; } // transparent outside
+                    var inside = dx <= halfWidth;
+                    if (!inside) { pixels[y * w + x] = new Color32(0, 0, 0, 0); continue; }
 
-                    var edge = distFromCenter > w * 0.30f && inMid;
-                    var ringMark = (y == 30 || y == 50) && inMid;          // horizontal trim
-                    var color = ringMark ? darkest : (edge ? darker : wood);
-                    pixels[y * w + x] = color;
+                    // Vertical highlight along the centerline → 3D feel.
+                    var centerWeight = 1f - Mathf.Clamp01(dx / Mathf.Max(1f, halfWidth));
+                    var edgeWeight = 1f - centerWeight;
+                    var r2 = (byte)Mathf.Lerp(woodBase.r, woodLight.r, centerWeight * 0.6f);
+                    var g2 = (byte)Mathf.Lerp(woodBase.g, woodLight.g, centerWeight * 0.6f);
+                    var b2 = (byte)Mathf.Lerp(woodBase.b, woodLight.b, centerWeight * 0.6f);
+                    if (edgeWeight > 0.85f)
+                    {
+                        r2 = woodDark.r; g2 = woodDark.g; b2 = woodDark.b;
+                    }
+
+                    // Cordage rings: thin horizontal stripes at torso y=42, y=72.
+                    var isCord = (y == 42 || y == 43 || y == 72 || y == 73) && y > socleTop && y < torsoTop;
+                    if (isCord) { r2 = cord.r; g2 = cord.g; b2 = cord.b; }
+
+                    pixels[y * w + x] = new Color32(r2, g2, b2, 255);
                 }
             }
             tex.SetPixels32(pixels);
             tex.Apply();
-            // PPU 32 (was 16): with sprite 40×80, world size is now 1.25×2.5 units (was 2.5×5).
-            // Brings the mannequin ratio to ~1.6× the character height instead of 3× — Sprint 3 fix #2.
+            // PPU 32: 80×140 px → 2.5×4.375 world units. Pivot bottom-center keeps the socle on the floor.
             var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), pixelsPerUnit: 32);
             sprite.name = "MannequinProcedural";
             return sprite;
+        }
+
+        /// <summary>Soft black ellipse — used as ground shadow under the player + mannequin.</summary>
+        private static Sprite CreateShadowSprite()
+        {
+            const int w = 96, h = 32;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var pixels = new Color32[w * h];
+            for (var y = 0; y < h; y++)
+            {
+                for (var x = 0; x < w; x++)
+                {
+                    var dx = (x - w * 0.5f) / (w * 0.5f);
+                    var dy = (y - h * 0.5f) / (h * 0.5f);
+                    var d = Mathf.Sqrt(dx * dx + dy * dy);
+                    var a = Mathf.Clamp01(1f - d);
+                    a = a * a * 0.55f; // softer falloff
+                    pixels[y * w + x] = new Color32(0, 0, 0, (byte)(a * 255));
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), pixelsPerUnit: 96);
+            s.name = "ShadowEllipseProcedural";
+            return s;
         }
 
         // -------- UI Canvas ---------------------------------------------
@@ -1363,22 +1634,51 @@ namespace Saga.Core
 
         private static void BuildForceCounter(Canvas canvas)
         {
+            // Sprint 7.5 polish: small "FORCE" label above + JetBrains-styled value below, drop shadow.
+            var tokens = DesignTokens.Get();
+
+            // Small "FORCE" label.
+            var lblGo = new GameObject("ForceLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lblGo.transform.SetParent(canvas.transform, false);
+            var lblRt = (RectTransform)lblGo.transform;
+            lblRt.anchorMin = new Vector2(0.5f, 1f);
+            lblRt.anchorMax = new Vector2(0.5f, 1f);
+            lblRt.pivot = new Vector2(0.5f, 1f);
+            lblRt.anchoredPosition = new Vector2(0, -110);
+            lblRt.sizeDelta = new Vector2(400, 28);
+            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
+            lblTmp.alignment = TextAlignmentOptions.Center;
+            lblTmp.color = tokens.textSecondary;
+            lblTmp.font = tokens.PrimaryFont;
+            lblTmp.fontSize = tokens.fontCaption;
+            lblTmp.fontStyle = FontStyles.SemiBold;
+            lblTmp.text = "FORCE";
+            lblTmp.characterSpacing = 8f;
+            lblTmp.raycastTarget = false;
+
+            // The big number itself.
             var go = new GameObject("ForceCounter", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(ForceCounterView));
             go.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0.5f, 1f);
             rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -160);
-            rt.sizeDelta = new Vector2(700, 160); // Sprint 5 round-2: tighter, font sizes were reduced
+            rt.anchoredPosition = new Vector2(0, -140);
+            rt.sizeDelta = new Vector2(900, 140);
 
             var label = go.GetComponent<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.Center;
-            label.color = TextPrimary;
-            label.fontSize = 64; // matches ForceCounterView SizeMid — overwritten on first Refresh anyway
+            label.color = tokens.textPrimary;
+            label.font = tokens.NumbersFont;
+            label.fontSize = 84; // overwritten on first Refresh based on magnitude
             label.enableAutoSizing = false;
-            label.fontStyle = FontStyles.Normal;
+            label.fontStyle = FontStyles.Bold;
             label.text = "0";
+            // Drop shadow: TMP underlay channel works on dark backgrounds.
+            label.fontMaterial.SetFloat("_UnderlayOffsetX", 0f);
+            label.fontMaterial.SetFloat("_UnderlayOffsetY", -1f);
+            label.fontMaterial.SetFloat("_UnderlaySoftness", 0.4f);
+            label.fontMaterial.SetColor("_UnderlayColor", new Color(0, 0, 0, 0.45f));
 
             go.GetComponent<ForceCounterView>().Label = label;
         }
@@ -1602,12 +1902,14 @@ namespace Saga.Core
             modal.Group = group;
             modal.ListContainer = listRt;
             back.GetComponent<Button>().onClick.AddListener(modal.Close);
+            SagaButton.Wrap(back, SagaButton.Variant.Standard);
 
             return modal;
         }
 
         private void BuildInventaireButton(Canvas canvas, EquipmentInventoryModal modal)
         {
+            var tokens = DesignTokens.Get();
             var btn = new GameObject("InventaireButton",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
             btn.transform.SetParent(canvas.transform, false);
@@ -1621,7 +1923,7 @@ namespace Saga.Core
             rt.sizeDelta = new Vector2(160, 80);
 
             var img = btn.GetComponent<Image>();
-            img.color = new Color(0.30f, 0.26f, 0.18f, 0.92f);
+            img.color = tokens.surfaceMid;
             img.raycastTarget = true;
 
             var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -1631,13 +1933,15 @@ namespace Saga.Core
             lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
             var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
             lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = new Color(0.98f, 0.95f, 0.85f, 1f);
-            lblTmp.fontSize = 22;
-            lblTmp.fontStyle = FontStyles.Bold;
+            lblTmp.color = tokens.textPrimary;
+            lblTmp.font = tokens.PrimaryFont;
+            lblTmp.fontSize = tokens.fontH3;
+            lblTmp.fontStyle = FontStyles.SemiBold;
             lblTmp.text = "INVENTAIRE";
             lblTmp.raycastTarget = false;
 
             btn.GetComponent<Button>().onClick.AddListener(modal.Open);
+            SagaButton.Wrap(btn, SagaButton.Variant.Standard);
         }
     }
 }

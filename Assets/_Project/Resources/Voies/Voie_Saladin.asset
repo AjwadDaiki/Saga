@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c32172c66c8cde428391ca6faaa56a7, type: 3}
+  m_Name: Voie_Saladin
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.VoieData
+  _voieEnum: 6
+  _displayName: Saladin
+  _mainColor: {r: 0.91, g: 0.72, b: 0.36, a: 1}
+  _accentColor: {r: 0.45, g: 0.3, b: 0.2, a: 1}
+  _introCitation: "La mis\xE9ricorde est plus tranchante que la lame."
+  _description: "Voie de la lumi\xE8re du d\xE9sert. Cimeterres, sagesse, lumi\xE8re."
+  _bonusDescription: "Bonus Saladin : r\xE9g\xE9n\xE9ration de Souffle acc\xE9l\xE9r\xE9e."

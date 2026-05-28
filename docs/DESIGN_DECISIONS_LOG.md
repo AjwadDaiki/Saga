@@ -583,6 +583,49 @@ avec `EchosMinReward = 10` et `EchosFormulaBase = 10`. La valeur d'entrée est `
 
 ---
 
+## 2026-05-28 — Sprint 7.5: Design system via SO unique (DesignTokens)
+
+**Décision**: Tous les colors / spacing / typography scale / radii sont centralisés dans une seule ScriptableObject `DesignTokens` chargée via `DesignTokens.Get()` depuis `Resources/DesignTokens/SagaDesignTokens.asset`. Plus aucun `new Color(0.98f, 0.78f, 0.46f, 1f)` hardcodé dans les UI scripts.
+
+**Raison**: Le re-skin d'un jeu mobile c'est un cycle d'itération constant. Avec des couleurs hardcodées partout, changer le ton du jeu = touch 30 files. Avec un SO unique, c'est 1 file (l'asset) et l'inspector le reload immédiatement en play. Permet aussi à Ajwad d'expérimenter en runtime sans recompile. Sprint 8+ on pourra avoir des theme variants par région monde (palette froide en Hokkaido, palette chaude en Aztèque) en swappant l'asset référencé.
+
+**Conséquence**: Pattern à respecter dans tout code UI à partir de Sprint 8+ : lire les couleurs/spacings via `DesignTokens.Get()`. Les Sprint 1-7 legacy ont encore quelques hardcodes — refactor incrémental au fil des passes de polish. Editor utility `Saga > Design > Generate Design Tokens` matérialise l'asset avec les valeurs spec du brief 7.5.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Fonts en TODO Ajwad (Inter / JetBrains Mono / Cinzel)
+
+**Décision**: Les 3 Google Fonts (Inter UI primary, JetBrains Mono numbers, Cinzel lore) ne sont PAS shipped dans le commit Sprint 7.5. `DesignTokens` expose 3 slots `TMP_FontAsset fontPrimary/fontNumbers/fontLore` nullables avec fallback automatique vers `TMP_Settings.defaultFontAsset`. Ajwad télécharge les .ttf, les passe au Font Asset Creator (Window > TextMeshPro > Font Asset Creator, atlas 1024² pour Inter / 512² pour les autres), et assigne les 3 Font Assets dans l'inspector DesignTokens.
+
+**Raison**: dev Claude ne peut pas télécharger de binaires (fonts .ttf de Google) en filesystem-only. Mock Font Assets pointant vers TMP default créerait une fausse impression de complétion et des références bizarres dans la scène. Mieux vaut un slot nullable explicite + warning console + doc d'install claire que de faux assets.
+
+**Conséquence**: Le jeu run en Sprint 7.5 avec TMP default (LiberationSans). Quand Ajwad drop les vraies fonts (5-10 min via Font Asset Creator), tout le UI bascule automatiquement vers Inter/JetBrains Mono/Cinzel sans recompile.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Audio 100% procédural Sprint 7-10
+
+**Décision**: Pas de fichiers .wav/.mp3 dans le repo pendant les Sprints 7-10. `ProceduralSoundGenerator` synthétise tous les SFX au boot via primitives `Sine` + `Noise` + `Mix` + envelope ASR. 9 sons définis : tap, combo, upgrade buy, vague, adversaire arrive, capitaine arrive, maître arrive, death, prestige phase.
+
+**Raison**: Ajwad est beatmaker et compositeur, il veut faire le sound design lui-même quand il aura la version polish-final du jeu (Sprint 11). En attendant, des sons procéduraux sont :
+- 0 footprint dans le repo (économie de Mo de binaires versionnés)
+- Ajustables instantanément (changer une fréquence, recompile, écouter)
+- Plus pro qu'un silence total — le jeu "respire" sonorement
+
+**Conséquence**: `AudioService` POCO + `AudioBindings` MonoBehaviour subscribe sur 9 GameEvents. Sprint 11, swap = changer `ProceduralSoundGenerator.TapBasic()` etc. pour `Resources.Load<AudioClip>("Sfx/tap_basic")`. Le reste du code ne bouge pas.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Haptic via Handheld.Vibrate, plugin natif reporté Sprint 8+
+
+**Décision**: `HapticService` MVP utilise `Handheld.Vibrate()` (Unity API standard). Sur Android = ~250ms pulse fixe. Sur iOS = même API mappée par Unity sur UIImpactFeedbackGenerator depuis Unity 2021+ donc OK MVP. Les strengths Light/Medium/Heavy sont juste un hint sémantique pour Sprint 7.5 ; Sprint 8+ on implémentera la durée réelle via `AndroidJavaObject(Vibrator).vibrate(ms)` pour Android et un plugin iOS natif pour le tactile fin.
+
+**Raison**: Plugin natif iOS = effort non-négligeable (Swift bridge + .a + Build Settings). Sprint 7.5 a un budget polish de 3-4 jours, pas le temps de refaire la stack mobile. Le MVP avec Handheld.Vibrate donne un feedback OK sur device, et la couche d'abstraction (HapticService POCO) garantit qu'on n'aura rien à refactor quand le plugin arrivera.
+
+**Conséquence**: Tests EditMode ne testent que le gate `Enabled`. Validation réelle = device build. Si Ajwad teste sur un iPhone et trouve les vibrations trop "uniformes", c'est attendu — le plugin natif Sprint 8 raffinera.
+
+---
+
 ## Template pour nouvelles entrées
 
 ```

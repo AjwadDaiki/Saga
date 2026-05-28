@@ -17,10 +17,12 @@ namespace Saga.UI
         [SerializeField] private Image _fillImage;
         [SerializeField] private TextMeshProUGUI _label;
         [SerializeField] private RectTransform _pulseTarget;
+        [SerializeField] private Image _glowImage; // Sprint 7.5: optional glow halo behind the bar
 
         public Image FillImage { get => _fillImage; set => _fillImage = value; }
         public TextMeshProUGUI Label { get => _label; set => _label = value; }
         public RectTransform PulseTarget { get => _pulseTarget; set => _pulseTarget = value; }
+        public Image GlowImage { get => _glowImage; set => _glowImage = value; }
 
         private Tween _pulse;
 
@@ -40,11 +42,19 @@ namespace Saga.UI
 
         private void Refresh(float current, float max)
         {
+            var ratio = 0f;
             if (_fillImage != null)
             {
-                var ratio = max > 0 ? Mathf.Clamp01(current / max) : 0f;
+                ratio = max > 0 ? Mathf.Clamp01(current / max) : 0f;
                 _fillImage.fillAmount = ratio;
                 UpdatePulse(ratio);
+            }
+            if (_glowImage != null)
+            {
+                // Glow ramps up over 70..100% so the player sees the bar "charge" visually.
+                var glow = Mathf.SmoothStep(0f, 0.45f, Mathf.InverseLerp(0.7f, 1f, ratio));
+                var c = _glowImage.color;
+                _glowImage.color = new Color(c.r, c.g, c.b, glow);
             }
             if (_label != null)
             {
