@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" width="120" height="160">
+  <!-- SAGA enemy chibi (Bandit Rōnin) — extracted from Claude Design shared.jsx. -->
+  <ellipse cx="60" cy="153" rx="26" ry="5" fill="rgba(0,0,0,0.3)"/>
+  <path d="M 42 125 L 40 150 L 52 150 L 52 125 Z" fill="#1A1626" stroke="#1F1B2E" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 68 125 L 68 150 L 80 150 L 78 125 Z" fill="#1A1626" stroke="#1F1B2E" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 34 76 Q 34 70 40 68 L 80 68 Q 86 70 86 76 L 88 130 Q 88 132 84 132 L 36 132 Q 32 132 32 130 Z" fill="#4A4258" stroke="#1F1B2E" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 32 130 L 38 124 L 44 130 L 50 124 L 56 130 L 62 124 L 68 130 L 74 124 L 80 130 L 86 124 L 88 130 Z" fill="#4A4258" stroke="#1F1B2E" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 24 76 Q 18 84 22 102 L 32 100 Q 32 86 34 78 Z" fill="#4A4258" stroke="#1F1B2E" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 96 76 Q 102 84 98 102 L 88 100 Q 88 86 86 78 Z" fill="#4A4258" stroke="#1F1B2E" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="100" y1="105" x2="115" y2="40" stroke="#5B4528" stroke-width="5" stroke-linecap="round"/>
+  <path d="M 110 50 L 118 30 L 122 40 L 114 50 Z" fill="#A8A8B5" stroke="#1F1B2E" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="98" cy="105" r="6" fill="#D4B98A" stroke="#1F1B2E" stroke-width="2.5"/>
+  <ellipse cx="60" cy="42" rx="25" ry="27" fill="#D4B98A" stroke="#1F1B2E" stroke-width="3"/>
+  <path d="M 30 40 Q 26 12 60 10 Q 94 12 90 40 L 86 28 Q 60 20 34 28 Z" fill="#2A2440" stroke="#1F1B2E" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M 44 42 L 52 44 L 52 47 L 44 45 Z" fill="#1F1B2E"/>
+  <path d="M 76 42 L 68 44 L 68 47 L 76 45 Z" fill="#1F1B2E"/>
+  <circle cx="48" cy="45" r="2" fill="#C42B2B"/>
+  <circle cx="72" cy="45" r="2" fill="#C42B2B"/>
+  <path d="M 50 56 L 60 58 L 70 56" stroke="#1F1B2E" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <path d="M 38 36 L 46 50" stroke="#1F1B2E" stroke-width="2" stroke-linecap="round"/>
+</svg>

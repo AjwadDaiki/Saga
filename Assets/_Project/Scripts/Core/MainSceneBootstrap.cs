@@ -111,6 +111,178 @@ namespace Saga.Core
             // Sprint 7: Inventaire
             var inventoryModal = BuildEquipmentInventoryModal(MainCanvas);
             BuildInventaireButton(MainCanvas, inventoryModal);
+
+            // Sprint 7.5 refonte : top bar pills + bottom nav 5 onglets.
+            BuildTopBarPills(MainCanvas);
+            BuildBottomNav(MainCanvas);
+        }
+
+        // ============================================================
+        //  Sprint 7.5 refonte — top bar currency pills + bottom nav
+        // ============================================================
+
+        /// <summary>Échos currency pill (Force is the main ForceCounter pill, built separately).</summary>
+        private void BuildTopBarPills(Canvas canvas)
+        {
+            var tokens = DesignTokens.Get();
+
+            // Échos pill (top-right area, left of settings). Violet icon débordante + valeur.
+            var echos = BuildCurrencyPill(canvas, "EchosPill", new Vector2(1f, 1f), new Vector2(-96, -40),
+                iconColor: tokens.accentPrimary /*overridden below*/, glyph: "◆");
+            // Override icon color to violet (Échos).
+            var echosIcon = echos.transform.Find("Icon")?.GetComponent<Image>();
+            if (echosIcon != null) echosIcon.color = new Color(0.69f, 0.48f, 1f, 1f); // violet
+            var echosLabel = echos.transform.Find("Value")?.GetComponent<TextMeshProUGUI>();
+            var gm = GameManager.Instance;
+            if (echosLabel != null && gm?.State != null)
+                echosLabel.text = Saga.Math.NumberFormatter.Format(gm.State.totalEchos);
+
+            // Settings round puffy button (top-right corner).
+            var settings = SagaButton.Create(canvas.transform, "SettingsButton", SagaButton.Variant.Standard,
+                tokens.m3SurfaceContainerHighest, "⚙", radius: 22, floorPx: 5, labelSize: 26,
+                labelColor: tokens.m3OnSurface);
+            var srt = (RectTransform)settings.transform;
+            srt.anchorMin = new Vector2(1f, 1f); srt.anchorMax = new Vector2(1f, 1f); srt.pivot = new Vector2(1f, 1f);
+            srt.anchoredPosition = new Vector2(-24, -36);
+            srt.sizeDelta = new Vector2(64, 64);
+        }
+
+        /// <summary>
+        /// Build a puffy currency pill : charcoal rounded pill + a colored round icon overflowing the
+        /// left edge + value label in JetBrains Mono. Returns the pill GO (Icon child + Value label child).
+        /// </summary>
+        private GameObject BuildCurrencyPill(Canvas canvas, string name, Vector2 anchor, Vector2 pos,
+            Color iconColor, string glyph)
+        {
+            var tokens = DesignTokens.Get();
+            var pill = new GameObject(name, typeof(RectTransform), typeof(Image));
+            pill.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)pill.transform;
+            rt.anchorMin = anchor; rt.anchorMax = anchor; rt.pivot = new Vector2(anchor.x, anchor.y);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(140, 40);
+            var bg = pill.GetComponent<Image>();
+            bg.sprite = PuffySprite.RoundedFill(20);
+            bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.086f, 0.114f, 0.122f, 0.85f); // charcoal 85%
+
+            // Floor (puffy depth).
+            var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
+            floor.transform.SetParent(pill.transform, false);
+            floor.transform.SetAsFirstSibling();
+            var fr = (RectTransform)floor.transform;
+            fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one; fr.offsetMin = new Vector2(0, -4); fr.offsetMax = Vector2.zero;
+            var fi = floor.GetComponent<Image>();
+            fi.sprite = PuffySprite.RoundedFill(20); fi.type = Image.Type.Sliced; fi.color = tokens.m3Outline; fi.raycastTarget = false;
+
+            // Icon round, overflowing left.
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(TextMeshProUGUI));
+            icon.transform.SetParent(pill.transform, false);
+            var irt = (RectTransform)icon.transform;
+            irt.anchorMin = new Vector2(0, 0.5f); irt.anchorMax = new Vector2(0, 0.5f); irt.pivot = new Vector2(0.5f, 0.5f);
+            irt.anchoredPosition = new Vector2(2, 0); irt.sizeDelta = new Vector2(38, 38);
+            var iimg = icon.GetComponent<Image>();
+            iimg.sprite = PuffySprite.RoundedFill(19); iimg.type = Image.Type.Sliced; iimg.color = iconColor;
+            var iglyph = icon.GetComponent<TextMeshProUGUI>();
+            iglyph.alignment = TextAlignmentOptions.Center; iglyph.font = tokens.DisplayFont; iglyph.fontSize = 18;
+            iglyph.color = tokens.m3OnSurface; iglyph.text = glyph; iglyph.raycastTarget = false;
+
+            // Value label.
+            var val = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
+            val.transform.SetParent(pill.transform, false);
+            var vrt = (RectTransform)val.transform;
+            vrt.anchorMin = Vector2.zero; vrt.anchorMax = Vector2.one; vrt.offsetMin = new Vector2(42, 0); vrt.offsetMax = new Vector2(-12, 0);
+            var vtmp = val.GetComponent<TextMeshProUGUI>();
+            vtmp.alignment = TextAlignmentOptions.Left; vtmp.font = tokens.NumbersFont; vtmp.fontStyle = FontStyles.Bold;
+            vtmp.fontSize = 18; vtmp.color = Color.white; vtmp.text = "0"; vtmp.raycastTarget = false;
+
+            return pill;
+        }
+
+        /// <summary>Bottom nav — 5 tabs (Shop/Hero/Dojo/Artifacts/Legend). Dojo active (raised, bleu).</summary>
+        private void BuildBottomNav(Canvas canvas)
+        {
+            var tokens = DesignTokens.Get();
+            var nav = new GameObject("BottomNav", typeof(RectTransform), typeof(Image));
+            nav.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)nav.transform;
+            rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(0, 150); // ~7.8% of 1920 incl. safe area
+            var bg = nav.GetComponent<Image>();
+            bg.color = tokens.m3SurfaceContainerHighest;
+
+            // Top border (charcoal line).
+            var border = new GameObject("TopBorder", typeof(RectTransform), typeof(Image));
+            border.transform.SetParent(nav.transform, false);
+            var brt = (RectTransform)border.transform;
+            brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(0.5f, 1f);
+            brt.sizeDelta = new Vector2(0, 4); brt.anchoredPosition = Vector2.zero;
+            border.GetComponent<Image>().color = tokens.m3Outline;
+
+            string[] labels = { "Shop", "Hero", "Dojo", "Artifacts", "Legend" };
+            string[] glyphs = { "🛒", "🥋", "⚔", "✦", "🏆" };
+            const int count = 5;
+            var frac = 1f / count;
+            for (var i = 0; i < count; i++)
+            {
+                var active = i == 2; // Dojo
+                var tab = new GameObject($"Tab_{labels[i]}", typeof(RectTransform), typeof(Image), typeof(Button));
+                tab.transform.SetParent(nav.transform, false);
+                var trt = (RectTransform)tab.transform;
+                trt.anchorMin = new Vector2(i * frac, 0); trt.anchorMax = new Vector2((i + 1) * frac, 1);
+                // Active tab raised + colored card; inactive transparent.
+                trt.offsetMin = new Vector2(8, active ? 18 : 30);
+                trt.offsetMax = new Vector2(-8, active ? -8 : -24);
+                var timg = tab.GetComponent<Image>();
+                if (active)
+                {
+                    timg.sprite = PuffySprite.RoundedFill(16); timg.type = Image.Type.Sliced;
+                    timg.color = tokens.m3TertiaryContainer;
+                }
+                else timg.color = new Color(0, 0, 0, 0);
+
+                var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                lbl.transform.SetParent(tab.transform, false);
+                var lrt = (RectTransform)lbl.transform;
+                lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;
+                var tmp = lbl.GetComponent<TextMeshProUGUI>();
+                tmp.alignment = TextAlignmentOptions.Center; tmp.font = tokens.PrimaryFont;
+                tmp.fontSize = tokens.fontSmall; tmp.fontStyle = FontStyles.Bold;
+                tmp.color = active ? tokens.m3OnTertiaryContainer : tokens.m3Outline;
+                tmp.text = $"{glyphs[i]}\n{labels[i]}";
+                tmp.raycastTarget = false;
+
+                if (!active)
+                {
+                    var captured = labels[i];
+                    tab.GetComponent<Button>().onClick.AddListener(() => ShowComingSoon(canvas, captured));
+                }
+            }
+        }
+
+        private GameObject _comingSoon;
+        private void ShowComingSoon(Canvas canvas, string screen)
+        {
+            var tokens = DesignTokens.Get();
+            if (_comingSoon == null)
+            {
+                _comingSoon = new GameObject("ComingSoonToast", typeof(RectTransform), typeof(Image));
+                _comingSoon.transform.SetParent(canvas.transform, false);
+                var rt = (RectTransform)_comingSoon.transform;
+                rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(560, 120);
+                var img = _comingSoon.GetComponent<Image>();
+                img.sprite = PuffySprite.RoundedFill(24); img.type = Image.Type.Sliced; img.color = tokens.m3InverseSurface;
+                var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                lbl.transform.SetParent(_comingSoon.transform, false);
+                var lrt = (RectTransform)lbl.transform; lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;
+                var tmp = lbl.GetComponent<TextMeshProUGUI>();
+                tmp.alignment = TextAlignmentOptions.Center; tmp.font = tokens.DisplayFont; tmp.fontSize = 28; tmp.color = Color.white;
+                _comingSoon.AddComponent<ComingSoonToast>().Label = tmp;
+            }
+            _comingSoon.transform.SetAsLastSibling();
+            _comingSoon.GetComponent<ComingSoonToast>().Show($"{screen}\nBientôt disponible");
         }
 
         private void BuildMaitre(Transform parent)
@@ -346,12 +518,12 @@ namespace Saga.Core
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(SouffleButtonView));
             btn.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)btn.transform;
-            // Top-left anchor, 24px from top + 24px from left
-            rt.anchorMin = new Vector2(0, 1f);
-            rt.anchorMax = new Vector2(0, 1f);
-            rt.pivot = new Vector2(0, 1f);
-            rt.anchoredPosition = new Vector2(32, -32);
-            rt.sizeDelta = new Vector2(160, 100);
+            // Sprint 7.5 refonte : left side-rail mid-height (clear of the crowded top bar pills).
+            rt.anchorMin = new Vector2(0, 0.5f);
+            rt.anchorMax = new Vector2(0, 0.5f);
+            rt.pivot = new Vector2(0, 0.5f);
+            rt.anchoredPosition = new Vector2(16, 64);
+            rt.sizeDelta = new Vector2(132, 78);
 
             // Sprint 7.5 A5: "Special" look — surface_mid bg + a 4px voie-colored border frame.
             // SouffleButtonView uses IPointerClickHandler (not Button) so we can't SagaButton.Wrap it;
@@ -1197,8 +1369,8 @@ namespace Saga.Core
             cam.orthographic = true;
             cam.orthographicSize = CameraOrthoSize;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            // Sprint 7.5: use bg_deep (#0a0a0a) so the radial gradient on top has somewhere to fade into.
-            cam.backgroundColor = DesignTokens.Get().bgDeep;
+            // Sprint 7.5 refonte : dusk violet (pas de noir) — visible seulement dans d'éventuels gaps.
+            cam.backgroundColor = new Color(0.23f, 0.14f, 0.31f, 1f);
             cam.nearClipPlane = -10f;
             cam.farClipPlane = 100f;
         }
@@ -1216,28 +1388,86 @@ namespace Saga.Core
             var root = new GameObject("Ambient");
             root.transform.SetParent(parent, false);
 
-            // Layer 1 — radial gradient backdrop.
-            var bgGo = new GameObject("BgGradient", typeof(SpriteRenderer));
+            // Sprint 7.5 refonte : fond illustré coloré (Vibrant Quest). On charge le sprite depuis
+            // Resources/Backgrounds/dojo_bg (copié par 'Saga > Design > Generate Font Assets + Background').
+            // Fallback : gradient dusk procédural si le sprite n'est pas là.
+            var illustrated = Resources.Load<Sprite>("Backgrounds/dojo_bg");
+            var bgGo = new GameObject("BgIllustrated", typeof(SpriteRenderer));
             bgGo.transform.SetParent(root.transform, false);
             bgGo.transform.position = new Vector3(0, 0, 10f);
             var bgSr = bgGo.GetComponent<SpriteRenderer>();
-            bgSr.sprite = CreateRadialGradientSprite(tokens.bgMain, tokens.bgDeep);
             bgSr.sortingOrder = -10;
-            // Stretch to cover the ortho frustum + a little extra so we never see clear color edges.
-            // orthoSize 3 → 6 unit tall. width 6 × 16/9 / 2 ≈ 5.34. We use 8×14 unit cover.
-            bgGo.transform.localScale = new Vector3(8f, 14f, 1f);
+            if (illustrated != null)
+            {
+                bgSr.sprite = illustrated;
+                // Cover the portrait ortho frustum (orthoSize 3 → 6u tall, ~3.4u wide).
+                var sp = illustrated.bounds.size;
+                if (sp.x > 0.01f && sp.y > 0.01f)
+                {
+                    var scale = Mathf.Max(7f / sp.x, 13f / sp.y); // cover 7×13 world units
+                    bgGo.transform.localScale = new Vector3(scale, scale, 1f);
+                }
+            }
+            else
+            {
+                // Fallback dusk gradient (fun, coloré — pas de noir plat).
+                bgSr.sprite = CreateDuskGradientSprite();
+                bgGo.transform.localScale = new Vector3(8f, 14f, 1f);
+            }
 
-            // Layer 2 — floor strip.
-            var floorGo = new GameObject("Floor", typeof(SpriteRenderer));
-            floorGo.transform.SetParent(root.transform, false);
-            floorGo.transform.position = new Vector3(0, -2.3f, 9f);
-            var floorSr = floorGo.GetComponent<SpriteRenderer>();
-            floorSr.sprite = CreateFloorSprite();
-            floorSr.sortingOrder = -8;
-            floorGo.transform.localScale = new Vector3(7f, 1f, 1f);
+            // Overlay gradient subtil haut+bas pour lisibilité de l'UI (léger, garde le fond visible).
+            var ovGo = new GameObject("BgOverlay", typeof(SpriteRenderer));
+            ovGo.transform.SetParent(root.transform, false);
+            ovGo.transform.position = new Vector3(0, 0, 9.5f);
+            var ovSr = ovGo.GetComponent<SpriteRenderer>();
+            ovSr.sprite = CreateVerticalShadeSprite();
+            ovSr.sortingOrder = -9;
+            ovGo.transform.localScale = new Vector3(8f, 14f, 1f);
 
-            // Layer 3 — ambient particles (amber motes drifting up).
+            // Ambient particles (amber motes drifting up) — garde le côté vivant.
             BuildAmbientParticles(root.transform, tokens);
+        }
+
+        /// <summary>Fallback dusk gradient (purple→pink→orange) when no illustrated bg is present.</summary>
+        private static Sprite CreateDuskGradientSprite()
+        {
+            const int w = 8, h = 256;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var top = new Color(1.00f, 0.60f, 0.42f);    // orange chaud
+            var mid = new Color(0.94f, 0.38f, 0.48f);    // rose
+            var bot = new Color(0.23f, 0.14f, 0.31f);    // violet sombre
+            var px = new Color32[w * h];
+            for (var y = 0; y < h; y++)
+            {
+                var t = y / (float)(h - 1); // 0 bottom → 1 top
+                Color c = t > 0.5f ? Color.Lerp(mid, top, (t - 0.5f) * 2f) : Color.Lerp(bot, mid, t * 2f);
+                for (var x = 0; x < w; x++) px[y * w + x] = c;
+            }
+            tex.SetPixels32(px); tex.Apply();
+            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32);
+            s.name = "DuskGradient";
+            return s;
+        }
+
+        /// <summary>Subtle top+bottom shade for UI legibility over the illustrated bg.</summary>
+        private static Sprite CreateVerticalShadeSprite()
+        {
+            const int w = 8, h = 256;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[w * h];
+            for (var y = 0; y < h; y++)
+            {
+                var t = y / (float)(h - 1);
+                // darker at very top (8%) and very bottom (15%), clear in the middle.
+                var aTop = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.92f, 1f, t)) * 0.35f;
+                var aBot = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0f, t)) * 0.45f;
+                var a = Mathf.Max(aTop, aBot);
+                for (var x = 0; x < w; x++) px[y * w + x] = new Color32(10, 8, 14, (byte)(a * 255));
+            }
+            tex.SetPixels32(px); tex.Apply();
+            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32);
+            s.name = "VerticalShade";
+            return s;
         }
 
         private static void BuildAmbientParticles(Transform parent, DesignTokens tokens)
@@ -1247,6 +1477,9 @@ namespace Saga.Core
             go.transform.position = new Vector3(0, -2.5f, 8f);
 
             var ps = go.GetComponent<ParticleSystem>();
+            // Sprint 7.5 fix: a freshly-added ParticleSystem auto-plays; mutating main.duration while
+            // it's playing throws "Setting the duration while system is still playing". Stop first.
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
             main.duration = 8f;
             main.loop = true;
@@ -1287,6 +1520,9 @@ namespace Saga.Core
             var r = ps.GetComponent<ParticleSystemRenderer>();
             r.sortingOrder = -7;
             r.material = new Material(Shader.Find("Sprites/Default"));
+
+            // Restart now that configuration is done (we stopped it above to set duration safely).
+            ps.Play();
         }
 
         /// <summary>Procedural radial gradient sprite (256×256) — bright center, dark edges.</summary>
@@ -1661,55 +1897,59 @@ namespace Saga.Core
 
         private static void BuildForceCounter(Canvas canvas)
         {
-            // Sprint 7.5 polish: small "FORCE" label above + JetBrains-styled value below, drop shadow.
+            // Sprint 7.5 refonte : la Force devient une CURRENCY PILL top-left (style Stitch dojo) —
+            // pill charcoal + icône or 力 débordante + valeur JetBrains Mono Bold. ForceCounterView
+            // pilote la valeur en mode Compact (taille fixe, pas de scaling magnitude).
             var tokens = DesignTokens.Get();
 
-            // Small "FORCE" label.
-            var lblGo = new GameObject("ForceLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
-            lblGo.transform.SetParent(canvas.transform, false);
-            var lblRt = (RectTransform)lblGo.transform;
-            lblRt.anchorMin = new Vector2(0.5f, 1f);
-            lblRt.anchorMax = new Vector2(0.5f, 1f);
-            lblRt.pivot = new Vector2(0.5f, 1f);
-            // Sprint 7.5 fix (BUG 2): top HUD band 6-14%. Label above the big number.
-            lblRt.anchoredPosition = new Vector2(0, -118);
-            lblRt.sizeDelta = new Vector2(400, 26);
-            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
-            lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = tokens.textSecondary;
-            lblTmp.font = tokens.PrimaryFont;
-            lblTmp.fontSize = tokens.fontCaption;
-            lblTmp.fontStyle = FontStyles.Bold;
-            lblTmp.text = "FORCE";
-            lblTmp.characterSpacing = 8f;
-            lblTmp.raycastTarget = false;
+            var pill = new GameObject("ForcePill", typeof(RectTransform), typeof(Image), typeof(ForceCounterView));
+            pill.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)pill.transform;
+            rt.anchorMin = new Vector2(0, 1f); rt.anchorMax = new Vector2(0, 1f); rt.pivot = new Vector2(0, 1f);
+            rt.anchoredPosition = new Vector2(24, -40);
+            rt.sizeDelta = new Vector2(190, 44);
+            var bg = pill.GetComponent<Image>();
+            bg.sprite = PuffySprite.RoundedFill(22); bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.086f, 0.114f, 0.122f, 0.85f);
 
-            // The big number itself.
-            var go = new GameObject("ForceCounter", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(ForceCounterView));
-            go.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(0.5f, 1f);
-            rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            // Sprint 7.5 fix (BUG 2): big number just under the FORCE label, well above the Adv bar (-270).
-            rt.anchoredPosition = new Vector2(0, -144);
-            rt.sizeDelta = new Vector2(940, 110);
+            // Floor.
+            var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
+            floor.transform.SetParent(pill.transform, false); floor.transform.SetAsFirstSibling();
+            var frt = (RectTransform)floor.transform; frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
+            frt.offsetMin = new Vector2(0, -4); frt.offsetMax = Vector2.zero;
+            var fi = floor.GetComponent<Image>(); fi.sprite = PuffySprite.RoundedFill(22); fi.type = Image.Type.Sliced;
+            fi.color = tokens.m3Outline; fi.raycastTarget = false;
 
-            var label = go.GetComponent<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.Center;
-            label.color = tokens.textPrimary;
+            // Gold icon round débordante (kanji 力 = Force).
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(TextMeshProUGUI));
+            icon.transform.SetParent(pill.transform, false);
+            var irt = (RectTransform)icon.transform;
+            irt.anchorMin = new Vector2(0, 0.5f); irt.anchorMax = new Vector2(0, 0.5f); irt.pivot = new Vector2(0.5f, 0.5f);
+            irt.anchoredPosition = new Vector2(2, 0); irt.sizeDelta = new Vector2(42, 42);
+            var iimg = icon.GetComponent<Image>(); iimg.sprite = PuffySprite.RoundedFill(21); iimg.type = Image.Type.Sliced;
+            iimg.color = tokens.accentPrimary; // or
+            var iglyph = icon.GetComponent<TextMeshProUGUI>();
+            iglyph.alignment = TextAlignmentOptions.Center; iglyph.font = tokens.DisplayFont; iglyph.fontSize = 20;
+            iglyph.color = tokens.m3OnSurface; iglyph.text = "力"; iglyph.raycastTarget = false;
+
+            // Value label (the one ForceCounterView drives).
+            var val = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
+            val.transform.SetParent(pill.transform, false);
+            var vrt = (RectTransform)val.transform;
+            vrt.anchorMin = Vector2.zero; vrt.anchorMax = Vector2.one; vrt.offsetMin = new Vector2(46, 0); vrt.offsetMax = new Vector2(-14, 0);
+            var label = val.GetComponent<TextMeshProUGUI>();
+            label.alignment = TextAlignmentOptions.Left;
+            label.color = Color.white;
             label.font = tokens.NumbersFont;
-            label.fontSize = 84; // overwritten on first Refresh based on magnitude
-            label.enableAutoSizing = false;
+            label.fontSize = 20;
             label.fontStyle = FontStyles.Bold;
+            label.enableAutoSizing = false;
             label.text = "0";
-            // Drop shadow: TMP underlay channel works on dark backgrounds.
-            label.fontMaterial.SetFloat("_UnderlayOffsetX", 0f);
-            label.fontMaterial.SetFloat("_UnderlayOffsetY", -1f);
-            label.fontMaterial.SetFloat("_UnderlaySoftness", 0.4f);
-            label.fontMaterial.SetColor("_UnderlayColor", new Color(0, 0, 0, 0.45f));
+            label.raycastTarget = false;
 
-            go.GetComponent<ForceCounterView>().Label = label;
+            var view = pill.GetComponent<ForceCounterView>();
+            view.Compact = true;
+            view.Label = label;
         }
 
         private static void BuildComboMeter(Canvas canvas)
@@ -1717,11 +1957,12 @@ namespace Saga.Core
             var root = new GameObject("ComboMeter", typeof(RectTransform), typeof(CanvasGroup), typeof(ComboMeterView));
             root.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)root.transform;
-            rt.anchorMin = new Vector2(1f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(1f, 1f);
-            rt.anchoredPosition = new Vector2(-48, -48);
-            rt.sizeDelta = new Vector2(220, 80);
+            // Sprint 7.5 refonte : sous la Force pill (top-left) pour ne pas heurter Échos pill + settings (top-right).
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(24, -92);
+            rt.sizeDelta = new Vector2(220, 60);
 
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = 0f;
@@ -1943,13 +2184,12 @@ namespace Saga.Core
                 typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
             btn.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)btn.transform;
-            // Sprint 7.5 portrait fix: live under the Souffle button (top-left column) so we don't
-            // collide with the ComboMeter that sits at top-right.
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(32, -148);
-            rt.sizeDelta = new Vector2(160, 80);
+            // Sprint 7.5 refonte : left side-rail, below the Souffle button (clear of top bar pills).
+            rt.anchorMin = new Vector2(0f, 0.5f);
+            rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.anchoredPosition = new Vector2(16, -24);
+            rt.sizeDelta = new Vector2(132, 72);
 
             var img = btn.GetComponent<Image>();
             img.color = tokens.surfaceMid;

@@ -27,6 +27,7 @@ namespace Saga.UI
         [SerializeField] private float _smoothing = 0.12f;
 
         [SerializeField] private TextMeshProUGUI _label;
+        [SerializeField] private bool _compact; // pill mode : fixed font size, no magnitude scaling
 
         private BigDouble _displayed;
         private BigDouble _target;
@@ -38,6 +39,10 @@ namespace Saga.UI
             get => _label;
             set => _label = value;
         }
+
+        /// <summary>Sprint 7.5: when true (top-bar pill), keep a fixed font size and skip the big
+        /// magnitude scaling — only the color tier + value text update.</summary>
+        public bool Compact { get => _compact; set => _compact = value; }
 
         private void OnEnable()
         {
@@ -94,6 +99,15 @@ namespace Saga.UI
             if (value.Sign() < 0) compare = -value;
 
             var tokens = DesignTokens.Get();
+
+            if (_compact)
+            {
+                // Pill mode : white value, fixed size (set at build), no magnitude scaling/glow.
+                if (tokens.NumbersFont != null && _label.font != tokens.NumbersFont)
+                    _label.font = tokens.NumbersFont;
+                return;
+            }
+
             _label.color = tokens.ForceTierColor(compare);
             _label.fontSize = tokens.ForceFontSize(compare);
 

@@ -61,6 +61,27 @@ namespace Saga.Data
         public Color accentDanger = new Color(0.784f, 0.224f, 0.165f, 1f);  // #C8392A
         public Color accentSuccess = new Color(0.478f, 0.671f, 0.361f, 1f); // #7AAB5C
 
+        // ----- Material 3 palette (Sprint 7.5 refonte "Vibrant Quest" — puffy 3D) -----
+        // Additive: legacy fields above stay valid until the layout refactor migrates usages.
+        // Function→color: green=succès/achat, red=action/start, blue=nav/info, gold=Force monnaie.
+        [Header("Material 3 (Vibrant Quest)")]
+        public Color m3Primary = new Color(0.000f, 0.431f, 0.125f, 1f);          // #006e20 vert succès
+        public Color m3PrimaryContainer = new Color(0.173f, 0.796f, 0.298f, 1f); // #2ccb4c vert vif
+        public Color m3OnPrimaryContainer = new Color(0.000f, 0.310f, 0.082f, 1f); // #004f15
+        public Color m3Secondary = new Color(0.718f, 0.078f, 0.133f, 1f);        // #b71422 rouge action
+        public Color m3SecondaryContainer = new Color(0.859f, 0.196f, 0.216f, 1f); // #db3237 rouge vif
+        public Color m3Tertiary = new Color(0.000f, 0.384f, 0.620f, 1f);         // #00629e bleu nav
+        public Color m3TertiaryContainer = new Color(0.404f, 0.714f, 1.000f, 1f); // #67b6ff bleu vif
+        public Color m3OnTertiaryContainer = new Color(0.000f, 0.275f, 0.451f, 1f); // #004673
+        public Color m3Surface = new Color(0.957f, 0.980f, 0.992f, 1f);          // #f4fafd surface claire
+        public Color m3SurfaceContainer = new Color(0.910f, 0.937f, 0.945f, 1f); // #e8eff1 panels
+        public Color m3SurfaceContainerHigh = new Color(0.886f, 0.914f, 0.925f, 1f); // #e2e9ec
+        public Color m3SurfaceContainerHighest = new Color(0.867f, 0.894f, 0.902f, 1f); // #dde4e6
+        public Color m3InverseSurface = new Color(0.169f, 0.196f, 0.204f, 1f);   // #2b3234 pills sombres
+        public Color m3Outline = new Color(0.427f, 0.482f, 0.412f, 1f);          // #6d7b69 plancher neutre
+        public Color m3OnSurface = new Color(0.086f, 0.114f, 0.122f, 1f);        // #161d1f charcoal OUTLINE
+        public Color m3OnPrimary = Color.white;                                   // texte sur couleur
+
         // ----- Voies -----
         [Header("Voies")]
         public Color voieSamurai = new Color(0.980f, 0.780f, 0.459f, 1f);   // #FAC775
@@ -89,11 +110,20 @@ namespace Saga.Data
         public int spacingXl = 32;
         public int spacingXxl = 48;
 
-        // ----- Radii -----
+        // ----- Radii (Vibrant Quest puffy : sm/buttons 16, panels 24) -----
         [Header("Border Radii")]
-        public int radiusSmall = 4;
-        public int radiusMedium = 8;
-        public int radiusLarge = 16;
+        public int radiusSmall = 12;
+        public int radiusMedium = 16;
+        public int radiusLarge = 24;
+
+        // ----- Puffy 3D (Vibrant Quest depth recipe) -----
+        [Header("Puffy 3D")]
+        [Tooltip("Charcoal outline thickness around puffy elements (px).")]
+        public int puffyOutline = 3;
+        [Tooltip("3D bottom-border 'floor' height for buttons (px).")]
+        public int puffyFloorButton = 6;
+        [Tooltip("3D bottom-border 'floor' height for cards/list items (px).")]
+        public int puffyFloorCard = 5;
 
         // ----- Typography scale (font sizes @ 1080×1920 ref) -----
         [Header("Typography Scale")]
@@ -106,16 +136,19 @@ namespace Saga.Data
         public int fontSmall = 12;
 
         // ----- Font assets (nullable — fall back to TMP default) -----
-        [Header("Font Assets (drop in from TMP Font Asset Creator)")]
-        [Tooltip("Inter — primary UI font (labels, descriptions, buttons). Google Fonts.")]
+        [Header("Font Assets (Saga > Design > Generate Font Assets)")]
+        [Tooltip("Plus Jakarta Sans — primary UI font (labels, descriptions, body). Google Fonts.")]
         public TMP_FontAsset fontPrimary;
+        [Tooltip("Lilita One — display font (big titles, button labels, cartoon punch). Google Fonts.")]
+        public TMP_FontAsset fontDisplay;
         [Tooltip("JetBrains Mono — numbers (Force, HP, Élan%, levels, costs). Google Fonts.")]
         public TMP_FontAsset fontNumbers;
-        [Tooltip("Cinzel — lore (citations Maîtres, noms reliques, cinematic titres). Google Fonts.")]
+        [Tooltip("Cinzel — lore (citations Maîtres). Optional — dropped from the core stack Sprint 7.5.")]
         public TMP_FontAsset fontLore;
 
         /// <summary>Returns the configured primary font or TMP default if unassigned.</summary>
         public TMP_FontAsset PrimaryFont => fontPrimary != null ? fontPrimary : TMP_Settings.defaultFontAsset;
+        public TMP_FontAsset DisplayFont => fontDisplay != null ? fontDisplay : (fontPrimary != null ? fontPrimary : TMP_Settings.defaultFontAsset);
         public TMP_FontAsset NumbersFont => fontNumbers != null ? fontNumbers : TMP_Settings.defaultFontAsset;
         public TMP_FontAsset LoreFont => fontLore != null ? fontLore : TMP_Settings.defaultFontAsset;
 
@@ -135,6 +168,16 @@ namespace Saga.Data
                 case Voie.Gaulois: return voieGaulois;
                 default: return textSecondary;
             }
+        }
+
+        /// <summary>
+        /// Darker shade of a color for the puffy 3D bottom-border ("floor"). Default -20% luminance
+        /// with a touch more saturation, matching the Vibrant Quest spec ("20% darker, increased sat").
+        /// </summary>
+        public static Color Darken(Color c, float percent = 0.20f)
+        {
+            var f = 1f - Mathf.Clamp01(percent);
+            return new Color(c.r * f, c.g * f, c.b * f, c.a);
         }
 
         public Color RarityColor(Rarity r)
