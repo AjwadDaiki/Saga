@@ -20,11 +20,19 @@ namespace Saga.UI
         [SerializeField] private Image _background;
         [SerializeField] private TextMeshProUGUI _label;
         [SerializeField] private RectTransform _root;
+        [SerializeField] private bool _alwaysVisible;
 
         public CanvasGroup Group { get => _group; set => _group = value; }
         public Image Background { get => _background; set => _background = value; }
         public TextMeshProUGUI Label { get => _label; set => _label = value; }
         public RectTransform Root { get => _root; set => _root = value; }
+
+        /// <summary>
+        /// Sprint 7.5 refonte zone 5 : when true, the button stays fully visible at all times
+        /// (puffy skill slot in the bottom row). The view only gates click trigger on _isVisible
+        /// (Élan ≥ max) instead of alpha. When false (legacy), the button popups/hides on Élan full.
+        /// </summary>
+        public bool AlwaysVisible { get => _alwaysVisible; set => _alwaysVisible = value; }
 
         private Tween _glow;
         private Tween _scalePulse;
@@ -33,7 +41,7 @@ namespace Saga.UI
         private void Awake()
         {
             if (_root == null) _root = transform as RectTransform;
-            HideInstant();
+            if (!_alwaysVisible) HideInstant();
         }
 
         private void OnEnable()
@@ -56,6 +64,13 @@ namespace Saga.UI
 
         private void HandleElanChanged(float current, float max)
         {
+            if (_alwaysVisible)
+            {
+                // In refonte mode the slot is always painted; we only flip the "is ready to fire" flag.
+                _isVisible = current >= ElanConstants.ElanMax;
+                if (_group != null) _group.interactable = _isVisible;
+                return;
+            }
             if (_isVisible && current < ElanConstants.ElanMax)
             {
                 HideWithScale();
@@ -78,6 +93,7 @@ namespace Saga.UI
             _group.blocksRaycasts = true;
             _group.interactable = true;
             _group.alpha = 1f;
+            if (_alwaysVisible) return; // in refonte mode, no scale punch or glow yoyo — gauge does the telegraphy
 
             _root.DOKill();
             _root.localScale = Vector3.zero;
@@ -113,6 +129,7 @@ namespace Saga.UI
 
         private void HideWithScale()
         {
+            if (_alwaysVisible) return;
             if (_root == null || _group == null || !_isVisible) return;
             _isVisible = false;
             _group.blocksRaycasts = false;
