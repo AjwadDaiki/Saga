@@ -88,7 +88,6 @@ namespace Saga.Core
             MainCanvas = BuildCanvas();
             ctx.Canvas = MainCanvas;
 
-            BuildForceCounter(MainCanvas);
             SceneBuilder.BuildComboMeter(MainCanvas);
             BuildTapHandler(MainCanvas);
             SceneBuilder.BuildTapFxSpawner(MainCanvas, AdversaireTransform);
@@ -914,70 +913,8 @@ namespace Saga.Core
         }
 
         // ============================================================
-        //  Top-of-canvas widgets (Force pill / Combo / Tap handler)
+        //  Tap handler (Force/Combo widgets now live in TopBarBuilder/SceneBuilder)
         // ============================================================
-
-        private static void BuildForceCounter(Canvas canvas)
-        {
-            // Sprint 7.5 refonte : la Force devient une CURRENCY PILL top-left (style Stitch dojo) —
-            // pill charcoal + icône or 力 débordante + valeur JetBrains Mono Bold. ForceCounterView
-            // pilote la valeur en mode Compact (taille fixe, pas de scaling magnitude).
-            var tokens = DesignTokens.Get();
-
-            var pill = new GameObject("ForcePill", typeof(RectTransform), typeof(Image), typeof(ForceCounterView));
-            pill.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)pill.transform;
-            rt.anchorMin = new Vector2(0, 1f); rt.anchorMax = new Vector2(0, 1f); rt.pivot = new Vector2(0, 1f);
-            rt.anchoredPosition = new Vector2(24, -40);
-            rt.sizeDelta = new Vector2(190, 44);
-            var bg = pill.GetComponent<Image>();
-            bg.sprite = PuffySprite.RoundedFill(22); bg.type = Image.Type.Sliced;
-            bg.color = new Color(0.086f, 0.114f, 0.122f, 0.85f);
-
-            // Floor.
-            var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
-            floor.transform.SetParent(pill.transform, false); floor.transform.SetAsFirstSibling();
-            var frt = (RectTransform)floor.transform; frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
-            frt.offsetMin = new Vector2(0, -4); frt.offsetMax = Vector2.zero;
-            var fi = floor.GetComponent<Image>(); fi.sprite = PuffySprite.RoundedFill(22); fi.type = Image.Type.Sliced;
-            fi.color = tokens.m3Outline; fi.raycastTarget = false;
-
-            // Gold icon round débordante (kanji 力 = Force). Image + glyph on SEPARATE GameObjects —
-            // a single GO can't host two Graphics (Image + TMP share one CanvasRenderer → TMP init NRE).
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-            icon.transform.SetParent(pill.transform, false);
-            var irt = (RectTransform)icon.transform;
-            irt.anchorMin = new Vector2(0, 0.5f); irt.anchorMax = new Vector2(0, 0.5f); irt.pivot = new Vector2(0.5f, 0.5f);
-            irt.anchoredPosition = new Vector2(2, 0); irt.sizeDelta = new Vector2(42, 42);
-            var iimg = icon.GetComponent<Image>(); iimg.sprite = PuffySprite.RoundedFill(21); iimg.type = Image.Type.Sliced;
-            iimg.color = tokens.accentPrimary; // or
-            var iglyphGo = new GameObject("Glyph", typeof(RectTransform), typeof(TextMeshProUGUI));
-            iglyphGo.transform.SetParent(icon.transform, false);
-            var iglyphRt = (RectTransform)iglyphGo.transform;
-            iglyphRt.anchorMin = Vector2.zero; iglyphRt.anchorMax = Vector2.one; iglyphRt.offsetMin = Vector2.zero; iglyphRt.offsetMax = Vector2.zero;
-            var iglyph = iglyphGo.GetComponent<TextMeshProUGUI>();
-            iglyph.alignment = TextAlignmentOptions.Center; iglyph.font = tokens.DisplayFont; iglyph.fontSize = 20;
-            iglyph.color = tokens.m3OnSurface; iglyph.text = "力"; iglyph.raycastTarget = false;
-
-            // Value label (the one ForceCounterView drives).
-            var val = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
-            val.transform.SetParent(pill.transform, false);
-            var vrt = (RectTransform)val.transform;
-            vrt.anchorMin = Vector2.zero; vrt.anchorMax = Vector2.one; vrt.offsetMin = new Vector2(46, 0); vrt.offsetMax = new Vector2(-14, 0);
-            var label = val.GetComponent<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.Left;
-            label.color = Color.white;
-            label.font = tokens.NumbersFont;
-            label.fontSize = 20;
-            label.fontStyle = FontStyles.Bold;
-            label.enableAutoSizing = false;
-            label.text = "0";
-            label.raycastTarget = false;
-
-            var view = pill.GetComponent<ForceCounterView>();
-            view.Compact = true;
-            view.Label = label;
-        }
 
         private static void BuildTapHandler(Canvas canvas)
         {
