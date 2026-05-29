@@ -28,6 +28,22 @@ MonoBehaviour:
   accentAction: {r: 0.91, g: 0.588, b: 0.259, a: 1}
   accentDanger: {r: 0.784, g: 0.224, b: 0.165, a: 1}
   accentSuccess: {r: 0.478, g: 0.671, b: 0.361, a: 1}
+  m3Primary: {r: 0, g: 0.431, b: 0.125, a: 1}
+  m3PrimaryContainer: {r: 0.173, g: 0.796, b: 0.298, a: 1}
+  m3OnPrimaryContainer: {r: 0, g: 0.31, b: 0.082, a: 1}
+  m3Secondary: {r: 0.718, g: 0.078, b: 0.133, a: 1}
+  m3SecondaryContainer: {r: 0.859, g: 0.196, b: 0.216, a: 1}
+  m3Tertiary: {r: 0, g: 0.384, b: 0.62, a: 1}
+  m3TertiaryContainer: {r: 0.404, g: 0.714, b: 1, a: 1}
+  m3OnTertiaryContainer: {r: 0, g: 0.275, b: 0.451, a: 1}
+  m3Surface: {r: 0.957, g: 0.98, b: 0.992, a: 1}
+  m3SurfaceContainer: {r: 0.91, g: 0.937, b: 0.945, a: 1}
+  m3SurfaceContainerHigh: {r: 0.886, g: 0.914, b: 0.925, a: 1}
+  m3SurfaceContainerHighest: {r: 0.867, g: 0.894, b: 0.902, a: 1}
+  m3InverseSurface: {r: 0.169, g: 0.196, b: 0.204, a: 1}
+  m3Outline: {r: 0.427, g: 0.482, b: 0.412, a: 1}
+  m3OnSurface: {r: 0.086, g: 0.114, b: 0.122, a: 1}
+  m3OnPrimary: {r: 1, g: 1, b: 1, a: 1}
   voieSamurai: {r: 0.98, g: 0.78, b: 0.459, a: 1}
   voieViking: {r: 0.49, g: 0.655, b: 0.788, a: 1}
   voieWuxia: {r: 0.624, g: 0.749, b: 0.659, a: 1}
@@ -50,13 +66,17 @@ MonoBehaviour:
   radiusSmall: 4
   radiusMedium: 8
   radiusLarge: 16
-  fontDisplay: 48
+  puffyOutline: 3
+  puffyFloorButton: 6
+  puffyFloorCard: 5
+  fontSizeDisplay: 48
   fontH1: 32
   fontH2: 24
   fontH3: 20
   fontBody: 16
   fontCaption: 14
   fontSmall: 12
-  fontPrimary: {fileID: 0}
-  fontNumbers: {fileID: 0}
+  fontPrimary: {fileID: 11400000, guid: 9ee7734bb70439d42959b2c2e36f82ae, type: 2}
+  fontDisplay: {fileID: 11400000, guid: 86fd0b8384bcfba41a2dfd10be372db6, type: 2}
+  fontNumbers: {fileID: 11400000, guid: efb4a2dd924ac0249bebc1fa0280d361, type: 2}
   fontLore: {fileID: 0}
