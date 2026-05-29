@@ -20,13 +20,13 @@ namespace Saga.UI
     /// so portrait→landscape transitions update the safe area immediately.
     /// </summary>
     [DisallowMultipleComponent]
-    [ExecuteAlways]
     public sealed class SafeAreaScaler : MonoBehaviour
     {
         private RectTransform _rt;
         private Rect _lastApplied;
         private Vector2Int _lastScreenSize;
         private ScreenOrientation _lastOrientation;
+        private bool _applying;
 
         private void Awake()
         {
@@ -57,6 +57,9 @@ namespace Saga.UI
 
         private void Apply()
         {
+            // Apply() écrit anchorMin/Max → OnRectTransformDimensionsChange() est rappelé
+            // par Unity, qui rappelle Apply() → boucle. Guard pour casser la récursion.
+            if (_applying) return;
             if (_rt == null) _rt = transform as RectTransform;
             if (_rt == null) return;
 
@@ -65,19 +68,27 @@ namespace Saga.UI
             var h = Screen.height;
             if (w <= 0 || h <= 0) return;
 
-            var min = area.position;
-            var max = area.position + area.size;
-            min.x /= w; min.y /= h;
-            max.x /= w; max.y /= h;
+            _applying = true;
+            try
+            {
+                var min = area.position;
+                var max = area.position + area.size;
+                min.x /= w; min.y /= h;
+                max.x /= w; max.y /= h;
 
-            _rt.anchorMin = min;
-            _rt.anchorMax = max;
-            _rt.offsetMin = Vector2.zero;
-            _rt.offsetMax = Vector2.zero;
+                _rt.anchorMin = min;
+                _rt.anchorMax = max;
+                _rt.offsetMin = Vector2.zero;
+                _rt.offsetMax = Vector2.zero;
 
-            _lastApplied = area;
-            _lastScreenSize = new Vector2Int(w, h);
-            _lastOrientation = Screen.orientation;
+                _lastApplied = area;
+                _lastScreenSize = new Vector2Int(w, h);
+                _lastOrientation = Screen.orientation;
+            }
+            finally
+            {
+                _applying = false;
+            }
         }
     }
 }
