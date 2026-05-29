@@ -15,13 +15,15 @@ namespace Saga.UI.Builders
     /// </summary>
     public static class TopBarBuilder
     {
-        // ---- Layout @ 1080 wide reference -----------------------------------------------
-        private static readonly Vector2 PillSizeForce = new Vector2(220, 56);
-        private static readonly Vector2 PillSizeEchos = new Vector2(180, 56);
-        private static readonly Vector2 SettingsSize = new Vector2(60, 60);
-        private const float TopY = -36f;
-        private const float SidePad = 28f;
-        private const float GapPills = 12f;
+        // ---- Layout @ 1080×1920 reference (Phase 4 wireframe SAGA §1) -------------------
+        // Top HUD band 154 px haut, 32 px lat inset, top = safeArea.top + 16.
+        // Force pill 200×80, Échos pill 200×80, Settings 80×80 rond.
+        private static readonly Vector2 PillSizeForce = new Vector2(200, 80);
+        private static readonly Vector2 PillSizeEchos = new Vector2(200, 80);
+        private static readonly Vector2 SettingsSize = new Vector2(80, 80);
+        private const float TopY = -16f;     // 16 px sous le bord top du SafeAreaContainer
+        private const float SidePad = 32f;
+        private const float GapPills = 16f;
 
         public static void Build(BuilderContext ctx)
         {
@@ -45,16 +47,16 @@ namespace Saga.UI.Builders
                 size: PillSizeForce);
             pill.AddComponent<ForceCounterView>();
 
-            // Gold coin icon (overflowing left). 2-Image construct: outer bright gold + inner darker ring.
-            var icon = BuildIconCircle(pill.transform, tokens.accentPrimary, DesignTokens.Darken(tokens.accentPrimary, 0.28f), diameter: 50);
+            // Phase 4 §1 — icône or 48 × 48 débordant à gauche.
+            var icon = BuildIconCircle(pill.transform, tokens.accentPrimary, DesignTokens.Darken(tokens.accentPrimary, 0.28f), diameter: 48);
             var iconRt = (RectTransform)icon.transform;
             iconRt.anchorMin = new Vector2(0, 0.5f);
             iconRt.anchorMax = new Vector2(0, 0.5f);
             iconRt.pivot = new Vector2(0.5f, 0.5f);
-            iconRt.anchoredPosition = new Vector2(2, 0);
+            iconRt.anchoredPosition = new Vector2(8, 0);
 
             // Value label : JetBrains Mono Bold, white, big.
-            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 56);
+            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 60);
             var view = pill.GetComponent<ForceCounterView>();
             view.Compact = true;
             view.Label = label;
@@ -71,15 +73,15 @@ namespace Saga.UI.Builders
                 pos: new Vector2(SidePad + PillSizeForce.x + GapPills, TopY),
                 size: PillSizeEchos);
 
-            // Violet "gem" icon — outer violet circle + inner rotated darker square (= diamond).
+            // Phase 4 §1 — icône violet 48 × 48 débordant à gauche, inner rotated diamond.
             var iconViolet = new Color(0.73f, 0.36f, 1.00f, 1f);   // #bb5cff
             var iconDeep = new Color(0.37f, 0.11f, 0.71f, 1f);     // #5f1db4
-            var icon = BuildIconCircle(pill.transform, iconViolet, iconDeep, diameter: 50);
+            var icon = BuildIconCircle(pill.transform, iconViolet, iconDeep, diameter: 48);
             var iconRt = (RectTransform)icon.transform;
             iconRt.anchorMin = new Vector2(0, 0.5f);
             iconRt.anchorMax = new Vector2(0, 0.5f);
             iconRt.pivot = new Vector2(0.5f, 0.5f);
-            iconRt.anchoredPosition = new Vector2(2, 0);
+            iconRt.anchoredPosition = new Vector2(8, 0);
 
             // Replace the inner circle with a rotated darker square to evoke a diamond/gem facet.
             var inner = icon.transform.Find("Inner");
@@ -92,7 +94,7 @@ namespace Saga.UI.Builders
             }
 
             // Value label.
-            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 56);
+            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 60);
             var gm = GameManager.Instance;
             label.text = gm?.State != null ? Saga.Math.NumberFormatter.Format(gm.State.totalEchos) : "0";
         }
@@ -110,9 +112,7 @@ namespace Saga.UI.Builders
             rt.anchoredPosition = new Vector2(-SidePad, TopY);
             rt.sizeDelta = SettingsSize;
 
-            // Gear-ish glyph : 3 stacked horizontal dashes (≡) — universal "menu/settings" hint that
-            // ASCII fonts always have. Built as 3 small Images so it renders even if the unicode ≡
-            // (U+2261) is missing from the SDF atlas.
+            // Phase 4 §1 — gear glyph 3 dashes scaled pour 80 × 80 (vs 60 avant) : 32 × 5 dashes, 12 px gap.
             var face = btn.transform.Find("Face");
             if (face == null) face = btn.transform; // Wrap variant has no Face child
             for (var i = 0; i < 3; i++)
@@ -122,8 +122,8 @@ namespace Saga.UI.Builders
                 var drt = (RectTransform)dash.transform;
                 drt.anchorMin = new Vector2(0.5f, 0.5f); drt.anchorMax = new Vector2(0.5f, 0.5f);
                 drt.pivot = new Vector2(0.5f, 0.5f);
-                drt.anchoredPosition = new Vector2(0, (i - 1) * 8f);
-                drt.sizeDelta = new Vector2(24, 4);
+                drt.anchoredPosition = new Vector2(0, (i - 1) * 12f);
+                drt.sizeDelta = new Vector2(32, 5);
                 var dimg = dash.GetComponent<Image>();
                 dimg.sprite = PuffySprite.RoundedFill(2);
                 dimg.type = Image.Type.Sliced;
