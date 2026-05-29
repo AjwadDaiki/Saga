@@ -61,26 +61,52 @@ namespace Saga.Data
         public Color accentDanger = new Color(0.784f, 0.224f, 0.165f, 1f);  // #C8392A
         public Color accentSuccess = new Color(0.478f, 0.671f, 0.361f, 1f); // #7AAB5C
 
-        // ----- Material 3 palette (Sprint 7.5 refonte "Vibrant Quest" — puffy 3D) -----
-        // Additive: legacy fields above stay valid until the layout refactor migrates usages.
-        // Function→color: green=succès/achat, red=action/start, blue=nav/info, gold=Force monnaie.
-        [Header("Material 3 (Vibrant Quest)")]
-        public Color m3Primary = new Color(0.000f, 0.431f, 0.125f, 1f);          // #006e20 vert succès
-        public Color m3PrimaryContainer = new Color(0.173f, 0.796f, 0.298f, 1f); // #2ccb4c vert vif
-        public Color m3OnPrimaryContainer = new Color(0.000f, 0.310f, 0.082f, 1f); // #004f15
-        public Color m3Secondary = new Color(0.718f, 0.078f, 0.133f, 1f);        // #b71422 rouge action
-        public Color m3SecondaryContainer = new Color(0.859f, 0.196f, 0.216f, 1f); // #db3237 rouge vif
-        public Color m3Tertiary = new Color(0.000f, 0.384f, 0.620f, 1f);         // #00629e bleu nav
-        public Color m3TertiaryContainer = new Color(0.404f, 0.714f, 1.000f, 1f); // #67b6ff bleu vif
-        public Color m3OnTertiaryContainer = new Color(0.000f, 0.275f, 0.451f, 1f); // #004673
-        public Color m3Surface = new Color(0.957f, 0.980f, 0.992f, 1f);          // #f4fafd surface claire
-        public Color m3SurfaceContainer = new Color(0.910f, 0.937f, 0.945f, 1f); // #e8eff1 panels
-        public Color m3SurfaceContainerHigh = new Color(0.886f, 0.914f, 0.925f, 1f); // #e2e9ec
-        public Color m3SurfaceContainerHighest = new Color(0.867f, 0.894f, 0.902f, 1f); // #dde4e6
-        public Color m3InverseSurface = new Color(0.169f, 0.196f, 0.204f, 1f);   // #2b3234 pills sombres
-        public Color m3Outline = new Color(0.427f, 0.482f, 0.412f, 1f);          // #6d7b69 plancher neutre
-        public Color m3OnSurface = new Color(0.086f, 0.114f, 0.122f, 1f);        // #161d1f charcoal OUTLINE
-        public Color m3OnPrimary = Color.white;                                   // texte sur couleur
+        // ----- DA Palette (DIRECTION_ARTISTIQUE.md §5) — palette officielle Sprint 7.5 Polish.
+        // Source de vérité unique : DIRECTION_ARTISTIQUE.md (§4.2 contours, §5.1 principale,
+        // §5.2 neutres, §5.3 décor samouraï, §7.2 héros, §10.3 raretés). Remplace l'ancienne
+        // palette Material 3 "Vibrant Quest" (supprimée Sprint 7.5 Phase 2 Polish).
+        [Header("DA Palette — section 5.1 principale")]
+        public Color coralAction = new Color(1.000f, 0.420f, 0.420f, 1f);     // #FF6B6B
+        public Color roseSakura = new Color(1.000f, 0.620f, 0.784f, 1f);      // #FF9EC8
+        public Color mintPositif = new Color(0.412f, 0.902f, 0.639f, 1f);     // #69E6A3
+        public Color vertBouton = new Color(0.490f, 0.890f, 0.310f, 1f);      // #7DE34F
+        public Color skyBlue = new Color(0.396f, 0.784f, 1.000f, 1f);         // #65C8FF
+        public Color jauneReward = new Color(1.000f, 0.847f, 0.302f, 1f);     // #FFD84D
+        public Color orangeChaud = new Color(1.000f, 0.624f, 0.239f, 1f);     // #FF9F3D
+        public Color lavandeUI = new Color(0.604f, 0.482f, 1.000f, 1f);       // #9A7BFF
+        public Color navyContour = new Color(0.145f, 0.157f, 0.239f, 1f);     // #25283D
+        public Color cremeText = new Color(1.000f, 0.957f, 0.839f, 1f);       // #FFF4D6
+
+        [Header("DA Palette — section 5.2 neutres")]
+        public Color panelSombre = new Color(0.227f, 0.263f, 0.345f, 1f);     // #3A4358
+        public Color panelSombre2 = new Color(0.184f, 0.216f, 0.290f, 1f);    // #2F374A
+        public Color panelClair = new Color(0.976f, 0.902f, 0.784f, 1f);      // #F9E6C8
+        public Color blancChaud = new Color(1.000f, 0.976f, 0.918f, 1f);      // #FFF9EA
+        public Color grisTexteSecondaire = new Color(0.725f, 0.757f, 0.831f, 1f); // #B9C1D4
+        public Color ombreDouce = new Color(0.110f, 0.125f, 0.188f, 1f);      // #1C2030
+
+        [Header("DA Palette — section 5.3 décor samouraï (couleurs principales)")]
+        public Color boisDojoMid = new Color(0.725f, 0.435f, 0.227f, 1f);     // #B96F3A
+        public Color boisDojoDark = new Color(0.561f, 0.310f, 0.180f, 1f);    // #8F4F2E
+        public Color boisDojoLight = new Color(0.886f, 0.631f, 0.361f, 1f);   // #E2A15C
+        public Color toitJaponaisMid = new Color(0.204f, 0.361f, 0.612f, 1f); // #345C9C
+        public Color toitJaponaisDark = new Color(0.141f, 0.239f, 0.451f, 1f);// #243D73
+        public Color sakuraMid = new Color(1.000f, 0.694f, 0.820f, 1f);       // #FFB1D1
+        public Color sakuraDark = new Color(1.000f, 0.471f, 0.682f, 1f);      // #FF78AE
+        public Color montagneMid = new Color(0.612f, 0.769f, 0.847f, 1f);     // #9CC4D8
+        public Color montagneDark = new Color(0.431f, 0.588f, 0.702f, 1f);    // #6E96B3
+
+        [Header("DA Palette — section 7.2 héros samouraï")]
+        public Color heroTenue = new Color(0.184f, 0.243f, 0.471f, 1f);       // #2F3E78
+        public Color heroTenueOmbre = new Color(0.114f, 0.153f, 0.310f, 1f);  // #1D274F
+        public Color heroCeinture = new Color(0.910f, 0.290f, 0.290f, 1f);    // #E84A4A
+
+        [Header("DA Palette — section 10.3 raretés")]
+        public Color rarityCommunDA = new Color(0.725f, 0.757f, 0.831f, 1f);  // #B9C1D4
+        public Color rarityRareDA = new Color(0.396f, 0.784f, 1.000f, 1f);    // #65C8FF
+        public Color rarityEpiqueDA = new Color(0.604f, 0.482f, 1.000f, 1f);  // #9A7BFF
+        public Color rarityLegendaireDA = new Color(1.000f, 0.847f, 0.302f, 1f); // #FFD84D
+        public Color rarityMythiqueDA = new Color(1.000f, 0.420f, 0.420f, 1f);   // #FF6B6B
 
         // ----- Voies -----
         [Header("Voies")]

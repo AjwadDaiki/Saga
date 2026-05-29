@@ -118,7 +118,7 @@ namespace Saga.UI
             label.font = tokens.NumbersFont;
             label.fontSize = 56;
             label.fontStyle = FontStyles.Bold;
-            label.outlineColor = tokens.m3OnSurface;
+            label.outlineColor = tokens.navyContour;
             label.outlineWidth = 0.28f;
             label.text = "";
 
@@ -148,7 +148,7 @@ namespace Saga.UI
             label.fontSize = 64;
             label.fontStyle = FontStyles.Bold;
             label.color = DamageColor;
-            label.outlineColor = tokens.m3OnSurface;
+            label.outlineColor = tokens.navyContour;
             label.outlineWidth = 0.30f;
             label.text = "-" + Saga.Math.NumberFormatter.Format(damage);
 

@@ -106,7 +106,7 @@ namespace Saga.UI
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, tokens.puffyOutline);
             olImg.type = Image.Type.Sliced;
-            olImg.color = (variant == Variant.Special && voieTint.HasValue) ? voieTint.Value : tokens.m3OnSurface;
+            olImg.color = (variant == Variant.Special && voieTint.HasValue) ? voieTint.Value : tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Gloss (top-left specular).
@@ -138,7 +138,7 @@ namespace Saga.UI
                 tmp.raycastTarget = false;
                 tmp.textWrappingMode = TextWrappingModes.NoWrap;
                 // Charcoal outline on the label (puffy text recipe). outlineWidth>0 enables it.
-                tmp.outlineColor = tokens.m3OnSurface;
+                tmp.outlineColor = tokens.navyContour;
                 tmp.outlineWidth = 0.2f;
                 sb.Label = tmp;
             }
@@ -193,7 +193,7 @@ namespace Saga.UI
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, tokens.puffyOutline);
             olImg.type = Image.Type.Sliced;
-            olImg.color = (variant == Variant.Special && voieTint.HasValue) ? voieTint.Value : tokens.m3OnSurface;
+            olImg.color = (variant == Variant.Special && voieTint.HasValue) ? voieTint.Value : tokens.navyContour;
             olImg.raycastTarget = false;
 
             if (variant == Variant.Primary) sb.SetReady(true);

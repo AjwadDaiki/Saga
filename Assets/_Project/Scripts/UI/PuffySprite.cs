@@ -7,7 +7,7 @@ namespace Saga.UI
     /// Sprint 7.5 — procedural rounded-rect sprite factory for the "puffy 3D" look.
     /// Generates 9-sliced sprites at runtime so we don't ship any sprite assets:
     ///   - <see cref="RoundedFill"/> : solid white rounded rect (tint via Image.color).
-    ///   - <see cref="RoundedOutline"/> : transparent center + charcoal ring (the heavy outline).
+    ///   - <see cref="RoundedOutline"/> : transparent center + white ring tinted via Image.color (heavy outline).
     /// Both are cached by (radius, outline) so we create each texture once.
     ///
     /// Usage in uGUI: set Image.sprite + Image.type = Sliced. The 9-slice border = corner radius,
@@ -39,7 +39,12 @@ namespace Saga.UI
             return s;
         }
 
-        /// <summary>Rounded-rect outline ring (charcoal, fixed color baked in). 9-slice border = radius.</summary>
+        /// <summary>
+        /// Rounded-rect outline ring (white-baked, tint via Image.color). 9-slice border = radius.
+        /// Sprint 7.5 Phase 2 Polish : ne baked plus le charcoal #161d1f hardcodé — consommateurs
+        /// doivent maintenant assigner <c>image.color = tokens.navyContour</c> (ou variant DA §4.2).
+        /// Évite de générer 1 texture par couleur d'outline.
+        /// </summary>
         public static Sprite RoundedOutline(int radius = 16, int thickness = 3)
         {
             radius = Mathf.Clamp(radius, 2, 64);
@@ -49,7 +54,7 @@ namespace Saga.UI
 
             var size = radius * 2 + 4;
             var tex = NewTex(size);
-            var ink = new Color32(22, 29, 31, 255); // #161d1f charcoal
+            var white = new Color32(255, 255, 255, 255); // tint runtime via Image.color
             var clear = new Color32(0, 0, 0, 0);
             var px = new Color32[size * size];
             for (var y = 0; y < size; y++)
@@ -57,7 +62,7 @@ namespace Saga.UI
                 {
                     var outer = InsideRoundedRect(x, y, size, size, radius);
                     var inner = InsideRoundedRect(x, y, size, size, radius, inset: thickness);
-                    px[y * size + x] = (outer && !inner) ? ink : clear;
+                    px[y * size + x] = (outer && !inner) ? white : clear;
                 }
             tex.SetPixels32(px); tex.Apply();
 

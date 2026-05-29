@@ -59,7 +59,7 @@ namespace Saga.UI.Builders
             var fi = floor.GetComponent<Image>();
             fi.sprite = PuffySprite.RoundedFill(radius);
             fi.type = Image.Type.Sliced;
-            fi.color = tokens.m3Outline;
+            fi.color = tokens.panelSombre2;
             fi.raycastTarget = false;
 
             // Charcoal outline.
@@ -71,7 +71,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, 3);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Red skull icon débordant left.
@@ -93,7 +93,7 @@ namespace Saga.UI.Builders
             lblTmp.fontSize = 26;
             lblTmp.color = Color.white;
             lblTmp.text = "Stade 1";
-            lblTmp.outlineColor = tokens.m3OnSurface;
+            lblTmp.outlineColor = tokens.navyContour;
             lblTmp.outlineWidth = 0.22f;
             lblTmp.raycastTarget = false;
             lblTmp.textWrappingMode = TextWrappingModes.NoWrap;
@@ -143,7 +143,7 @@ namespace Saga.UI.Builders
             var olImg = olGo.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, 3);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Green glossy fill.
@@ -158,7 +158,7 @@ namespace Saga.UI.Builders
             fillImg.fillMethod = Image.FillMethod.Horizontal;
             fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
             fillImg.fillAmount = 0f;
-            fillImg.color = tokens.m3PrimaryContainer;             // #2ccb4c vert vif
+            fillImg.color = tokens.mintPositif;                    // #69E6A3 vert vif DA §5.1
             fillImg.raycastTarget = false;
 
             // Top gloss bar inside fill (subtle white sheen across upper half).
@@ -226,7 +226,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // 2 eye dots.
@@ -243,7 +243,7 @@ namespace Saga.UI.Builders
                 var eimg = eye.GetComponent<Image>();
                 eimg.sprite = PuffySprite.RoundedFill(3);
                 eimg.type = Image.Type.Sliced;
-                eimg.color = tokens.m3OnSurface;
+                eimg.color = tokens.navyContour;
                 eimg.raycastTarget = false;
             }
 

@@ -33,7 +33,7 @@ namespace Saga.UI.Builders
 
         // Cream body (mockup) — #FFF6E0
         private static readonly Color CreamBody = new Color(1.000f, 0.965f, 0.878f, 1f);
-        // Cost pill vert puffy (réutilise m3Primary/m3PrimaryContainer)
+        // Cost pill vert puffy (DA §5.1 vertBouton/mintPositif — hex hardcodés ici car couleurs custom)
         private static readonly Color CostFace = new Color(0.173f, 0.796f, 0.298f, 1f);       // #2ccb4c
         private static readonly Color CostFloor = new Color(0.000f, 0.431f, 0.125f, 1f);      // #006e20
         // Coin or pour le coin pill
@@ -117,7 +117,7 @@ namespace Saga.UI.Builders
             var olImg = outlineGo.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(tokens.radiusMedium, tokens.puffyOutline);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // ---- Row : Icon (left) / Text (center) / Cost (right) -------------------------
@@ -183,7 +183,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(28, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Glyph (white procedural inside).
@@ -304,9 +304,9 @@ namespace Saga.UI.Builders
             tmp.font = tokens.DisplayFont;
             tmp.fontSize = 26;
             tmp.alignment = TextAlignmentOptions.BottomLeft;
-            tmp.color = tokens.m3OnSurface;
+            tmp.color = tokens.navyContour;
             tmp.text = "Strike";
-            tmp.outlineColor = tokens.m3OnSurface;
+            tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.12f;
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
@@ -329,7 +329,7 @@ namespace Saga.UI.Builders
             tmp.fontSize = 18;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.BottomRight;
-            tmp.color = new Color(tokens.m3OnSurface.r, tokens.m3OnSurface.g, tokens.m3OnSurface.b, 0.65f);
+            tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.65f);
             tmp.text = "Lv.0";
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
@@ -351,7 +351,7 @@ namespace Saga.UI.Builders
             tmp.font = tokens.PrimaryFont;
             tmp.fontSize = 13;
             tmp.alignment = TextAlignmentOptions.TopLeft;
-            tmp.color = new Color(tokens.m3OnSurface.r, tokens.m3OnSurface.g, tokens.m3OnSurface.b, 0.72f);
+            tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.72f);
             tmp.text = "";
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.Normal;
@@ -404,7 +404,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(tokens.radiusMedium, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Coin or (small circle on the left of the pill).
@@ -430,7 +430,7 @@ namespace Saga.UI.Builders
             var coImg = coinOutline.GetComponent<Image>();
             coImg.sprite = PuffySprite.RoundedOutline(14, 2);
             coImg.type = Image.Type.Sliced;
-            coImg.color = tokens.m3OnSurface;
+            coImg.color = tokens.navyContour;
             coImg.raycastTarget = false;
 
             // Coin glyph (small darker stripe through the center).
@@ -460,7 +460,7 @@ namespace Saga.UI.Builders
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
             tmp.text = "1.2K";
-            tmp.outlineColor = tokens.m3OnSurface;
+            tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.24f;
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;

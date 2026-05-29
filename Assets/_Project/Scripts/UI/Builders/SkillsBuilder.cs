@@ -202,7 +202,7 @@ namespace Saga.UI.Builders
             var olImg = olGo.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(8, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Fill (light cyan).
@@ -233,7 +233,7 @@ namespace Saga.UI.Builders
             labelTmp.fontStyle = FontStyles.Bold;
             labelTmp.color = Color.white;
             labelTmp.text = "0%";
-            labelTmp.outlineColor = tokens.m3OnSurface;
+            labelTmp.outlineColor = tokens.navyContour;
             labelTmp.outlineWidth = 0.22f;
             labelTmp.raycastTarget = false;
         }
@@ -298,7 +298,7 @@ namespace Saga.UI.Builders
             var olImg = ol.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(24, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Inner dot.
@@ -312,7 +312,7 @@ namespace Saga.UI.Builders
             var innerImg = inner.GetComponent<Image>();
             innerImg.sprite = PuffySprite.RoundedFill(10);
             innerImg.type = Image.Type.Sliced;
-            innerImg.color = tokens.m3OnSurface;
+            innerImg.color = tokens.navyContour;
             innerImg.raycastTarget = false;
         }
 
@@ -398,7 +398,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, 3);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // Gloss bar top.
@@ -441,7 +441,7 @@ namespace Saga.UI.Builders
             tmp.fontSize = 38;
             tmp.color = Color.white;
             tmp.text = text;
-            tmp.outlineColor = tokens.m3OnSurface;
+            tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.28f;
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;

@@ -101,7 +101,7 @@ namespace Saga.UI.Builders
         private static void BuildSettingsButton(Canvas canvas, DesignTokens tokens)
         {
             var btn = SagaButton.Create(canvas.transform, "SettingsButton", SagaButton.Variant.Standard,
-                tokens.m3SurfaceContainerHighest, "", radius: (int)(SettingsSize.x / 2f), floorPx: 5);
+                DesignTokens.Darken(tokens.panelClair, 0.15f), "", radius: (int)(SettingsSize.x / 2f), floorPx: 5);
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = new Vector2(1f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
             rt.anchoredPosition = new Vector2(-SidePad, TopY);
@@ -124,7 +124,7 @@ namespace Saga.UI.Builders
                 var dimg = dash.GetComponent<Image>();
                 dimg.sprite = PuffySprite.RoundedFill(2);
                 dimg.type = Image.Type.Sliced;
-                dimg.color = tokens.m3OnSurface;
+                dimg.color = tokens.navyContour;
                 dimg.raycastTarget = false;
             }
         }
@@ -160,7 +160,7 @@ namespace Saga.UI.Builders
             var fi = floor.GetComponent<Image>();
             fi.sprite = PuffySprite.RoundedFill(radius);
             fi.type = Image.Type.Sliced;
-            fi.color = tokens.m3Outline;
+            fi.color = tokens.panelSombre2;
             fi.raycastTarget = false;
 
             // Top gloss bar (subtle white sheen).
@@ -202,7 +202,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(radius, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = DesignTokens.Get().m3OnSurface;
+            olImg.color = DesignTokens.Get().navyContour;
             olImg.raycastTarget = false;
 
             // Inner darker disc (the "depth" giving the coin/gem its 3D look).
@@ -255,7 +255,7 @@ namespace Saga.UI.Builders
             tmp.text = "0";
             tmp.raycastTarget = false;
             // Charcoal outline like the puffy text recipe (saga_target_spec.md).
-            tmp.outlineColor = tokens.m3OnSurface;
+            tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.2f;
             return tmp;
         }

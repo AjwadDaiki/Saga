@@ -42,7 +42,7 @@ namespace Saga.UI.Builders
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = new Vector2(0, 150); // ~7.8% of 1920 incl. safe area
             var bg = nav.GetComponent<Image>();
-            bg.color = tokens.m3SurfaceContainerHighest;
+            bg.color = DesignTokens.Darken(tokens.panelClair, 0.15f);
 
             // Top border (charcoal line).
             var border = new GameObject("TopBorder", typeof(RectTransform), typeof(Image));
@@ -50,7 +50,7 @@ namespace Saga.UI.Builders
             var brt = (RectTransform)border.transform;
             brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(0.5f, 1f);
             brt.sizeDelta = new Vector2(0, 4); brt.anchoredPosition = Vector2.zero;
-            border.GetComponent<Image>().color = tokens.m3Outline;
+            border.GetComponent<Image>().color = tokens.panelSombre2;
 
             string[] labels = { "Shop", "Hero", "Dojo", "Artifacts", "Legend" };
             Color[] iconColors = { ShopColor, HeroColor, DojoColor, ArtifactsColor, LegendColor };
@@ -70,7 +70,7 @@ namespace Saga.UI.Builders
                 if (active)
                 {
                     timg.sprite = PuffySprite.RoundedFill(16); timg.type = Image.Type.Sliced;
-                    timg.color = tokens.m3TertiaryContainer;
+                    timg.color = tokens.skyBlue;
                 }
                 else timg.color = new Color(0, 0, 0, 0);
 
@@ -86,9 +86,9 @@ namespace Saga.UI.Builders
                 var tmp = lbl.GetComponent<TextMeshProUGUI>();
                 tmp.alignment = TextAlignmentOptions.Center; tmp.font = tokens.PrimaryFont;
                 tmp.fontSize = tokens.fontSmall; tmp.fontStyle = FontStyles.Bold;
-                tmp.color = active ? tokens.m3OnTertiaryContainer : tokens.m3Outline;
+                tmp.color = active ? tokens.navyContour : tokens.panelSombre2;
                 tmp.text = labels[i];
-                tmp.outlineColor = tokens.m3OnSurface;
+                tmp.outlineColor = tokens.navyContour;
                 tmp.outlineWidth = active ? 0f : 0.14f;
                 tmp.raycastTarget = false;
 
@@ -130,7 +130,7 @@ namespace Saga.UI.Builders
             var olImg = outline.GetComponent<Image>();
             olImg.sprite = PuffySprite.RoundedOutline(18, 2);
             olImg.type = Image.Type.Sliced;
-            olImg.color = tokens.m3OnSurface;
+            olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
             // White glyph centered inside.
@@ -223,7 +223,7 @@ namespace Saga.UI.Builders
                 rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(560, 120);
                 var img = _comingSoon.GetComponent<Image>();
-                img.sprite = PuffySprite.RoundedFill(24); img.type = Image.Type.Sliced; img.color = tokens.m3InverseSurface;
+                img.sprite = PuffySprite.RoundedFill(24); img.type = Image.Type.Sliced; img.color = tokens.panelSombre2;
                 var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
                 lbl.transform.SetParent(_comingSoon.transform, false);
                 var lrt = (RectTransform)lbl.transform; lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;

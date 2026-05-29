@@ -28,22 +28,39 @@ MonoBehaviour:
   accentAction: {r: 0.91, g: 0.588, b: 0.259, a: 1}
   accentDanger: {r: 0.784, g: 0.224, b: 0.165, a: 1}
   accentSuccess: {r: 0.478, g: 0.671, b: 0.361, a: 1}
-  m3Primary: {r: 0, g: 0.431, b: 0.125, a: 1}
-  m3PrimaryContainer: {r: 0.173, g: 0.796, b: 0.298, a: 1}
-  m3OnPrimaryContainer: {r: 0, g: 0.31, b: 0.082, a: 1}
-  m3Secondary: {r: 0.718, g: 0.078, b: 0.133, a: 1}
-  m3SecondaryContainer: {r: 0.859, g: 0.196, b: 0.216, a: 1}
-  m3Tertiary: {r: 0, g: 0.384, b: 0.62, a: 1}
-  m3TertiaryContainer: {r: 0.404, g: 0.714, b: 1, a: 1}
-  m3OnTertiaryContainer: {r: 0, g: 0.275, b: 0.451, a: 1}
-  m3Surface: {r: 0.957, g: 0.98, b: 0.992, a: 1}
-  m3SurfaceContainer: {r: 0.91, g: 0.937, b: 0.945, a: 1}
-  m3SurfaceContainerHigh: {r: 0.886, g: 0.914, b: 0.925, a: 1}
-  m3SurfaceContainerHighest: {r: 0.867, g: 0.894, b: 0.902, a: 1}
-  m3InverseSurface: {r: 0.169, g: 0.196, b: 0.204, a: 1}
-  m3Outline: {r: 0.427, g: 0.482, b: 0.412, a: 1}
-  m3OnSurface: {r: 0.086, g: 0.114, b: 0.122, a: 1}
-  m3OnPrimary: {r: 1, g: 1, b: 1, a: 1}
+  coralAction: {r: 1, g: 0.42, b: 0.42, a: 1}
+  roseSakura: {r: 1, g: 0.62, b: 0.784, a: 1}
+  mintPositif: {r: 0.412, g: 0.902, b: 0.639, a: 1}
+  vertBouton: {r: 0.49, g: 0.89, b: 0.31, a: 1}
+  skyBlue: {r: 0.396, g: 0.784, b: 1, a: 1}
+  jauneReward: {r: 1, g: 0.847, b: 0.302, a: 1}
+  orangeChaud: {r: 1, g: 0.624, b: 0.239, a: 1}
+  lavandeUI: {r: 0.604, g: 0.482, b: 1, a: 1}
+  navyContour: {r: 0.145, g: 0.157, b: 0.239, a: 1}
+  cremeText: {r: 1, g: 0.957, b: 0.839, a: 1}
+  panelSombre: {r: 0.227, g: 0.263, b: 0.345, a: 1}
+  panelSombre2: {r: 0.184, g: 0.216, b: 0.29, a: 1}
+  panelClair: {r: 0.976, g: 0.902, b: 0.784, a: 1}
+  blancChaud: {r: 1, g: 0.976, b: 0.918, a: 1}
+  grisTexteSecondaire: {r: 0.725, g: 0.757, b: 0.831, a: 1}
+  ombreDouce: {r: 0.11, g: 0.125, b: 0.188, a: 1}
+  boisDojoMid: {r: 0.725, g: 0.435, b: 0.227, a: 1}
+  boisDojoDark: {r: 0.561, g: 0.31, b: 0.18, a: 1}
+  boisDojoLight: {r: 0.886, g: 0.631, b: 0.361, a: 1}
+  toitJaponaisMid: {r: 0.204, g: 0.361, b: 0.612, a: 1}
+  toitJaponaisDark: {r: 0.141, g: 0.239, b: 0.451, a: 1}
+  sakuraMid: {r: 1, g: 0.694, b: 0.82, a: 1}
+  sakuraDark: {r: 1, g: 0.471, b: 0.682, a: 1}
+  montagneMid: {r: 0.612, g: 0.769, b: 0.847, a: 1}
+  montagneDark: {r: 0.431, g: 0.588, b: 0.702, a: 1}
+  heroTenue: {r: 0.184, g: 0.243, b: 0.471, a: 1}
+  heroTenueOmbre: {r: 0.114, g: 0.153, b: 0.31, a: 1}
+  heroCeinture: {r: 0.91, g: 0.29, b: 0.29, a: 1}
+  rarityCommunDA: {r: 0.725, g: 0.757, b: 0.831, a: 1}
+  rarityRareDA: {r: 0.396, g: 0.784, b: 1, a: 1}
+  rarityEpiqueDA: {r: 0.604, g: 0.482, b: 1, a: 1}
+  rarityLegendaireDA: {r: 1, g: 0.847, b: 0.302, a: 1}
+  rarityMythiqueDA: {r: 1, g: 0.42, b: 0.42, a: 1}
   voieSamurai: {r: 0.98, g: 0.78, b: 0.459, a: 1}
   voieViking: {r: 0.49, g: 0.655, b: 0.788, a: 1}
   voieWuxia: {r: 0.624, g: 0.749, b: 0.659, a: 1}

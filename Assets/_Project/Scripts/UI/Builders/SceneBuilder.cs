@@ -87,7 +87,7 @@ namespace Saga.UI.Builders
             label.fontStyle = TMPro.FontStyles.Bold;
             label.text = "x1.0";
             // Outline charcoal (puffy text recipe) pour ressortir au-dessus de tous les fonds.
-            label.outlineColor = tokens.m3OnSurface;
+            label.outlineColor = tokens.navyContour;
             label.outlineWidth = 0.32f;
             label.raycastTarget = false;
 
