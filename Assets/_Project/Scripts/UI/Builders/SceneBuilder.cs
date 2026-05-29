@@ -52,15 +52,19 @@ namespace Saga.UI.Builders
 
         public static void BuildComboMeter(Canvas canvas)
         {
+            var tokens = DesignTokens.Get();
             var root = new GameObject("ComboMeter", typeof(RectTransform), typeof(CanvasGroup), typeof(ComboMeterView));
             root.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)root.transform;
-            // Sprint 7.5 refonte : sous la Force pill (top-left) pour ne pas heurter Échos pill + settings (top-right).
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(24, -92);
-            rt.sizeDelta = new Vector2(220, 60);
+            // Sprint 7.5 zone 4 + ajout 9 coord — combo overlay "×N COMBO" tilted -5° (signature mockup).
+            // Positionné au centre-haut (sous la Force pill) pour signature flottante au-dessus de la scène.
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -180);
+            rt.sizeDelta = new Vector2(320, 90);
+            // Tilt -5° pour le punch cartoon de la mockup.
+            rt.localEulerAngles = new Vector3(0, 0, -5f);
 
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = 0f;
@@ -76,10 +80,16 @@ namespace Saga.UI.Builders
             labelRt.offsetMax = Vector2.zero;
 
             var label = labelGo.GetComponent<TMPro.TextMeshProUGUI>();
-            label.alignment = TMPro.TextAlignmentOptions.MidlineRight;
-            label.color = MainSceneBootstrap.TextSecondaryColor;
-            label.fontSize = 56;
+            label.alignment = TMPro.TextAlignmentOptions.Center;
+            label.font = tokens.DisplayFont;          // Lilita One (cartoon punch)
+            label.color = new Color(1.000f, 0.416f, 0.239f, 1f); // #FF6A3D orange combo signature
+            label.fontSize = 64;
+            label.fontStyle = TMPro.FontStyles.Bold;
             label.text = "x1.0";
+            // Outline charcoal (puffy text recipe) pour ressortir au-dessus de tous les fonds.
+            label.outlineColor = tokens.m3OnSurface;
+            label.outlineWidth = 0.32f;
+            label.raycastTarget = false;
 
             var view = root.GetComponent<ComboMeterView>();
             view.Label = label;
