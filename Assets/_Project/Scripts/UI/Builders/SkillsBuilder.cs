@@ -22,11 +22,11 @@ namespace Saga.UI.Builders
     {
         public static void Build(BuilderContext ctx)
         {
-            var canvas = ctx.Canvas;
             var tokens = ctx.Tokens;
-            if (canvas == null || tokens == null) return;
+            if (ctx.Canvas == null || tokens == null) return;
+            var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
 
-            ctx.ElanRow = BuildSkillsRow(canvas, tokens);
+            ctx.ElanRow = BuildSkillsRow(parent, tokens);
             BuildAffronterMaitreButton(ctx.ElanRow, modal: null);
         }
 
@@ -43,12 +43,12 @@ namespace Saga.UI.Builders
         //  ROW — 2 big puffy buttons VAGUE + SOUFFLE side-by-side.
         // ====================================================================================
 
-        private static RectTransform BuildSkillsRow(Canvas canvas, DesignTokens tokens)
+        private static RectTransform BuildSkillsRow(Transform parent, DesignTokens tokens)
         {
             // Row positioned in the 34-44% band of the canvas (above upgrade cards, below the scene).
             // Anchor.x stretches 4-96% so the 28px padding rule matches the spec.
             var row = new GameObject("SkillsRow", typeof(RectTransform));
-            row.transform.SetParent(canvas.transform, false);
+            row.transform.SetParent(parent, false);
             var rt = (RectTransform)row.transform;
             rt.anchorMin = new Vector2(0.04f, 0.34f);
             rt.anchorMax = new Vector2(0.96f, 0.44f);

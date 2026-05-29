@@ -28,19 +28,22 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
-            BuildBottomNav(ctx.Canvas);
+            var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
+            BuildBottomNav(parent);
         }
 
         /// <summary>Bottom nav — 5 tabs (Shop/Hero/Dojo/Artifacts/Legend). Dojo active (raised, bleu).</summary>
-        private static void BuildBottomNav(Canvas canvas)
+        private static void BuildBottomNav(Transform parent)
         {
             var tokens = DesignTokens.Get();
             var nav = new GameObject("BottomNav", typeof(RectTransform), typeof(Image));
-            nav.transform.SetParent(canvas.transform, false);
+            nav.transform.SetParent(parent, false);
             var rt = (RectTransform)nav.transform;
             rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(0.5f, 0f);
             rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(0, 150); // ~7.8% of 1920 incl. safe area
+            // DIRECTION_ARTISTIQUE.md §3.2 — bottom nav 10-12 % de l'écran. À 1920 ref c'est ~220 px.
+            // Le SafeAreaContainer parent gère déjà la home bar iPhone (~68 px) → 220 px utiles.
+            rt.sizeDelta = new Vector2(0, 220);
             var bg = nav.GetComponent<Image>();
             bg.color = DesignTokens.Darken(tokens.panelClair, 0.15f);
 
@@ -95,7 +98,7 @@ namespace Saga.UI.Builders
                 if (!active)
                 {
                     var captured = labels[i];
-                    tab.GetComponent<Button>().onClick.AddListener(() => ShowComingSoon(canvas, captured));
+                    tab.GetComponent<Button>().onClick.AddListener(() => ShowComingSoon(parent, captured));
                 }
             }
         }
@@ -212,13 +215,13 @@ namespace Saga.UI.Builders
             img.raycastTarget = false;
         }
 
-        private static void ShowComingSoon(Canvas canvas, string screen)
+        private static void ShowComingSoon(Transform parent, string screen)
         {
             var tokens = DesignTokens.Get();
             if (_comingSoon == null)
             {
                 _comingSoon = new GameObject("ComingSoonToast", typeof(RectTransform), typeof(Image));
-                _comingSoon.transform.SetParent(canvas.transform, false);
+                _comingSoon.transform.SetParent(parent, false);
                 var rt = (RectTransform)_comingSoon.transform;
                 rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(560, 120);

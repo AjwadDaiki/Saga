@@ -20,22 +20,22 @@ namespace Saga.UI.Builders
     {
         public static void Build(BuilderContext ctx)
         {
-            var canvas = ctx.Canvas;
             var tokens = ctx.Tokens;
-            if (canvas == null || tokens == null) return;
+            if (ctx.Canvas == null || tokens == null) return;
+            var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
 
-            BuildStageChip(canvas, tokens);
-            BuildBossProgressBar(canvas, tokens);
+            BuildStageChip(parent, tokens);
+            BuildBossProgressBar(parent, tokens);
         }
 
         // ====================================================================================
         //  STAGE CHIP — pill charcoal + red skull icon + "Stade N" label.
         // ====================================================================================
 
-        private static void BuildStageChip(Canvas canvas, DesignTokens tokens)
+        private static void BuildStageChip(Transform parent, DesignTokens tokens)
         {
             var chip = new GameObject("StageChip", typeof(RectTransform), typeof(Image), typeof(StagePillView));
-            chip.transform.SetParent(canvas.transform, false);
+            chip.transform.SetParent(parent, false);
             var rt = (RectTransform)chip.transform;
             rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
@@ -106,11 +106,11 @@ namespace Saga.UI.Builders
         //  BOSS PROGRESS BAR — green glossy fill + red skull marker at right.
         // ====================================================================================
 
-        private static void BuildBossProgressBar(Canvas canvas, DesignTokens tokens)
+        private static void BuildBossProgressBar(Transform parent, DesignTokens tokens)
         {
             var root = new GameObject("StageBossBar",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireProgressBarView));
-            root.transform.SetParent(canvas.transform, false);
+            root.transform.SetParent(parent, false);
             var rt = (RectTransform)root.transform;
             rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);

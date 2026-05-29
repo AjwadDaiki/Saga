@@ -11,6 +11,10 @@ namespace Saga.UI.Builders
     public sealed class BuilderContext
     {
         public Canvas Canvas;
+        /// <summary>Sprint 7.5 Polish — safe-area-clamped parent for HUD elements (top bar, stage, skills,
+        /// upgrades, bottom nav). Cinematics and modal backdrops should still parent to <see cref="Canvas"/>
+        /// directly so they can bleed past the notch / home indicator.</summary>
+        public RectTransform UIRoot;
         public Transform WorldRoot;
         public DesignTokens Tokens;
         // Filled by SceneBuilder.

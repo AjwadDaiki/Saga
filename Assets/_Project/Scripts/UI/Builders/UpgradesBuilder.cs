@@ -42,10 +42,11 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
-            BuildUpgradePanel(ctx.Canvas, ctx.Tokens);
+            var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
+            BuildUpgradePanel(parent, ctx.Tokens);
         }
 
-        private static void BuildUpgradePanel(Canvas canvas, DesignTokens tokens)
+        private static void BuildUpgradePanel(Transform parent, DesignTokens tokens)
         {
             var gm = GameManager.Instance;
             if (gm?.Content == null) return;
@@ -56,12 +57,14 @@ namespace Saga.UI.Builders
                 return;
             }
 
-            // Sprint 7.5 refonte: band 8-32% (above bottom nav at 0-8%, below skills row at 34-44%).
+            // Sprint 7.5 Polish Phase 3 — DA §3.2 : Panel upgrade 22-28% de l'écran. Bottom nav prend
+            // ~12 %, donc upgrade panel commence à 12-13 % et termine à 34-35 %. Skills row (34-44 %)
+            // suit juste au-dessus, scène commence à 44 %.
             var panel = new GameObject("UpgradePanel", typeof(RectTransform));
-            panel.transform.SetParent(canvas.transform, false);
+            panel.transform.SetParent(parent, false);
             var panelRt = (RectTransform)panel.transform;
-            panelRt.anchorMin = new Vector2(0.04f, 0.08f);
-            panelRt.anchorMax = new Vector2(0.96f, 0.32f);
+            panelRt.anchorMin = new Vector2(0.04f, 0.12f);
+            panelRt.anchorMax = new Vector2(0.96f, 0.34f);
             panelRt.offsetMin = Vector2.zero;
             panelRt.offsetMax = Vector2.zero;
 

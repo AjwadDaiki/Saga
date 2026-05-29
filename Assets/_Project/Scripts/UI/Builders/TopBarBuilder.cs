@@ -25,18 +25,21 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
-            BuildForcePill(ctx.Canvas, ctx.Tokens);
-            BuildEchosPill(ctx.Canvas, ctx.Tokens);
-            BuildSettingsButton(ctx.Canvas, ctx.Tokens);
+            // Sprint 7.5 Polish Phase 3 — parent under safe-area-clamped UIRoot so currency pills
+            // and settings stay clear of the iPhone notch.
+            var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
+            BuildForcePill(parent, ctx.Tokens);
+            BuildEchosPill(parent, ctx.Tokens);
+            BuildSettingsButton(parent, ctx.Tokens);
         }
 
         // ====================================================================================
         //  FORCE PILL — top-left, gold coin icon, ForceCounterView drives the value label.
         // ====================================================================================
 
-        private static void BuildForcePill(Canvas canvas, DesignTokens tokens)
+        private static void BuildForcePill(Transform parent, DesignTokens tokens)
         {
-            var pill = BuildPillRoot(canvas, "ForcePill",
+            var pill = BuildPillRoot(parent, "ForcePill",
                 anchor: new Vector2(0, 1),
                 pos: new Vector2(SidePad, TopY),
                 size: PillSizeForce);
@@ -61,9 +64,9 @@ namespace Saga.UI.Builders
         //  ÉCHOS PILL — left of settings (alongside Force), violet gem icon.
         // ====================================================================================
 
-        private static void BuildEchosPill(Canvas canvas, DesignTokens tokens)
+        private static void BuildEchosPill(Transform parent, DesignTokens tokens)
         {
-            var pill = BuildPillRoot(canvas, "EchosPill",
+            var pill = BuildPillRoot(parent, "EchosPill",
                 anchor: new Vector2(0, 1),
                 pos: new Vector2(SidePad + PillSizeForce.x + GapPills, TopY),
                 size: PillSizeEchos);
@@ -98,9 +101,9 @@ namespace Saga.UI.Builders
         //  SETTINGS — round puffy button top-right, charcoal "≡" icon (gear glyph fallback).
         // ====================================================================================
 
-        private static void BuildSettingsButton(Canvas canvas, DesignTokens tokens)
+        private static void BuildSettingsButton(Transform parent, DesignTokens tokens)
         {
-            var btn = SagaButton.Create(canvas.transform, "SettingsButton", SagaButton.Variant.Standard,
+            var btn = SagaButton.Create(parent, "SettingsButton", SagaButton.Variant.Standard,
                 DesignTokens.Darken(tokens.panelClair, 0.15f), "", radius: (int)(SettingsSize.x / 2f), floorPx: 5);
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = new Vector2(1f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
@@ -134,11 +137,11 @@ namespace Saga.UI.Builders
         // ====================================================================================
 
         /// <summary>Charcoal pill body + floor (puffy depth). Returns the root pill GameObject.</summary>
-        private static GameObject BuildPillRoot(Canvas canvas, string name, Vector2 anchor, Vector2 pos, Vector2 size)
+        private static GameObject BuildPillRoot(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size)
         {
             var tokens = DesignTokens.Get();
             var pill = new GameObject(name, typeof(RectTransform), typeof(Image));
-            pill.transform.SetParent(canvas.transform, false);
+            pill.transform.SetParent(parent, false);
             var rt = (RectTransform)pill.transform;
             rt.anchorMin = anchor; rt.anchorMax = anchor; rt.pivot = new Vector2(anchor.x, anchor.y);
             rt.anchoredPosition = pos;

@@ -19,9 +19,10 @@ namespace Saga.UI.Builders
         // Y lowered to -1.3 so both stand on the floor strip top (floor centered at -2.3, half-height 1).
         private static readonly Vector3 CharacterPosition = new Vector3(-0.95f, -1.3f, 0f);
         private static readonly Vector3 MannequinPosition = new Vector3(1.05f, -1.3f, 0f);
-        // Mannequin sprite is 80×140 @ PPU32 = 2.5×4.375 world. 0.7 scale → ~3.06 tall so the 2× chibi
-        // (≈2 tall) reads at ~65% of its height — the balance Ajwad asked for.
-        private const float MannequinScale = 0.7f;
+        // Sprint 7.5 Polish Phase 3 — DA §7.1 chibi proportions : héros doit dominer la scène centrale.
+        // Mannequin sprite est 80×140 @ PPU32 = 2.5×4.375 world. 0.5 → ~2.19 tall so the 2.3× chibi
+        // (~2.3 tall) reads at ~105 % du mannequin — ratio matchant le mockup samourai.
+        private const float MannequinScale = 0.5f;
 
         public static void Build(BuilderContext ctx)
         {
@@ -187,9 +188,9 @@ namespace Saga.UI.Builders
 
             var view = go.GetComponent<CharacterView>();
             view.Renderer = renderer;
-            // Sprint 7.5 fix: set base scale AFTER construction (Awake/OnEnable already ran during
-            // `new GameObject`). 2x so the chibi reads at ~60% of the mannequin height in portrait.
-            view.SetBaseScale(new Vector3(2f, 2f, 1f));
+            // Sprint 7.5 Polish Phase 3 — DA §7.1 chibi proportions. 2.3× (vs 2.0× legacy) pour que
+            // la silhouette samourai domine la scène centrale comme le mockup le demande.
+            view.SetBaseScale(new Vector3(2.3f, 2.3f, 1f));
 
             return go.transform;
         }

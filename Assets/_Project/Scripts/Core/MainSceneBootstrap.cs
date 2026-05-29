@@ -87,6 +87,7 @@ namespace Saga.Core
             BuildEventSystem();
             MainCanvas = BuildCanvas();
             ctx.Canvas = MainCanvas;
+            ctx.UIRoot = BuildSafeAreaContainer(MainCanvas);
 
             SceneBuilder.BuildComboMeter(MainCanvas);
             BuildTapHandler(MainCanvas);
@@ -998,6 +999,25 @@ namespace Saga.Core
             scaler.matchWidthOrHeight = 0.5f;
 
             return canvas;
+        }
+
+        /// <summary>
+        /// Sprint 7.5 Polish Phase 3 — wraps HUD elements inside <see cref="Screen.safeArea"/>.
+        /// Builders that want notch / home-indicator safety parent to this RectTransform via
+        /// <see cref="BuilderContext.UIRoot"/>. Cinematics + modal backdrops still parent to the
+        /// Canvas itself so they can bleed past the notch.
+        /// </summary>
+        private static RectTransform BuildSafeAreaContainer(Canvas canvas)
+        {
+            var go = new GameObject("SafeAreaContainer", typeof(RectTransform), typeof(SafeAreaScaler));
+            go.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)go.transform;
+            // SafeAreaScaler.Awake/Apply() will populate anchors from Screen.safeArea on the first frame.
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            return rt;
         }
     }
 }
