@@ -13,16 +13,13 @@ namespace Saga.UI.Builders
     /// </summary>
     public static class SceneBuilder
     {
-        // World layout constants — mirrored verbatim from MainSceneBootstrap (Sprint 7.5 portrait pivot).
-        // Sprint 7.5 portrait pivot: world X positions tightened so character + mannequin both fit
-        // inside a 9:16 ortho frustum (orthoSize 3 → ±1.69 horizontal). Was (-1.8, 3.0) for landscape.
-        // Y lowered to -1.3 so both stand on the floor strip top (floor centered at -2.3, half-height 1).
-        private static readonly Vector3 CharacterPosition = new Vector3(-0.95f, -1.3f, 0f);
-        private static readonly Vector3 MannequinPosition = new Vector3(1.05f, -1.3f, 0f);
-        // Sprint 7.5 Polish Phase 3 — DA §7.1 chibi proportions : héros doit dominer la scène centrale.
-        // Mannequin sprite est 80×140 @ PPU32 = 2.5×4.375 world. 0.5 → ~2.19 tall so the 2.3× chibi
-        // (~2.3 tall) reads at ~105 % du mannequin — ratio matchant le mockup samourai.
-        private const float MannequinScale = 0.5f;
+        // Phase 4 wireframe SAGA §3 — Combat zone centrée verticalement entre Top HUD + Stage band
+        // (250 ref du haut) et stack UI bas (710 ref du bas). Centre combat ≈ canvas y 1190 (world +0.72).
+        // Perso et mannequin recadrés : plus petits + position centrale (vs trop grands + en bas avant).
+        private static readonly Vector3 CharacterPosition = new Vector3(-0.7f, 0f, 0f);
+        private static readonly Vector3 MannequinPosition = new Vector3(0.7f, 0f, 0f);
+        // Phase 4 §3 — mannequin scale réduit (était 0.5×) pour matcher perso plus petit.
+        private const float MannequinScale = 0.4f;
 
         public static void Build(BuilderContext ctx)
         {
@@ -188,9 +185,9 @@ namespace Saga.UI.Builders
 
             var view = go.GetComponent<CharacterView>();
             view.Renderer = renderer;
-            // Sprint 7.5 Polish Phase 3 — DA §7.1 chibi proportions. 2.3× (vs 2.0× legacy) pour que
-            // la silhouette samourai domine la scène centrale comme le mockup le demande.
-            view.SetBaseScale(new Vector3(2.3f, 2.3f, 1f));
+            // Phase 4 wireframe SAGA §3 — perso scale réduit 2.3× → 1.5× (recadrage utilisateur :
+            // perso trop grand chevauchait les boutons VAGUE/SOUFFLE en bas). Itérable.
+            view.SetBaseScale(new Vector3(1.5f, 1.5f, 1f));
 
             return go.transform;
         }
