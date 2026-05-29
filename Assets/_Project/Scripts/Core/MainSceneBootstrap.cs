@@ -1,7 +1,7 @@
-using DG.Tweening;
 using Saga.Data;
 using Saga.Gameplay;
 using Saga.UI;
+using Saga.UI.Builders;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -15,6 +15,11 @@ namespace Saga.Core
     /// Lets the gameplay loop run without manual Unity scene editing while the MCP bridge is down.
     ///
     /// Sprint 4+ : remove this and scene-author Main directly. See DESIGN_DECISIONS_LOG.md 2026-05-27.
+    ///
+    /// Sprint 7.5 refonte (Phase 2) : the monolithic ~2.2k lines builder is split into 7 zone-scoped
+    /// builders under <c>Saga.UI.Builders</c>. This file keeps only the orchestrator, scene-setup
+    /// scaffolding (camera + canvas + EventSystem) and the overlays/modals/cinematics that don't fit
+    /// a single zone.
     /// </summary>
     [DisallowMultipleComponent]
     public class MainSceneBootstrap : MonoBehaviour
@@ -22,21 +27,13 @@ namespace Saga.Core
         // -- Palette per 05_VISUAL_STYLE.md ------------------------------
         // Sprint 3: scene bg moves to #1a1a1a (Camera clear color), UI cards stay on #161616.
         private static readonly Color BgDojo       = new Color(0.102f, 0.102f, 0.102f, 1f);  // #1a1a1a Camera clear
-        private static readonly Color TextPrimary  = new Color(0.98f, 0.98f, 0.98f, 1f);     // #fafafa
-        private static readonly Color TextSecondary = new Color(0.53f, 0.53f, 0.53f, 1f);    // #888
-        private static readonly Color BgModal       = new Color(0f, 0f, 0f, 1f);             // pure black overlay base, alpha controlled by CanvasGroup
+        internal static readonly Color TextPrimaryColor   = new Color(0.98f, 0.98f, 0.98f, 1f);     // #fafafa
+        internal static readonly Color TextSecondaryColor = new Color(0.53f, 0.53f, 0.53f, 1f);    // #888
+        internal static readonly Color BgModalColor       = new Color(0f, 0f, 0f, 1f);             // pure black overlay base, alpha controlled by CanvasGroup
         private static readonly Color MannequinWood = new Color(0.42f, 0.27f, 0.14f, 1f);    // bois sombre
 
         // -- World layout (orthographic camera, sizes in world units) ----
         private const float CameraOrthoSize = 3.0f; // tighter zoom per Sprint 3 fix #4
-        // Sprint 7.5 portrait pivot: world X positions tightened so character + mannequin both fit
-        // inside a 9:16 ortho frustum (orthoSize 3 → ±1.69 horizontal). Was (-1.8, 3.0) for landscape.
-        // Y lowered to -1.3 so both stand on the floor strip top (floor centered at -2.3, half-height 1).
-        private static readonly Vector3 CharacterPosition  = new Vector3(-0.95f, -1.3f, 0f);
-        private static readonly Vector3 MannequinPosition  = new Vector3( 1.05f, -1.3f, 0f);
-        // Mannequin sprite is 80×140 @ PPU32 = 2.5×4.375 world. 0.7 scale → ~3.06 tall so the 2× chibi
-        // (≈2 tall) reads at ~65% of its height — the balance Ajwad asked for.
-        private const float MannequinScale = 0.7f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoBootstrapIfMainScene()
@@ -70,507 +67,67 @@ namespace Saga.Core
             CleanLeftoverWorldSprites();
 
             EnsureMainCamera();
-            var worldRoot = new GameObject("WorldRoot").transform;
-            BuildAmbientBackground(worldRoot); // Sprint 7.5: 3-layer dojo background (gradient + particles + floor)
-            BuildCharacter(worldRoot);
-            BuildMannequin(worldRoot);
-            BuildAdversaire(worldRoot);
-            BuildCapitaine(worldRoot);
-            BuildMaitre(worldRoot);
-            BuildSlashFxSpawner(worldRoot);
+
+            var ctx = new BuilderContext
+            {
+                WorldRoot = new GameObject("WorldRoot").transform,
+                Tokens = DesignTokens.Get(),
+            };
+
+            BackgroundBuilder.Build(ctx);          // Sprint 7.5 zone 1 — dojo dusk background + particles.
+            SceneBuilder.Build(ctx);               // Sprint 7.5 zone 4 — character + mannequin + adv/cap/maitre + slash FX.
+
+            // Copy zone-4 transforms back to the public properties consumed by other scripts.
+            CharacterTransform = ctx.CharacterTransform;
+            MannequinTransform = ctx.MannequinTransform;
+            AdversaireTransform = ctx.AdversaireTransform;
+            CapitaineTransform = ctx.CapitaineTransform;
+            MaitreTransform = ctx.MaitreTransform;
 
             BuildEventSystem();
             MainCanvas = BuildCanvas();
+            ctx.Canvas = MainCanvas;
+
             BuildForceCounter(MainCanvas);
-            BuildComboMeter(MainCanvas);
+            SceneBuilder.BuildComboMeter(MainCanvas);
             BuildTapHandler(MainCanvas);
-            BuildTapFxSpawner(MainCanvas);
-            BuildUpgradePanel(MainCanvas);
+            SceneBuilder.BuildTapFxSpawner(MainCanvas, AdversaireTransform);
+            UpgradesBuilder.Build(ctx);            // Sprint 7.5 zone 6 — upgrade card panel.
             BuildStadeTransitionOverlay(MainCanvas);
 
             // Sprint 4: combat active system UI
             BuildAdversaireProgressBar(MainCanvas);
             BuildCombatHud(MainCanvas);
-            BuildAdversaireSpawnView(MainCanvas);
+            SceneBuilder.BuildAdversaireSpawnView(MainCanvas);
             BuildDeathOverlay(MainCanvas);
 
-            // Sprint 5: Élan + Vague + Capitaine
-            var elanRow = BuildElanRow(MainCanvas);
+            // Sprint 5/6: Élan + Vague + Souffle + Affronter Maître button (button is bound to its
+            // modal below once the modal exists).
+            SkillsBuilder.Build(ctx);              // Sprint 7.5 zone 5 — Élan row + Vague + Souffle + Affronter (modal=null).
             BuildVagueFlashOverlay(MainCanvas);
             BuildCapitaineIntroOverlay(MainCanvas);
             BuildCapitaineDeathOverlay(MainCanvas);
 
-            // Sprint 6: Souffle + Maître + Prestige
-            BuildSouffleButton(MainCanvas);
+            // Sprint 6: Maître + Prestige
             var citationModal = BuildCitationInputModal(MainCanvas);
             var affronterModal = BuildAffronterMaitreModal(MainCanvas);
-            BuildAffronterMaitreButton(elanRow, affronterModal);
+            SkillsBuilder.BindAffronterMaitre(ctx, affronterModal);
             BuildMaitreIntroOverlay(MainCanvas);
             BuildPrestigeCinematicOverlay(MainCanvas, citationModal);
 
             // Sprint 7: Inventaire
             var inventoryModal = BuildEquipmentInventoryModal(MainCanvas);
-            BuildInventaireButton(MainCanvas, inventoryModal);
+            BottomNavBuilder.BuildInventaireButton(MainCanvas, inventoryModal);
 
             // Sprint 7.5 refonte : top bar pills + bottom nav 5 onglets.
-            BuildTopBarPills(MainCanvas);
-            BuildBottomNav(MainCanvas);
+            StageBuilder.Build(ctx);               // Sprint 7.5 zone 3 — placeholder, Phase 3 stage chip.
+            TopBarBuilder.Build(ctx);              // Sprint 7.5 zone 2 — currency pills + settings.
+            BottomNavBuilder.Build(ctx);           // Sprint 7.5 zone 7 — 5-tab bottom nav.
         }
 
         // ============================================================
-        //  Sprint 7.5 refonte — top bar currency pills + bottom nav
+        //  Overlays & modals — kept here because they cut across zones.
         // ============================================================
-
-        /// <summary>Échos currency pill (Force is the main ForceCounter pill, built separately).</summary>
-        private void BuildTopBarPills(Canvas canvas)
-        {
-            var tokens = DesignTokens.Get();
-
-            // Échos pill (top-right area, left of settings). Violet icon débordante + valeur.
-            var echos = BuildCurrencyPill(canvas, "EchosPill", new Vector2(1f, 1f), new Vector2(-96, -40),
-                iconColor: tokens.accentPrimary /*overridden below*/, glyph: "◆");
-            // Override icon color to violet (Échos).
-            var echosIcon = echos.transform.Find("Icon")?.GetComponent<Image>();
-            if (echosIcon != null) echosIcon.color = new Color(0.69f, 0.48f, 1f, 1f); // violet
-            var echosLabel = echos.transform.Find("Value")?.GetComponent<TextMeshProUGUI>();
-            var gm = GameManager.Instance;
-            if (echosLabel != null && gm?.State != null)
-                echosLabel.text = Saga.Math.NumberFormatter.Format(gm.State.totalEchos);
-
-            // Settings round puffy button (top-right corner).
-            var settings = SagaButton.Create(canvas.transform, "SettingsButton", SagaButton.Variant.Standard,
-                tokens.m3SurfaceContainerHighest, "⚙", radius: 22, floorPx: 5, labelSize: 26,
-                labelColor: tokens.m3OnSurface);
-            var srt = (RectTransform)settings.transform;
-            srt.anchorMin = new Vector2(1f, 1f); srt.anchorMax = new Vector2(1f, 1f); srt.pivot = new Vector2(1f, 1f);
-            srt.anchoredPosition = new Vector2(-24, -36);
-            srt.sizeDelta = new Vector2(64, 64);
-        }
-
-        /// <summary>
-        /// Build a puffy currency pill : charcoal rounded pill + a colored round icon overflowing the
-        /// left edge + value label in JetBrains Mono. Returns the pill GO (Icon child + Value label child).
-        /// </summary>
-        private GameObject BuildCurrencyPill(Canvas canvas, string name, Vector2 anchor, Vector2 pos,
-            Color iconColor, string glyph)
-        {
-            var tokens = DesignTokens.Get();
-            var pill = new GameObject(name, typeof(RectTransform), typeof(Image));
-            pill.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)pill.transform;
-            rt.anchorMin = anchor; rt.anchorMax = anchor; rt.pivot = new Vector2(anchor.x, anchor.y);
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(140, 40);
-            var bg = pill.GetComponent<Image>();
-            bg.sprite = PuffySprite.RoundedFill(20);
-            bg.type = Image.Type.Sliced;
-            bg.color = new Color(0.086f, 0.114f, 0.122f, 0.85f); // charcoal 85%
-
-            // Floor (puffy depth).
-            var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
-            floor.transform.SetParent(pill.transform, false);
-            floor.transform.SetAsFirstSibling();
-            var fr = (RectTransform)floor.transform;
-            fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one; fr.offsetMin = new Vector2(0, -4); fr.offsetMax = Vector2.zero;
-            var fi = floor.GetComponent<Image>();
-            fi.sprite = PuffySprite.RoundedFill(20); fi.type = Image.Type.Sliced; fi.color = tokens.m3Outline; fi.raycastTarget = false;
-
-            // Icon round, overflowing left. Image + glyph on SEPARATE GameObjects (two Graphics on one
-            // GO share a CanvasRenderer → TMP init NRE).
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-            icon.transform.SetParent(pill.transform, false);
-            var irt = (RectTransform)icon.transform;
-            irt.anchorMin = new Vector2(0, 0.5f); irt.anchorMax = new Vector2(0, 0.5f); irt.pivot = new Vector2(0.5f, 0.5f);
-            irt.anchoredPosition = new Vector2(2, 0); irt.sizeDelta = new Vector2(38, 38);
-            var iimg = icon.GetComponent<Image>();
-            iimg.sprite = PuffySprite.RoundedFill(19); iimg.type = Image.Type.Sliced; iimg.color = iconColor;
-            var iglyphGo = new GameObject("Glyph", typeof(RectTransform), typeof(TextMeshProUGUI));
-            iglyphGo.transform.SetParent(icon.transform, false);
-            var iglyphRt = (RectTransform)iglyphGo.transform;
-            iglyphRt.anchorMin = Vector2.zero; iglyphRt.anchorMax = Vector2.one; iglyphRt.offsetMin = Vector2.zero; iglyphRt.offsetMax = Vector2.zero;
-            var iglyph = iglyphGo.GetComponent<TextMeshProUGUI>();
-            iglyph.alignment = TextAlignmentOptions.Center; iglyph.font = tokens.DisplayFont; iglyph.fontSize = 18;
-            iglyph.color = tokens.m3OnSurface; iglyph.text = glyph; iglyph.raycastTarget = false;
-
-            // Value label.
-            var val = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
-            val.transform.SetParent(pill.transform, false);
-            var vrt = (RectTransform)val.transform;
-            vrt.anchorMin = Vector2.zero; vrt.anchorMax = Vector2.one; vrt.offsetMin = new Vector2(42, 0); vrt.offsetMax = new Vector2(-12, 0);
-            var vtmp = val.GetComponent<TextMeshProUGUI>();
-            vtmp.alignment = TextAlignmentOptions.Left; vtmp.font = tokens.NumbersFont; vtmp.fontStyle = FontStyles.Bold;
-            vtmp.fontSize = 18; vtmp.color = Color.white; vtmp.text = "0"; vtmp.raycastTarget = false;
-
-            return pill;
-        }
-
-        /// <summary>Bottom nav — 5 tabs (Shop/Hero/Dojo/Artifacts/Legend). Dojo active (raised, bleu).</summary>
-        private void BuildBottomNav(Canvas canvas)
-        {
-            var tokens = DesignTokens.Get();
-            var nav = new GameObject("BottomNav", typeof(RectTransform), typeof(Image));
-            nav.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)nav.transform;
-            rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(0.5f, 0f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(0, 150); // ~7.8% of 1920 incl. safe area
-            var bg = nav.GetComponent<Image>();
-            bg.color = tokens.m3SurfaceContainerHighest;
-
-            // Top border (charcoal line).
-            var border = new GameObject("TopBorder", typeof(RectTransform), typeof(Image));
-            border.transform.SetParent(nav.transform, false);
-            var brt = (RectTransform)border.transform;
-            brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(0.5f, 1f);
-            brt.sizeDelta = new Vector2(0, 4); brt.anchoredPosition = Vector2.zero;
-            border.GetComponent<Image>().color = tokens.m3Outline;
-
-            string[] labels = { "Shop", "Hero", "Dojo", "Artifacts", "Legend" };
-            string[] glyphs = { "🛒", "🥋", "⚔", "✦", "🏆" };
-            const int count = 5;
-            var frac = 1f / count;
-            for (var i = 0; i < count; i++)
-            {
-                var active = i == 2; // Dojo
-                var tab = new GameObject($"Tab_{labels[i]}", typeof(RectTransform), typeof(Image), typeof(Button));
-                tab.transform.SetParent(nav.transform, false);
-                var trt = (RectTransform)tab.transform;
-                trt.anchorMin = new Vector2(i * frac, 0); trt.anchorMax = new Vector2((i + 1) * frac, 1);
-                // Active tab raised + colored card; inactive transparent.
-                trt.offsetMin = new Vector2(8, active ? 18 : 30);
-                trt.offsetMax = new Vector2(-8, active ? -8 : -24);
-                var timg = tab.GetComponent<Image>();
-                if (active)
-                {
-                    timg.sprite = PuffySprite.RoundedFill(16); timg.type = Image.Type.Sliced;
-                    timg.color = tokens.m3TertiaryContainer;
-                }
-                else timg.color = new Color(0, 0, 0, 0);
-
-                var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-                lbl.transform.SetParent(tab.transform, false);
-                var lrt = (RectTransform)lbl.transform;
-                lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;
-                var tmp = lbl.GetComponent<TextMeshProUGUI>();
-                tmp.alignment = TextAlignmentOptions.Center; tmp.font = tokens.PrimaryFont;
-                tmp.fontSize = tokens.fontSmall; tmp.fontStyle = FontStyles.Bold;
-                tmp.color = active ? tokens.m3OnTertiaryContainer : tokens.m3Outline;
-                tmp.text = $"{glyphs[i]}\n{labels[i]}";
-                tmp.raycastTarget = false;
-
-                if (!active)
-                {
-                    var captured = labels[i];
-                    tab.GetComponent<Button>().onClick.AddListener(() => ShowComingSoon(canvas, captured));
-                }
-            }
-        }
-
-        private GameObject _comingSoon;
-        private void ShowComingSoon(Canvas canvas, string screen)
-        {
-            var tokens = DesignTokens.Get();
-            if (_comingSoon == null)
-            {
-                _comingSoon = new GameObject("ComingSoonToast", typeof(RectTransform), typeof(Image));
-                _comingSoon.transform.SetParent(canvas.transform, false);
-                var rt = (RectTransform)_comingSoon.transform;
-                rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(560, 120);
-                var img = _comingSoon.GetComponent<Image>();
-                img.sprite = PuffySprite.RoundedFill(24); img.type = Image.Type.Sliced; img.color = tokens.m3InverseSurface;
-                var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-                lbl.transform.SetParent(_comingSoon.transform, false);
-                var lrt = (RectTransform)lbl.transform; lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;
-                var tmp = lbl.GetComponent<TextMeshProUGUI>();
-                tmp.alignment = TextAlignmentOptions.Center; tmp.font = tokens.DisplayFont; tmp.fontSize = 28; tmp.color = Color.white;
-                _comingSoon.AddComponent<ComingSoonToast>().Label = tmp;
-            }
-            _comingSoon.transform.SetAsLastSibling();
-            _comingSoon.GetComponent<ComingSoonToast>().Show($"{screen}\nBientôt disponible");
-        }
-
-        private void BuildMaitre(Transform parent)
-        {
-            var go = new GameObject("Maitre", typeof(MaitreWorldView));
-            go.transform.SetParent(parent, false);
-            go.transform.position = MannequinPosition;
-
-            var auraGo = new GameObject("Aura", typeof(SpriteRenderer));
-            auraGo.transform.SetParent(go.transform, false);
-            var aura = auraGo.GetComponent<SpriteRenderer>();
-            aura.sortingOrder = 3;
-            aura.color = new Color(1, 1, 1, 0);
-
-            var bodyGo = new GameObject("Body", typeof(SpriteRenderer));
-            bodyGo.transform.SetParent(go.transform, false);
-            var body = bodyGo.GetComponent<SpriteRenderer>();
-            body.sortingOrder = 6;
-            body.color = new Color(1, 1, 1, 0);
-
-            var view = go.GetComponent<MaitreWorldView>();
-            view.BodyRenderer = body;
-            view.AuraRenderer = aura;
-
-            MaitreTransform = go.transform;
-        }
-
-        private void BuildCapitaine(Transform parent)
-        {
-            // Same world position as Adversaire (mutually exclusive). Aura is a child renderer.
-            var go = new GameObject("Capitaine", typeof(CapitaineWorldView));
-            go.transform.SetParent(parent, false);
-            go.transform.position = MannequinPosition;
-
-            // Aura first (child), drawn behind body.
-            var auraGo = new GameObject("Aura", typeof(SpriteRenderer));
-            auraGo.transform.SetParent(go.transform, false);
-            var aura = auraGo.GetComponent<SpriteRenderer>();
-            aura.sortingOrder = 3;
-            aura.color = new Color(1, 1, 1, 0);
-
-            // Body
-            var bodyGo = new GameObject("Body", typeof(SpriteRenderer));
-            bodyGo.transform.SetParent(go.transform, false);
-            var body = bodyGo.GetComponent<SpriteRenderer>();
-            body.sortingOrder = 6;
-            body.color = new Color(1, 1, 1, 0);
-
-            var view = go.GetComponent<CapitaineWorldView>();
-            view.BodyRenderer = body;
-            view.AuraRenderer = aura;
-
-            CapitaineTransform = go.transform;
-        }
-
-        private RectTransform BuildElanRow(Canvas canvas)
-        {
-            // Sprint 7.5 portrait pivot: bands now mirror the 9:16 phone layout.
-            //   0-8%        : bottom safe area (iOS home indicator)
-            //   8-34%       : Upgrade cards (3 cards stacked VERTICALLY)
-            //   34-42%      : Élan row (bar + Vague button + Affronter Maître button)
-            //   42-74%      : gameplay zone (character + mannequin + adversaire/capitaine/maitre)
-            //   74-78%      : Prochain Adversaire bar
-            //   78-92%      : Top HUD (Force counter, Combo, Souffle, Inventaire, CombatHud)
-            //   92-100%     : top safe area (iOS notch)
-            //
-            // Row split inside the band: Élan bar (0..0.58), Vague (0.60..0.78), Affronter (0.80..1.0).
-            var row = new GameObject("ElanRow", typeof(RectTransform));
-            row.transform.SetParent(canvas.transform, false);
-            var rowRt = (RectTransform)row.transform;
-            rowRt.anchorMin = new Vector2(0.05f, 0.34f);
-            rowRt.anchorMax = new Vector2(0.95f, 0.42f);
-            rowRt.offsetMin = Vector2.zero;
-            rowRt.offsetMax = Vector2.zero;
-
-            var tokens = DesignTokens.Get();
-
-            // Élan bar (left ~58% of the row)
-            var bar = new GameObject("ElanBar",
-                typeof(RectTransform), typeof(ElanBarView));
-            bar.transform.SetParent(rowRt, false);
-            var barRt = (RectTransform)bar.transform;
-            barRt.anchorMin = new Vector2(0, 0);
-            barRt.anchorMax = new Vector2(0.58f, 1);
-            barRt.offsetMin = Vector2.zero;
-            barRt.offsetMax = Vector2.zero;
-
-            // Glow halo behind the bar — picks up the accent color when fill > 70%.
-            // Sprint 7.5 fix (BUG 3): tight + asymmetric padding so it never bleeds up into the
-            // gameplay zone above the Élan row (extends sideways + down, barely up).
-            var glowGo = new GameObject("Glow", typeof(RectTransform), typeof(Image));
-            glowGo.transform.SetParent(barRt, false);
-            var glowRt = (RectTransform)glowGo.transform;
-            glowRt.anchorMin = Vector2.zero; glowRt.anchorMax = Vector2.one;
-            glowRt.offsetMin = new Vector2(-8, -8); glowRt.offsetMax = new Vector2(8, 2);
-            var glowImg = glowGo.GetComponent<Image>();
-            glowImg.color = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0f);
-            glowImg.raycastTarget = false;
-
-            // Bar background
-            var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
-            bgGo.transform.SetParent(barRt, false);
-            var bgRt = (RectTransform)bgGo.transform;
-            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
-            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
-            var bgImg = bgGo.GetComponent<Image>();
-            bgImg.color = tokens.surfaceLow;
-            bgImg.raycastTarget = false;
-
-            // Bar fill — gradient effect via accent_action (warm orange base).
-            var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fillGo.transform.SetParent(barRt, false);
-            var fillRt = (RectTransform)fillGo.transform;
-            fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
-            fillRt.offsetMin = new Vector2(4, 4); fillRt.offsetMax = new Vector2(-4, -4);
-            var fillImg = fillGo.GetComponent<Image>();
-            fillImg.color = tokens.accentAction;
-            fillImg.type = Image.Type.Filled;
-            fillImg.fillMethod = Image.FillMethod.Horizontal;
-            fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
-            fillImg.fillAmount = 0f;
-            fillImg.raycastTarget = false;
-
-            // Centered label — JetBrains Mono Bold for the numeric percentage.
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            lblGo.transform.SetParent(barRt, false);
-            var lblRt = (RectTransform)lblGo.transform;
-            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
-            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
-            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
-            lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = tokens.textPrimary;
-            lblTmp.font = tokens.NumbersFont;
-            lblTmp.fontSize = 28;
-            lblTmp.fontStyle = FontStyles.Bold;
-            lblTmp.text = "ÉLAN 0%";
-            lblTmp.raycastTarget = false;
-
-            var barView = bar.GetComponent<ElanBarView>();
-            barView.FillImage = fillImg;
-            barView.Label = lblTmp;
-            barView.PulseTarget = barRt;
-            barView.GlowImage = glowImg;
-
-            // Vague button (middle 60-78% of the row) — Primary CTA variant (gradient + pulse).
-            var btn = new GameObject("VagueButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VagueButtonView));
-            btn.transform.SetParent(rowRt, false);
-            var btnRt = (RectTransform)btn.transform;
-            btnRt.anchorMin = new Vector2(0.60f, 0);
-            btnRt.anchorMax = new Vector2(0.78f, 1);
-            btnRt.offsetMin = Vector2.zero;
-            btnRt.offsetMax = Vector2.zero;
-
-            var btnImg = btn.GetComponent<Image>();
-            // Sprint 7.5 A5: warm accent_action CTA color (glow pulses its alpha up to 1.0 when ready).
-            btnImg.color = new Color(tokens.accentAction.r, tokens.accentAction.g, tokens.accentAction.b, 0.7f);
-            btnImg.raycastTarget = true;
-
-            var btnGroup = btn.GetComponent<CanvasGroup>();
-            btnGroup.alpha = 0f;
-            btnGroup.blocksRaycasts = false;
-            btnGroup.interactable = false;
-
-            var btnLblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            btnLblGo.transform.SetParent(btnRt, false);
-            var btnLblRt = (RectTransform)btnLblGo.transform;
-            btnLblRt.anchorMin = Vector2.zero; btnLblRt.anchorMax = Vector2.one;
-            btnLblRt.offsetMin = Vector2.zero; btnLblRt.offsetMax = Vector2.zero;
-            var btnLblTmp = btnLblGo.GetComponent<TextMeshProUGUI>();
-            btnLblTmp.alignment = TextAlignmentOptions.Center;
-            btnLblTmp.color = new Color(0.10f, 0.08f, 0.04f, 1f);
-            btnLblTmp.fontSize = 40;
-            btnLblTmp.fontStyle = FontStyles.Bold;
-            btnLblTmp.text = "VAGUE";
-            btnLblTmp.raycastTarget = false;
-
-            var btnView = btn.GetComponent<VagueButtonView>();
-            btnView.Group = btnGroup;
-            btnView.Background = btnImg;
-            btnView.Label = btnLblTmp;
-            btnView.Root = btnRt;
-
-            return rowRt;
-        }
-
-        // -- Sprint 6 builders -------------------------------------------
-
-        private void BuildAffronterMaitreButton(RectTransform elanRow, AffronterMaitreModal modal)
-        {
-            if (elanRow == null) return;
-            var btn = new GameObject("AffronterMaitreButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(AffronterMaitreButtonView));
-            btn.transform.SetParent(elanRow, false);
-            var rt = (RectTransform)btn.transform;
-            rt.anchorMin = new Vector2(0.80f, 0);
-            rt.anchorMax = new Vector2(1f, 1);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
-            var img = btn.GetComponent<Image>();
-            img.color = new Color(0.85f, 0.65f, 0.28f, 0.6f); // gold-ish — distinct from Vague's ambre
-            img.raycastTarget = true;
-
-            var group = btn.GetComponent<CanvasGroup>();
-            group.alpha = 0f; group.blocksRaycasts = false; group.interactable = false;
-
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            lblGo.transform.SetParent(rt, false);
-            var lblRt = (RectTransform)lblGo.transform;
-            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
-            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
-            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
-            lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = new Color(0.10f, 0.08f, 0.04f, 1f);
-            lblTmp.fontSize = 22;
-            lblTmp.fontStyle = FontStyles.Bold;
-            lblTmp.text = "AFFRONTER\nUN MAÎTRE";
-            lblTmp.raycastTarget = false;
-
-            var view = btn.GetComponent<AffronterMaitreButtonView>();
-            view.Group = group;
-            view.Background = img;
-            view.Label = lblTmp;
-            view.Root = rt;
-            view.Modal = modal;
-        }
-
-        private void BuildSouffleButton(Canvas canvas)
-        {
-            var tokens = DesignTokens.Get();
-            var btn = new GameObject("SouffleButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(SouffleButtonView));
-            btn.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)btn.transform;
-            // Sprint 7.5 refonte : left side-rail mid-height (clear of the crowded top bar pills).
-            rt.anchorMin = new Vector2(0, 0.5f);
-            rt.anchorMax = new Vector2(0, 0.5f);
-            rt.pivot = new Vector2(0, 0.5f);
-            rt.anchoredPosition = new Vector2(16, 64);
-            rt.sizeDelta = new Vector2(132, 78);
-
-            // Sprint 7.5 A5: "Special" look — surface_mid bg + a 4px voie-colored border frame.
-            // SouffleButtonView uses IPointerClickHandler (not Button) so we can't SagaButton.Wrap it;
-            // we replicate the Special visual manually. Souffle is voie-neutral → use accent_primary border.
-            var border = new GameObject("Border", typeof(RectTransform), typeof(Image));
-            border.transform.SetParent(rt, false);
-            var borderRt = (RectTransform)border.transform;
-            borderRt.anchorMin = Vector2.zero; borderRt.anchorMax = Vector2.one;
-            borderRt.offsetMin = new Vector2(-3, -3); borderRt.offsetMax = new Vector2(3, 3);
-            var borderImg = border.GetComponent<Image>();
-            borderImg.color = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0.55f);
-            borderImg.raycastTarget = false;
-            border.transform.SetAsFirstSibling(); // behind the button fill
-
-            var img = btn.GetComponent<Image>();
-            img.color = tokens.surfaceMid;
-            img.raycastTarget = true;
-
-            var group = btn.GetComponent<CanvasGroup>();
-            group.alpha = 1f;
-            group.interactable = true;
-            group.blocksRaycasts = true;
-
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            lblGo.transform.SetParent(rt, false);
-            var lblRt = (RectTransform)lblGo.transform;
-            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
-            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
-            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
-            lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = new Color(0.98f, 0.98f, 0.98f, 1f);
-            lblTmp.fontSize = 22;
-            lblTmp.fontStyle = FontStyles.Bold;
-            lblTmp.text = "SOUFFLE";
-            lblTmp.raycastTarget = false;
-
-            var view = btn.GetComponent<SouffleButtonView>();
-            view.Group = group;
-            view.Background = img;
-            view.Label = lblTmp;
-            view.Root = rt;
-        }
 
         private AffronterMaitreModal BuildAffronterMaitreModal(Canvas canvas)
         {
@@ -815,7 +372,7 @@ namespace Saga.Core
             subRt.offsetMin = Vector2.zero; subRt.offsetMax = Vector2.zero;
             var subTmp = subGo.GetComponent<TextMeshProUGUI>();
             subTmp.alignment = TextAlignmentOptions.Center;
-            subTmp.color = TextSecondary;
+            subTmp.color = TextSecondaryColor;
             subTmp.fontSize = 38;
             subTmp.text = "";
             subTmp.raycastTarget = false;
@@ -827,7 +384,7 @@ namespace Saga.Core
             citRt.offsetMin = Vector2.zero; citRt.offsetMax = Vector2.zero;
             var citTmp = citGo.GetComponent<TextMeshProUGUI>();
             citTmp.alignment = TextAlignmentOptions.Center;
-            citTmp.color = TextPrimary;
+            citTmp.color = TextPrimaryColor;
             citTmp.fontSize = 32;
             citTmp.fontStyle = FontStyles.Italic;
             citTmp.text = "";
@@ -871,21 +428,21 @@ namespace Saga.Core
                 new Color(0.6f, 0.05f, 0.05f, 1f), 128, FontStyles.Bold);
             var subtitle = AddCinematicLabel(rt, "Subtitle",
                 new Vector2(0, 0.48f), new Vector2(1, 0.55f),
-                TextSecondary, 36, FontStyles.Normal);
+                TextSecondaryColor, 36, FontStyles.Normal);
             var maitreCit = AddCinematicLabel(rt, "MaitreCitation",
                 new Vector2(0.1f, 0.40f), new Vector2(0.9f, 0.47f),
-                TextPrimary, 30, FontStyles.Italic);
+                TextPrimaryColor, 30, FontStyles.Italic);
 
             var statsLine = AddCinematicLabel(rt, "StatsLine",
                 new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.60f),
-                TextPrimary, 28, FontStyles.Normal);
+                TextPrimaryColor, 28, FontStyles.Normal);
             var echos = AddCinematicLabel(rt, "EchosLabel",
                 new Vector2(0, 0.30f), new Vector2(1, 0.40f),
                 new Color(0.98f, 0.78f, 0.46f, 1f), 60, FontStyles.Bold);
 
             var heritage = AddCinematicLabel(rt, "Heritage",
                 new Vector2(0, 0.60f), new Vector2(1, 0.66f),
-                TextSecondary, 28, FontStyles.Normal);
+                TextSecondaryColor, 28, FontStyles.Normal);
             var playerCit = AddCinematicLabel(rt, "PlayerCitation",
                 new Vector2(0.1f, 0.45f), new Vector2(0.9f, 0.58f),
                 new Color(0.95f, 0.94f, 0.91f, 1f), 36, FontStyles.Italic);
@@ -983,7 +540,7 @@ namespace Saga.Core
             subRt.offsetMin = Vector2.zero; subRt.offsetMax = Vector2.zero;
             var subTmp = subGo.GetComponent<TextMeshProUGUI>();
             subTmp.alignment = TextAlignmentOptions.Center;
-            subTmp.color = TextSecondary;
+            subTmp.color = TextSecondaryColor;
             subTmp.fontSize = 36;
             subTmp.text = "";
             subTmp.raycastTarget = false;
@@ -995,7 +552,7 @@ namespace Saga.Core
             citRt.offsetMin = Vector2.zero; citRt.offsetMax = Vector2.zero;
             var citTmp = citGo.GetComponent<TextMeshProUGUI>();
             citTmp.alignment = TextAlignmentOptions.Center;
-            citTmp.color = TextPrimary;
+            citTmp.color = TextPrimaryColor;
             citTmp.fontSize = 32;
             citTmp.fontStyle = FontStyles.Italic;
             citTmp.text = "";
@@ -1041,7 +598,7 @@ namespace Saga.Core
             citRt.offsetMin = Vector2.zero; citRt.offsetMax = Vector2.zero;
             var citTmp = citGo.GetComponent<TextMeshProUGUI>();
             citTmp.alignment = TextAlignmentOptions.Center;
-            citTmp.color = TextPrimary;
+            citTmp.color = TextPrimaryColor;
             citTmp.fontSize = 38;
             citTmp.fontStyle = FontStyles.Italic;
             citTmp.text = "";
@@ -1067,22 +624,9 @@ namespace Saga.Core
             view.VictoryLabel = vicTmp;
         }
 
-        private void BuildAdversaire(Transform parent)
-        {
-            // Same position as mannequin — they're mutually exclusive (phase-driven visibility).
-            var go = new GameObject("Adversaire", typeof(SpriteRenderer), typeof(AdversaireWorldView));
-            go.transform.SetParent(parent, false);
-            go.transform.position = MannequinPosition;
-
-            var sr = go.GetComponent<SpriteRenderer>();
-            sr.sortingOrder = 5;
-            sr.color = new Color(1, 1, 1, 0); // start invisible
-
-            var view = go.GetComponent<AdversaireWorldView>();
-            view.Renderer = sr;
-
-            AdversaireTransform = go.transform;
-        }
+        // ============================================================
+        //  Combat overlays + bars
+        // ============================================================
 
         private static void BuildAdversaireProgressBar(Canvas canvas)
         {
@@ -1136,7 +680,7 @@ namespace Saga.Core
             labelRt.sizeDelta = new Vector2(0, 24);
             var labelTmp = label.GetComponent<TextMeshProUGUI>();
             labelTmp.alignment = TextAlignmentOptions.Center;
-            labelTmp.color = TextSecondary;
+            labelTmp.color = TextSecondaryColor;
             labelTmp.fontSize = 22;
             labelTmp.text = "Prochain adversaire";
             labelTmp.raycastTarget = false;
@@ -1177,7 +721,7 @@ namespace Saga.Core
             nameRt.sizeDelta = new Vector2(0, 50);
             var nameLabel = nameGo.GetComponent<TextMeshProUGUI>();
             nameLabel.alignment = TextAlignmentOptions.Center;
-            nameLabel.color = TextPrimary;
+            nameLabel.color = TextPrimaryColor;
             nameLabel.fontSize = 38;
             nameLabel.fontStyle = FontStyles.Bold;
             nameLabel.text = "";
@@ -1217,7 +761,7 @@ namespace Saga.Core
             hpLabelRt.offsetMin = Vector2.zero; hpLabelRt.offsetMax = Vector2.zero;
             var hpLabelTmp = hpLabel.GetComponent<TextMeshProUGUI>();
             hpLabelTmp.alignment = TextAlignmentOptions.Center;
-            hpLabelTmp.color = TextPrimary;
+            hpLabelTmp.color = TextPrimaryColor;
             hpLabelTmp.fontSize = 18;
             hpLabelTmp.text = "";
             hpLabelTmp.raycastTarget = false;
@@ -1232,7 +776,7 @@ namespace Saga.Core
             chronoRt.sizeDelta = new Vector2(200, 60);
             var chronoTmp = chrono.GetComponent<TextMeshProUGUI>();
             chronoTmp.alignment = TextAlignmentOptions.Center;
-            chronoTmp.color = TextPrimary;
+            chronoTmp.color = TextPrimaryColor;
             chronoTmp.fontSize = 48;
             chronoTmp.fontStyle = FontStyles.Bold;
             chronoTmp.text = "0:00";
@@ -1244,38 +788,6 @@ namespace Saga.Core
             view.HpLabel = hpLabelTmp;
             view.HpFill = hpFillImg;
             view.ChronoLabel = chronoTmp;
-        }
-
-        private static void BuildAdversaireSpawnView(Canvas canvas)
-        {
-            var root = new GameObject("AdversaireSpawnView",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireSpawnView));
-            root.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)root.transform;
-            rt.anchorMin = new Vector2(0, 0.55f); rt.anchorMax = new Vector2(1, 0.7f);
-            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-
-            var group = root.GetComponent<CanvasGroup>();
-            group.alpha = 0f;
-            group.interactable = false;
-            group.blocksRaycasts = false;
-
-            var label = new GameObject("Name", typeof(RectTransform), typeof(TextMeshProUGUI));
-            label.transform.SetParent(rt, false);
-            var labelRt = (RectTransform)label.transform;
-            labelRt.anchorMin = Vector2.zero; labelRt.anchorMax = Vector2.one;
-            labelRt.offsetMin = Vector2.zero; labelRt.offsetMax = Vector2.zero;
-            var labelTmp = label.GetComponent<TextMeshProUGUI>();
-            labelTmp.alignment = TextAlignmentOptions.Center;
-            labelTmp.color = new Color(0.98f, 0.78f, 0.46f, 1f); // ambre
-            labelTmp.fontSize = 96;
-            labelTmp.fontStyle = FontStyles.Bold;
-            labelTmp.text = "";
-            labelTmp.raycastTarget = false;
-
-            var view = root.GetComponent<AdversaireSpawnView>();
-            view.Group = group;
-            view.NameLabel = labelTmp;
         }
 
         private static void BuildDeathOverlay(Canvas canvas)
@@ -1321,7 +833,7 @@ namespace Saga.Core
             subRt.offsetMin = Vector2.zero; subRt.offsetMax = Vector2.zero;
             var subTmp = sub.GetComponent<TextMeshProUGUI>();
             subTmp.alignment = TextAlignmentOptions.Center;
-            subTmp.color = TextSecondary;
+            subTmp.color = TextSecondaryColor;
             subTmp.fontSize = 28;
             subTmp.fontStyle = FontStyles.Italic;
             subTmp.text = "";
@@ -1347,568 +859,63 @@ namespace Saga.Core
             view.Hint = hintTmp;
         }
 
-        private static void CleanLeftoverWorldSprites()
+        private static void BuildStadeTransitionOverlay(Canvas canvas)
         {
-            var existing = FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            if (existing == null || existing.Length == 0) return;
-            foreach (var sr in existing)
-            {
-                if (sr == null) continue;
-                Debug.LogWarning($"[MainSceneBootstrap] Destroying pre-existing SpriteRenderer '{sr.gameObject.name}' at {sr.transform.position} (sprite='{(sr.sprite != null ? sr.sprite.name : "null")}')");
-                Destroy(sr.gameObject);
-            }
+            var root = new GameObject("StadeTransition",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(StadeTransitionView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 0f;
+            group.interactable = false;
+            group.blocksRaycasts = false;
+
+            var bg = root.GetComponent<Image>();
+            bg.color = BgModalColor;
+            bg.raycastTarget = false;
+
+            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+            titleGo.transform.SetParent(root.transform, false);
+            var titleRt = (RectTransform)titleGo.transform;
+            titleRt.anchorMin = new Vector2(0.1f, 0.45f);
+            titleRt.anchorMax = new Vector2(0.9f, 0.6f);
+            titleRt.offsetMin = Vector2.zero;
+            titleRt.offsetMax = Vector2.zero;
+            var titleLabel = titleGo.GetComponent<TextMeshProUGUI>();
+            titleLabel.alignment = TextAlignmentOptions.Center;
+            titleLabel.color = TextPrimaryColor;
+            titleLabel.fontSize = 72;
+            titleLabel.fontStyle = FontStyles.Bold;
+            titleLabel.text = "";
+
+            var subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
+            subGo.transform.SetParent(root.transform, false);
+            var subRt = (RectTransform)subGo.transform;
+            subRt.anchorMin = new Vector2(0.1f, 0.38f);
+            subRt.anchorMax = new Vector2(0.9f, 0.45f);
+            subRt.offsetMin = Vector2.zero;
+            subRt.offsetMax = Vector2.zero;
+            var subLabel = subGo.GetComponent<TextMeshProUGUI>();
+            subLabel.alignment = TextAlignmentOptions.Center;
+            subLabel.color = TextSecondaryColor;
+            subLabel.fontSize = 36;
+            subLabel.text = "";
+
+            var view = root.GetComponent<StadeTransitionView>();
+            view.Overlay = group;
+            view.Background = bg;
+            view.Title = titleLabel;
+            view.Subtitle = subLabel;
         }
 
-        // -------- Camera + world ----------------------------------------
-
-        private static void EnsureMainCamera()
-        {
-            var cam = Camera.main;
-            if (cam == null)
-            {
-                var go = new GameObject("Main Camera", typeof(Camera));
-                go.tag = "MainCamera";
-                cam = go.GetComponent<Camera>();
-                go.transform.position = new Vector3(0, 0, -10);
-            }
-            cam.orthographic = true;
-            cam.orthographicSize = CameraOrthoSize;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            // Sprint 7.5 refonte : dusk violet (pas de noir) — visible seulement dans d'éventuels gaps.
-            cam.backgroundColor = new Color(0.23f, 0.14f, 0.31f, 1f);
-            cam.nearClipPlane = -10f;
-            cam.farClipPlane = 100f;
-        }
-
-        /// <summary>
-        /// Sprint 7.5 ambient background — 3 visual layers built in world space, behind everything.
-        ///   z=10 : radial gradient quad (procedural, dark center, deeper at edges — adds depth)
-        ///   z=9  : floor strip (procedural, dark wood gradient at the bottom — grounds the scene)
-        ///   z=8  : ambient ParticleSystem (subtle amber motes drifting up — "dojo qui respire")
-        /// All purely procedural so no art assets are required.
-        /// </summary>
-        private void BuildAmbientBackground(Transform parent)
-        {
-            var tokens = DesignTokens.Get();
-            var root = new GameObject("Ambient");
-            root.transform.SetParent(parent, false);
-
-            // Sprint 7.5 refonte : fond illustré coloré (Vibrant Quest). On charge le sprite depuis
-            // Resources/Backgrounds/dojo_bg (copié par 'Saga > Design > Generate Font Assets + Background').
-            // Fallback : gradient dusk procédural si le sprite n'est pas là.
-            var illustrated = Resources.Load<Sprite>("Backgrounds/dojo_bg");
-            var bgGo = new GameObject("BgIllustrated", typeof(SpriteRenderer));
-            bgGo.transform.SetParent(root.transform, false);
-            bgGo.transform.position = new Vector3(0, 0, 10f);
-            var bgSr = bgGo.GetComponent<SpriteRenderer>();
-            bgSr.sortingOrder = -10;
-            // Cover the ACTUAL camera frustum (+10% margin), not an arbitrary 13u — covering 13u tall
-            // while the ortho cam only shows 6u was zooming the bg ~2× ("gros plan"). Compute from cam.
-            var cam = Camera.main;
-            var viewH = (cam != null ? cam.orthographicSize : 3f) * 2f;
-            var aspect = (cam != null && cam.aspect > 0.01f) ? cam.aspect : (1080f / 1920f);
-            var viewW = viewH * aspect;
-            var coverW = viewW * 1.12f;
-            var coverH = viewH * 1.12f;
-
-            if (illustrated != null)
-            {
-                bgSr.sprite = illustrated;
-                var sp = illustrated.bounds.size;
-                if (sp.x > 0.01f && sp.y > 0.01f)
-                {
-                    var scale = Mathf.Max(coverW / sp.x, coverH / sp.y); // cover-fit (fills, crops overflow)
-                    bgGo.transform.localScale = new Vector3(scale, scale, 1f);
-                }
-            }
-            else
-            {
-                // Fallback dusk gradient (fun, coloré — pas de noir plat). 8-wide tex, 256-tall.
-                bgSr.sprite = CreateDuskGradientSprite();
-                var sp = bgSr.sprite.bounds.size;
-                bgGo.transform.localScale = new Vector3(coverW / Mathf.Max(0.01f, sp.x), coverH / Mathf.Max(0.01f, sp.y), 1f);
-            }
-
-            // Overlay gradient subtil haut+bas pour lisibilité de l'UI (léger, garde le fond visible).
-            var ovGo = new GameObject("BgOverlay", typeof(SpriteRenderer));
-            ovGo.transform.SetParent(root.transform, false);
-            ovGo.transform.position = new Vector3(0, 0, 9.5f);
-            var ovSr = ovGo.GetComponent<SpriteRenderer>();
-            ovSr.sprite = CreateVerticalShadeSprite();
-            ovSr.sortingOrder = -9;
-            var ovSp = ovSr.sprite.bounds.size;
-            ovGo.transform.localScale = new Vector3(coverW / Mathf.Max(0.01f, ovSp.x), coverH / Mathf.Max(0.01f, ovSp.y), 1f);
-
-            // Ambient particles (amber motes drifting up) — garde le côté vivant.
-            BuildAmbientParticles(root.transform, tokens);
-        }
-
-        /// <summary>Fallback dusk gradient (purple→pink→orange) when no illustrated bg is present.</summary>
-        private static Sprite CreateDuskGradientSprite()
-        {
-            const int w = 8, h = 256;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-            var top = new Color(1.00f, 0.60f, 0.42f);    // orange chaud
-            var mid = new Color(0.94f, 0.38f, 0.48f);    // rose
-            var bot = new Color(0.23f, 0.14f, 0.31f);    // violet sombre
-            var px = new Color32[w * h];
-            for (var y = 0; y < h; y++)
-            {
-                var t = y / (float)(h - 1); // 0 bottom → 1 top
-                Color c = t > 0.5f ? Color.Lerp(mid, top, (t - 0.5f) * 2f) : Color.Lerp(bot, mid, t * 2f);
-                for (var x = 0; x < w; x++) px[y * w + x] = c;
-            }
-            tex.SetPixels32(px); tex.Apply();
-            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32);
-            s.name = "DuskGradient";
-            return s;
-        }
-
-        /// <summary>Subtle top+bottom shade for UI legibility over the illustrated bg.</summary>
-        private static Sprite CreateVerticalShadeSprite()
-        {
-            const int w = 8, h = 256;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-            var px = new Color32[w * h];
-            for (var y = 0; y < h; y++)
-            {
-                var t = y / (float)(h - 1);
-                // darker at very top (8%) and very bottom (15%), clear in the middle.
-                var aTop = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.92f, 1f, t)) * 0.35f;
-                var aBot = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0f, t)) * 0.45f;
-                var a = Mathf.Max(aTop, aBot);
-                for (var x = 0; x < w; x++) px[y * w + x] = new Color32(10, 8, 14, (byte)(a * 255));
-            }
-            tex.SetPixels32(px); tex.Apply();
-            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 32);
-            s.name = "VerticalShade";
-            return s;
-        }
-
-        private static void BuildAmbientParticles(Transform parent, DesignTokens tokens)
-        {
-            var go = new GameObject("AmbientParticles", typeof(ParticleSystem));
-            go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(0, -2.5f, 8f);
-
-            var ps = go.GetComponent<ParticleSystem>();
-            // Sprint 7.5 fix: a freshly-added ParticleSystem auto-plays; mutating main.duration while
-            // it's playing throws "Setting the duration while system is still playing". Stop first.
-            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            var main = ps.main;
-            main.duration = 8f;
-            main.loop = true;
-            main.startLifetime = 6f;
-            main.startSpeed = 0.25f;
-            main.startSize = 0.04f;
-            main.startColor = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, 0.13f);
-            main.maxParticles = 40;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startRotation = 0f;
-            main.gravityModifier = -0.02f; // very slight upward drift
-
-            var emission = ps.emission;
-            emission.rateOverTime = 4.5f; // ~25-30 particles in flight at a time
-
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(5.5f, 0.2f, 1f); // emit along a horizontal strip at the bottom
-
-            // Fade in then out across lifetime.
-            var color = ps.colorOverLifetime;
-            color.enabled = true;
-            var grad = new Gradient();
-            grad.SetKeys(
-                new[] {
-                    new GradientColorKey(tokens.accentPrimary, 0f),
-                    new GradientColorKey(tokens.accentPrimary, 1f)
-                },
-                new[] {
-                    new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(0.15f, 0.3f),
-                    new GradientAlphaKey(0.10f, 0.7f),
-                    new GradientAlphaKey(0f, 1f)
-                });
-            color.color = grad;
-
-            // Renderer settings.
-            var r = ps.GetComponent<ParticleSystemRenderer>();
-            r.sortingOrder = -7;
-            r.material = new Material(Shader.Find("Sprites/Default"));
-
-            // Restart now that configuration is done (we stopped it above to set duration safely).
-            ps.Play();
-        }
-
-        /// <summary>Procedural radial gradient sprite (256×256) — bright center, dark edges.</summary>
-        private static Sprite CreateRadialGradientSprite(Color center, Color edge)
-        {
-            const int size = 256;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear
-            };
-            var pixels = new Color32[size * size];
-            var maxDist = size * 0.5f * 1.2f; // soft falloff
-            for (var y = 0; y < size; y++)
-            {
-                for (var x = 0; x < size; x++)
-                {
-                    var dx = x - size * 0.5f;
-                    var dy = y - size * 0.5f;
-                    var d = Mathf.Sqrt(dx * dx + dy * dy);
-                    var t = Mathf.Clamp01(d / maxDist);
-                    // Ease out so the bright center has more presence.
-                    t = t * t;
-                    var c = Color.Lerp(center, edge, t);
-                    pixels[y * size + x] = c;
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply();
-            var s = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), pixelsPerUnit: 32);
-            s.name = "RadialGradientBg";
-            return s;
-        }
-
-        /// <summary>
-        /// Procedural floor sprite: vertical gradient from dark wood to almost-black, with subtle
-        /// vertical plank divisions. 256×64.
-        /// </summary>
-        private static Sprite CreateFloorSprite()
-        {
-            const int w = 256, h = 64;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var top = new Color32(42, 26, 16, 255);     // #2a1a10
-            var bottom = new Color32(26, 14, 8, 255);    // #1a0e08
-            var plank = new Color32(18, 10, 6, 255);
-            var pixels = new Color32[w * h];
-            // 6 planks
-            for (var y = 0; y < h; y++)
-            {
-                var t = 1f - (y / (float)h); // y=0 bottom -> t=1, y=h-1 top -> t=~0
-                var rowColor = new Color32(
-                    (byte)Mathf.Lerp(bottom.r, top.r, 1f - t),
-                    (byte)Mathf.Lerp(bottom.g, top.g, 1f - t),
-                    (byte)Mathf.Lerp(bottom.b, top.b, 1f - t),
-                    255);
-                for (var x = 0; x < w; x++)
-                {
-                    // Subtle plank divisions every ~42px.
-                    var isDivider = (x % 42) < 2;
-                    pixels[y * w + x] = isDivider ? plank : rowColor;
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply();
-            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), pixelsPerUnit: 32);
-            s.name = "FloorProcedural";
-            return s;
-        }
-
-        private void BuildCharacter(Transform parent)
-        {
-            // Sprint 7: layered character = 3 stacked SpriteRenderers (Body / Armor / Weapon),
-            // driven by a single LayeredCharacterRenderer on the root. SaveService.Migrate guarantees
-            // equippedBodyId defaults to body_chibi_neutral so the body slot is always visible.
-            //
-            // Sprint 7.5 fix: if the body SpriteLayerSet hasn't been generated yet (Editor utility
-            // not run, or rvros sprites missing), fall back to a runtime placeholder so the player
-            // is never invisible. Logs a warning telling the user how to fix it permanently.
-            var go = new GameObject("Character", typeof(LayeredCharacterRenderer), typeof(CharacterView));
-            go.transform.SetParent(parent, false);
-            go.transform.position = CharacterPosition;
-
-            // Ground shadow under the character. Built on a child so the parent's CharacterView
-            // breathing scale doesn't squash the shadow with it (child compensates via inverse scale).
-            BuildGroundShadow(go.transform, scale: new Vector3(0.45f, 0.22f, 1f));
-
-            var body = new GameObject("Body", typeof(SpriteRenderer));
-            body.transform.SetParent(go.transform, false);
-            var bodySr = body.GetComponent<SpriteRenderer>();
-            bodySr.sortingOrder = 5;
-
-            var armor = new GameObject("Armor", typeof(SpriteRenderer));
-            armor.transform.SetParent(go.transform, false);
-            var armorSr = armor.GetComponent<SpriteRenderer>();
-            armorSr.sortingOrder = 6;
-
-            var weapon = new GameObject("Weapon", typeof(SpriteRenderer));
-            weapon.transform.SetParent(go.transform, false);
-            var weaponSr = weapon.GetComponent<SpriteRenderer>();
-            weaponSr.sortingOrder = 7;
-
-            var renderer = go.GetComponent<LayeredCharacterRenderer>();
-            renderer.BodyRenderer = bodySr;
-            renderer.ArmorRenderer = armorSr;
-            renderer.WeaponRenderer = weaponSr;
-
-            var gm = GameManager.Instance;
-            var content = gm?.Content;
-            var state = gm?.State;
-
-            // Resolve body layer with safety fallback.
-            SpriteLayerSet bodyLayer = null;
-            if (content != null && state != null)
-                bodyLayer = content.GetSpriteLayerSet(state.equippedBodyId);
-            if (bodyLayer == null || bodyLayer.SpriteIdle == null || bodyLayer.SpriteIdle.Length == 0)
-            {
-                Debug.LogWarning("[MainSceneBootstrap] body_chibi_neutral SpriteLayerSet missing or has no idle frames — using runtime placeholder. Run 'Saga > Sprint 7 > Generate Sprite Layer Sets' to populate proper sprites.");
-                bodyLayer = CreatePlaceholderBodyLayerSet();
-            }
-
-            renderer.SetLayer(EquipmentSlot.Body, bodyLayer);
-            renderer.SetLayer(EquipmentSlot.Armor, content?.GetSpriteLayerSet(state?.equippedArmorId));
-            renderer.SetLayer(EquipmentSlot.Weapon, content?.GetSpriteLayerSet(state?.equippedWeaponId));
-
-            var view = go.GetComponent<CharacterView>();
-            view.Renderer = renderer;
-            // Sprint 7.5 fix: set base scale AFTER construction (Awake/OnEnable already ran during
-            // `new GameObject`). 2x so the chibi reads at ~60% of the mannequin height in portrait.
-            view.SetBaseScale(new Vector3(2f, 2f, 1f));
-
-            CharacterTransform = go.transform;
-        }
-
-        /// <summary>
-        /// Runtime fallback used when the body SpriteLayerSet asset is missing. Produces a
-        /// 64×96 ambre rectangle so the character is at least visible at the canonical
-        /// CharacterPosition. Replaced as soon as the player equips a real body layer set.
-        /// </summary>
-        private static SpriteLayerSet CreatePlaceholderBodyLayerSet()
-        {
-            var sprite = CreatePlaceholderBodySprite();
-            return SpriteLayerSet.CreateRuntime(
-                id: EquipmentConstants.DefaultBodyId,
-                slot: EquipmentSlot.Body,
-                idle: new[] { sprite },
-                displayName: "Corps (placeholder)");
-        }
-
-        private static Sprite CreatePlaceholderBodySprite()
-        {
-            // 64×96 ambre block with a subtle darker outline so the silhouette reads as
-            // "humanoid placeholder" without faking detail.
-            const int w = 64;
-            const int h = 96;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var amber = new Color32(250, 199, 117, 255);     // 0.98, 0.78, 0.46
-            var outline = new Color32(160, 110, 60, 255);
-            var pixels = new Color32[w * h];
-            for (var y = 0; y < h; y++)
-            {
-                for (var x = 0; x < w; x++)
-                {
-                    var isEdge = x == 0 || x == w - 1 || y == 0 || y == h - 1;
-                    pixels[y * w + x] = isEdge ? outline : amber;
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply();
-            var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), pixelsPerUnit: 32);
-            sprite.name = "BodyPlaceholderProcedural";
-            return sprite;
-        }
-
-        private void BuildMannequin(Transform parent)
-        {
-            var go = new GameObject("Mannequin", typeof(SpriteRenderer), typeof(MannequinView));
-            go.transform.SetParent(parent, false);
-            go.transform.position = MannequinPosition;
-            go.transform.localScale = new Vector3(MannequinScale, MannequinScale, 1f);
-
-            var sr = go.GetComponent<SpriteRenderer>();
-            sr.sprite = CreateMannequinSprite();
-            sr.color = Color.white;
-            sr.sortingOrder = 5;
-
-            // Sprint 7.5: subtle ground shadow + gentle sway DOTween so the dojo feels alive.
-            BuildGroundShadow(go.transform, scale: new Vector3(1.3f, 0.7f, 1f), yOffset: 0.02f);
-
-            // Slow ±2° rotation, infinite yoyo. SetLink ensures the tween dies with the GO.
-            go.transform.rotation = Quaternion.Euler(0, 0, -2f);
-            go.transform.DORotate(new Vector3(0, 0, 2f), 2.4f)
-                .SetEase(Ease.InOutSine)
-                .SetLoops(-1, LoopType.Yoyo)
-                .SetLink(go, LinkBehaviour.KillOnDestroy);
-
-            MannequinTransform = go.transform;
-        }
-
-        /// <summary>
-        /// Adds a soft elliptical shadow at the feet of a world entity. Sorted just above the floor
-        /// (-7) and below all character/mannequin/adversaire renderers (5+).
-        /// </summary>
-        private static SpriteRenderer BuildGroundShadow(Transform parent, Vector3 scale, float yOffset = 0f)
-        {
-            var go = new GameObject("Shadow", typeof(SpriteRenderer));
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0, yOffset, 0.1f);
-            go.transform.localScale = scale;
-            var sr = go.GetComponent<SpriteRenderer>();
-            sr.sprite = CreateShadowSprite();
-            sr.sortingOrder = -5; // above floor (-8/-7), below characters (5+)
-            return sr;
-        }
-
-        private void BuildSlashFxSpawner(Transform parent)
-        {
-            var go = new GameObject("SlashFxSpawner", typeof(SlashFxSpawner));
-            go.transform.SetParent(parent, false);
-            var s = go.GetComponent<SlashFxSpawner>();
-            s.CharacterTransform = CharacterTransform;
-            s.MannequinTransform = MannequinTransform;
-        }
-
-        /// <summary>
-        /// Sprint 7.5 mannequin redesign — 3 distinct sections (head sphere / torso cylinder / wider socle)
-        /// with cordage rings, dark wood gradient and subtle edge shadow. 80×140 procedural.
-        /// </summary>
-        private static Sprite CreateMannequinSprite()
-        {
-            const int w = 80, h = 140;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Point,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var pixels = new Color32[w * h];
-
-            // Wood palette (dark base, lighter highlights along the centerline).
-            var woodBase = new Color32(58, 42, 24, 255);    // #3a2a18
-            var woodLight = new Color32(90, 64, 40, 255);   // #5a4028 — center highlight
-            var woodDark = new Color32(34, 22, 12, 255);    // edge shadow
-            var cord = new Color32(15, 9, 5, 255);          // pitch black cordage
-
-            // Section heights (from bottom).
-            const int socleTop = 22;   // 0..22  : socle (wider)
-            const int torsoTop = 100;  // 22..100 : torso (medium cylinder)
-            // 100..140 : head (narrowest, capped silhouette)
-
-            for (var y = 0; y < h; y++)
-            {
-                for (var x = 0; x < w; x++)
-                {
-                    var dx = Mathf.Abs(x - w * 0.5f);
-
-                    float halfWidth;
-                    if (y < socleTop)
-                    {
-                        // Socle: widest at the bottom, tapers slightly up.
-                        var t = y / (float)socleTop;
-                        halfWidth = Mathf.Lerp(0.40f, 0.32f, t) * w;
-                    }
-                    else if (y < torsoTop)
-                    {
-                        // Torso: medium cylinder with a very subtle barrel.
-                        var t = (y - socleTop) / (float)(torsoTop - socleTop);
-                        halfWidth = (0.26f + 0.02f * Mathf.Sin(t * Mathf.PI)) * w;
-                    }
-                    else
-                    {
-                        // Head: smaller sphere capped on top.
-                        var t = (y - torsoTop) / (float)(h - torsoTop);
-                        // Half-circle outline.
-                        var r = 0.22f * w;
-                        var dyHead = (y - torsoTop) - r * 0.6f;
-                        var dist = Mathf.Sqrt(dx * dx + dyHead * dyHead);
-                        if (dist > r) { pixels[y * w + x] = new Color32(0, 0, 0, 0); continue; }
-                        halfWidth = w; // already inside the circle test
-                    }
-
-                    var inside = dx <= halfWidth;
-                    if (!inside) { pixels[y * w + x] = new Color32(0, 0, 0, 0); continue; }
-
-                    // Vertical highlight along the centerline → 3D feel.
-                    var centerWeight = 1f - Mathf.Clamp01(dx / Mathf.Max(1f, halfWidth));
-                    var edgeWeight = 1f - centerWeight;
-                    var r2 = (byte)Mathf.Lerp(woodBase.r, woodLight.r, centerWeight * 0.6f);
-                    var g2 = (byte)Mathf.Lerp(woodBase.g, woodLight.g, centerWeight * 0.6f);
-                    var b2 = (byte)Mathf.Lerp(woodBase.b, woodLight.b, centerWeight * 0.6f);
-                    if (edgeWeight > 0.85f)
-                    {
-                        r2 = woodDark.r; g2 = woodDark.g; b2 = woodDark.b;
-                    }
-
-                    // Cordage rings: thin horizontal stripes at torso y=42, y=72.
-                    var isCord = (y == 42 || y == 43 || y == 72 || y == 73) && y > socleTop && y < torsoTop;
-                    if (isCord) { r2 = cord.r; g2 = cord.g; b2 = cord.b; }
-
-                    pixels[y * w + x] = new Color32(r2, g2, b2, 255);
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply();
-            // PPU 32: 80×140 px → 2.5×4.375 world units. Pivot bottom-center keeps the socle on the floor.
-            var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), pixelsPerUnit: 32);
-            sprite.name = "MannequinProcedural";
-            return sprite;
-        }
-
-        /// <summary>Soft black ellipse — used as ground shadow under the player + mannequin.</summary>
-        private static Sprite CreateShadowSprite()
-        {
-            const int w = 96, h = 32;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
-            {
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
-            };
-            var pixels = new Color32[w * h];
-            for (var y = 0; y < h; y++)
-            {
-                for (var x = 0; x < w; x++)
-                {
-                    var dx = (x - w * 0.5f) / (w * 0.5f);
-                    var dy = (y - h * 0.5f) / (h * 0.5f);
-                    var d = Mathf.Sqrt(dx * dx + dy * dy);
-                    var a = Mathf.Clamp01(1f - d);
-                    a = a * a * 0.55f; // softer falloff
-                    pixels[y * w + x] = new Color32(0, 0, 0, (byte)(a * 255));
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply();
-            var s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), pixelsPerUnit: 96);
-            s.name = "ShadowEllipseProcedural";
-            return s;
-        }
-
-        // -------- UI Canvas ---------------------------------------------
-
-        private static void BuildEventSystem()
-        {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
-            var es = new GameObject("EventSystem");
-            es.AddComponent<EventSystem>();
-            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-        }
-
-        private static Canvas BuildCanvas()
-        {
-            var go = new GameObject("MainCanvas",
-                typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            var canvas = go.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 0;
-
-            var scaler = go.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080, 1920);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
-
-            return canvas;
-        }
+        // ============================================================
+        //  Top-of-canvas widgets (Force pill / Combo / Tap handler)
+        // ============================================================
 
         private static void BuildForceCounter(Canvas canvas)
         {
@@ -1972,155 +979,16 @@ namespace Saga.Core
             view.Label = label;
         }
 
-        private static void BuildComboMeter(Canvas canvas)
-        {
-            var root = new GameObject("ComboMeter", typeof(RectTransform), typeof(CanvasGroup), typeof(ComboMeterView));
-            root.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)root.transform;
-            // Sprint 7.5 refonte : sous la Force pill (top-left) pour ne pas heurter Échos pill + settings (top-right).
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(24, -92);
-            rt.sizeDelta = new Vector2(220, 60);
-
-            var group = root.GetComponent<CanvasGroup>();
-            group.alpha = 0f;
-            group.interactable = false;
-            group.blocksRaycasts = false;
-
-            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            labelGo.transform.SetParent(root.transform, false);
-            var labelRt = (RectTransform)labelGo.transform;
-            labelRt.anchorMin = Vector2.zero;
-            labelRt.anchorMax = Vector2.one;
-            labelRt.offsetMin = Vector2.zero;
-            labelRt.offsetMax = Vector2.zero;
-
-            var label = labelGo.GetComponent<TextMeshProUGUI>();
-            label.alignment = TextAlignmentOptions.MidlineRight;
-            label.color = TextSecondary;
-            label.fontSize = 56;
-            label.text = "x1.0";
-
-            var view = root.GetComponent<ComboMeterView>();
-            view.Label = label;
-            view.Group = group;
-        }
-
         private static void BuildTapHandler(Canvas canvas)
         {
             var go = new GameObject("TapHandler", typeof(TapHandler));
             go.transform.SetParent(canvas.transform, false);
         }
 
-        private void BuildTapFxSpawner(Canvas canvas)
-        {
-            var go = new GameObject("TapFxSpawner", typeof(TapFxSpawner));
-            go.transform.SetParent(canvas.transform, false);
-            var spawner = go.GetComponent<TapFxSpawner>();
-            spawner.Init(canvas);
-            // Combat "-X" damage numbers spawn from the enemy anchor. Adversaire + Capitaine share
-            // the same world position, so either transform works — we pick Adversaire by convention.
-            spawner.EnemyAnchor = AdversaireTransform;
-        }
-
-        private static void BuildUpgradePanel(Canvas canvas)
-        {
-            var gm = GameManager.Instance;
-            if (gm?.Content == null) return;
-            var upgrades = gm.Content.AllUpgrades;
-            if (upgrades == null || upgrades.Count == 0)
-            {
-                Debug.LogWarning("[MainSceneBootstrap] No upgrades in ContentDatabase — run menu \"Saga > Sprint 2 > Generate Upgrade Assets\" then reload Play.");
-                return;
-            }
-
-            // Sprint 5 round-2: switched from absolute (sizeDelta 220px, anchoredPosition 96px)
-            // Sprint 7.5 portrait pivot : cards stack VERTICALLY (was a 3-column row in landscape).
-            // Band 8-34% from bottom of screen = ~500px on a 1920 canvas → ~165px per card.
-            var panel = new GameObject("UpgradePanel", typeof(RectTransform));
-            panel.transform.SetParent(canvas.transform, false);
-            var panelRt = (RectTransform)panel.transform;
-            panelRt.anchorMin = new Vector2(0.04f, 0.08f);
-            panelRt.anchorMax = new Vector2(0.96f, 0.34f);
-            panelRt.offsetMin = Vector2.zero;
-            panelRt.offsetMax = Vector2.zero;
-
-            var count = upgrades.Count;
-            var frac = 1f / count;
-            for (var i = 0; i < count; i++)
-            {
-                var card = new GameObject($"Card_{upgrades[i].UpgradeId}", typeof(RectTransform), typeof(UpgradeCardView));
-                card.transform.SetParent(panelRt, false);
-                var rt = (RectTransform)card.transform;
-                // Stack top->bottom: card 0 at top, card N-1 at bottom.
-                // Unity anchors: y=1 is top, y=0 is bottom. Card i occupies (1 - (i+1)*frac) .. (1 - i*frac).
-                rt.anchorMin = new Vector2(0, 1f - (i + 1) * frac);
-                rt.anchorMax = new Vector2(1, 1f - i * frac);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.offsetMin = new Vector2(8, 6);
-                rt.offsetMax = new Vector2(-8, -6);
-
-                card.GetComponent<UpgradeCardView>().Init(upgrades[i]);
-            }
-        }
-
-        private static void BuildStadeTransitionOverlay(Canvas canvas)
-        {
-            var root = new GameObject("StadeTransition",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(StadeTransitionView));
-            root.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)root.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
-            var group = root.GetComponent<CanvasGroup>();
-            group.alpha = 0f;
-            group.interactable = false;
-            group.blocksRaycasts = false;
-
-            var bg = root.GetComponent<Image>();
-            bg.color = BgModal;
-            bg.raycastTarget = false;
-
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
-            titleGo.transform.SetParent(root.transform, false);
-            var titleRt = (RectTransform)titleGo.transform;
-            titleRt.anchorMin = new Vector2(0.1f, 0.45f);
-            titleRt.anchorMax = new Vector2(0.9f, 0.6f);
-            titleRt.offsetMin = Vector2.zero;
-            titleRt.offsetMax = Vector2.zero;
-            var titleLabel = titleGo.GetComponent<TextMeshProUGUI>();
-            titleLabel.alignment = TextAlignmentOptions.Center;
-            titleLabel.color = TextPrimary;
-            titleLabel.fontSize = 72;
-            titleLabel.fontStyle = FontStyles.Bold;
-            titleLabel.text = "";
-
-            var subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
-            subGo.transform.SetParent(root.transform, false);
-            var subRt = (RectTransform)subGo.transform;
-            subRt.anchorMin = new Vector2(0.1f, 0.38f);
-            subRt.anchorMax = new Vector2(0.9f, 0.45f);
-            subRt.offsetMin = Vector2.zero;
-            subRt.offsetMax = Vector2.zero;
-            var subLabel = subGo.GetComponent<TextMeshProUGUI>();
-            subLabel.alignment = TextAlignmentOptions.Center;
-            subLabel.color = TextSecondary;
-            subLabel.fontSize = 36;
-            subLabel.text = "";
-
-            var view = root.GetComponent<StadeTransitionView>();
-            view.Overlay = group;
-            view.Background = bg;
-            view.Title = titleLabel;
-            view.Subtitle = subLabel;
-        }
-
-        // -------- Sprint 7: Inventaire ----------------------------------
+        // ============================================================
+        //  Sprint 7 — equipment inventory modal (kept in Bootstrap; the
+        //  bottom-nav-adjacent "Inventaire" button lives in BottomNavBuilder).
+        // ============================================================
 
         private EquipmentInventoryModal BuildEquipmentInventoryModal(Canvas canvas)
         {
@@ -2197,40 +1065,64 @@ namespace Saga.Core
             return modal;
         }
 
-        private void BuildInventaireButton(Canvas canvas, EquipmentInventoryModal modal)
+        // ============================================================
+        //  Camera + Canvas + EventSystem scaffolding
+        // ============================================================
+
+        private static void CleanLeftoverWorldSprites()
         {
-            var tokens = DesignTokens.Get();
-            var btn = new GameObject("InventaireButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(Button));
-            btn.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)btn.transform;
-            // Sprint 7.5 refonte : left side-rail, below the Souffle button (clear of top bar pills).
-            rt.anchorMin = new Vector2(0f, 0.5f);
-            rt.anchorMax = new Vector2(0f, 0.5f);
-            rt.pivot = new Vector2(0f, 0.5f);
-            rt.anchoredPosition = new Vector2(16, -24);
-            rt.sizeDelta = new Vector2(132, 72);
+            var existing = FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (existing == null || existing.Length == 0) return;
+            foreach (var sr in existing)
+            {
+                if (sr == null) continue;
+                Debug.LogWarning($"[MainSceneBootstrap] Destroying pre-existing SpriteRenderer '{sr.gameObject.name}' at {sr.transform.position} (sprite='{(sr.sprite != null ? sr.sprite.name : "null")}')");
+                Destroy(sr.gameObject);
+            }
+        }
 
-            var img = btn.GetComponent<Image>();
-            img.color = tokens.surfaceMid;
-            img.raycastTarget = true;
+        private static void EnsureMainCamera()
+        {
+            var cam = Camera.main;
+            if (cam == null)
+            {
+                var go = new GameObject("Main Camera", typeof(Camera));
+                go.tag = "MainCamera";
+                cam = go.GetComponent<Camera>();
+                go.transform.position = new Vector3(0, 0, -10);
+            }
+            cam.orthographic = true;
+            cam.orthographicSize = CameraOrthoSize;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            // Sprint 7.5 refonte : dusk violet (pas de noir) — visible seulement dans d'éventuels gaps.
+            cam.backgroundColor = new Color(0.23f, 0.14f, 0.31f, 1f);
+            cam.nearClipPlane = -10f;
+            cam.farClipPlane = 100f;
+        }
 
-            var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            lblGo.transform.SetParent(rt, false);
-            var lblRt = (RectTransform)lblGo.transform;
-            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
-            lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
-            var lblTmp = lblGo.GetComponent<TextMeshProUGUI>();
-            lblTmp.alignment = TextAlignmentOptions.Center;
-            lblTmp.color = tokens.textPrimary;
-            lblTmp.font = tokens.PrimaryFont;
-            lblTmp.fontSize = tokens.fontH3;
-            lblTmp.fontStyle = FontStyles.Bold;
-            lblTmp.text = "INVENTAIRE";
-            lblTmp.raycastTarget = false;
+        private static void BuildEventSystem()
+        {
+            if (FindFirstObjectByType<EventSystem>() != null) return;
+            var es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        }
 
-            btn.GetComponent<Button>().onClick.AddListener(modal.Open);
-            SagaButton.Wrap(btn, SagaButton.Variant.Standard);
+        private static Canvas BuildCanvas()
+        {
+            var go = new GameObject("MainCanvas",
+                typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 0;
+
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1080, 1920);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            return canvas;
         }
     }
 }
