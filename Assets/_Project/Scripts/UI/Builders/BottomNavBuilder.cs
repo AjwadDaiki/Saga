@@ -39,11 +39,11 @@ namespace Saga.UI.Builders
             var nav = new GameObject("BottomNav", typeof(RectTransform), typeof(Image));
             nav.transform.SetParent(parent, false);
             var rt = (RectTransform)nav.transform;
+            // Phase 4 wireframe SAGA §6 — bottom nav 10% (192 ref) hauteur, 16 px inset latéral.
+            // sizeDelta.x = -32 retire 16 + 16 px aux côtés du parent (lateral inset).
             rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(0.5f, 0f);
             rt.anchoredPosition = Vector2.zero;
-            // DIRECTION_ARTISTIQUE.md §3.2 — bottom nav 10-12 % de l'écran. À 1920 ref c'est ~220 px.
-            // Le SafeAreaContainer parent gère déjà la home bar iPhone (~68 px) → 220 px utiles.
-            rt.sizeDelta = new Vector2(0, 220);
+            rt.sizeDelta = new Vector2(-32, 192);
             var bg = nav.GetComponent<Image>();
             bg.color = DesignTokens.Darken(tokens.panelClair, 0.15f);
 
@@ -66,9 +66,11 @@ namespace Saga.UI.Builders
                 tab.transform.SetParent(nav.transform, false);
                 var trt = (RectTransform)tab.transform;
                 trt.anchorMin = new Vector2(i * frac, 0); trt.anchorMax = new Vector2((i + 1) * frac, 1);
-                // Active tab raised + colored card; inactive transparent.
-                trt.offsetMin = new Vector2(8, active ? 18 : 30);
-                trt.offsetMax = new Vector2(-8, active ? -8 : -24);
+                // Phase 4 §6 — onglet 160 px haut (192 - 16*2 padding). Active Dojo lifted +12 px
+                // (offsetMin.y 16→28, offsetMax.y -16→-4) puis scale 1.05.
+                trt.offsetMin = new Vector2(0, active ? 28 : 16);
+                trt.offsetMax = new Vector2(0, active ? -4 : -16);
+                if (active) trt.localScale = new Vector3(1.05f, 1.05f, 1f);
                 var timg = tab.GetComponent<Image>();
                 if (active)
                 {
@@ -77,18 +79,18 @@ namespace Saga.UI.Builders
                 }
                 else timg.color = new Color(0, 0, 0, 0);
 
-                // Procedural icon (top half of the tab).
-                BuildTabIcon(tab.transform, labels[i], iconColors[i], tokens);
+                // Phase 4 §6 — icône 80×80 px en haut.
+                BuildTabIcon(tab.transform, labels[i], iconColors[i], tokens, diameter: 80f);
 
-                // Label (bottom strip).
+                // Phase 4 §6 — label 24 px sous l'icône, bas du tab.
                 var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
                 lbl.transform.SetParent(tab.transform, false);
                 var lrt = (RectTransform)lbl.transform;
-                lrt.anchorMin = new Vector2(0, 0); lrt.anchorMax = new Vector2(1, 0.35f);
-                lrt.offsetMin = Vector2.zero; lrt.offsetMax = Vector2.zero;
+                lrt.anchorMin = new Vector2(0, 0); lrt.anchorMax = new Vector2(1, 0); lrt.pivot = new Vector2(0.5f, 0f);
+                lrt.sizeDelta = new Vector2(0, 30); lrt.anchoredPosition = new Vector2(0, 8);
                 var tmp = lbl.GetComponent<TextMeshProUGUI>();
                 tmp.alignment = TextAlignmentOptions.Center; tmp.font = tokens.PrimaryFont;
-                tmp.fontSize = tokens.fontSmall; tmp.fontStyle = FontStyles.Bold;
+                tmp.fontSize = 24; tmp.fontStyle = FontStyles.Bold;
                 tmp.color = active ? tokens.navyContour : tokens.panelSombre2;
                 tmp.text = labels[i];
                 tmp.outlineColor = tokens.navyContour;
@@ -108,18 +110,20 @@ namespace Saga.UI.Builders
         //  Replaces the emoji glyphs 🛒🥋⚔✦🏆 that rendered as missing tofu in SDF Latin fonts.
         // ====================================================================================
 
-        private static void BuildTabIcon(Transform parent, string label, Color iconColor, DesignTokens tokens)
+        private static void BuildTabIcon(Transform parent, string label, Color iconColor, DesignTokens tokens, float diameter = 80f)
         {
             var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(parent, false);
             var rt = (RectTransform)icon.transform;
-            rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0, 16);
-            rt.sizeDelta = new Vector2(36, 36);
+            // Phase 4 §6 — icône en haut du tab (8 px sous le top edge).
+            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -8);
+            rt.sizeDelta = new Vector2(diameter, diameter);
 
+            var radius = Mathf.RoundToInt(diameter / 2f);
             var bg = icon.GetComponent<Image>();
-            bg.sprite = PuffySprite.RoundedFill(18);
+            bg.sprite = PuffySprite.RoundedFill(radius);
             bg.type = Image.Type.Sliced;
             bg.color = iconColor;
             bg.raycastTarget = false;
@@ -131,13 +135,23 @@ namespace Saga.UI.Builders
             olRt.anchorMin = Vector2.zero; olRt.anchorMax = Vector2.one;
             olRt.offsetMin = Vector2.zero; olRt.offsetMax = Vector2.zero;
             var olImg = outline.GetComponent<Image>();
-            olImg.sprite = PuffySprite.RoundedOutline(18, 2);
+            olImg.sprite = PuffySprite.RoundedOutline(radius, 4);
             olImg.type = Image.Type.Sliced;
             olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
-            // White glyph centered inside.
-            BuildGlyph(rt, label);
+            // Glyph container kept at original 36 ref size; localScale matches icon diameter
+            // so existing glyph layouts inside BuildGlyph stay valid for any icon size.
+            var glyphContainer = new GameObject("GlyphContainer", typeof(RectTransform));
+            glyphContainer.transform.SetParent(rt, false);
+            var gcRt = (RectTransform)glyphContainer.transform;
+            gcRt.anchorMin = new Vector2(0.5f, 0.5f); gcRt.anchorMax = new Vector2(0.5f, 0.5f);
+            gcRt.pivot = new Vector2(0.5f, 0.5f);
+            gcRt.sizeDelta = new Vector2(36, 36);
+            gcRt.anchoredPosition = Vector2.zero;
+            gcRt.localScale = Vector3.one * (diameter / 36f);
+
+            BuildGlyph(gcRt, label);
         }
 
         private static void BuildGlyph(Transform parent, string label)
