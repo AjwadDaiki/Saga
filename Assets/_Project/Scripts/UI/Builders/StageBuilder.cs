@@ -1,14 +1,253 @@
+using Saga.Data;
+using Saga.UI;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
 namespace Saga.UI.Builders
 {
     /// <summary>
-    /// Zone 3 placeholder — Phase 3 will populate this with the stage chip + boss skull bar.
-    /// Currently a no-op so the bootstrap can wire the call site now.
+    /// Sprint 7.5 refonte zone 3 — stage chip + boss progress bar.
+    ///
+    /// Mockup (saga_target_spec.md §2) :
+    ///   - Pill "Stade N" charcoal anthracite + crâne rouge débordant à gauche
+    ///   - Barre progression verte glossy avec crâne rouge marker à droite
+    ///
+    /// Le bar reuse <see cref="AdversaireProgressBarView"/> (Sprint 4 component que SaveService déjà
+    /// alimente via GameEvents) — on le re-skin puffy 3D au lieu de l'ambre flat précédent.
     /// </summary>
     public static class StageBuilder
     {
         public static void Build(BuilderContext ctx)
         {
-            // Zone 3 — TODO Phase 3 (stage chip + boss skull bar).
+            var canvas = ctx.Canvas;
+            var tokens = ctx.Tokens;
+            if (canvas == null || tokens == null) return;
+
+            BuildStageChip(canvas, tokens);
+            BuildBossProgressBar(canvas, tokens);
+        }
+
+        // ====================================================================================
+        //  STAGE CHIP — pill charcoal + red skull icon + "Stade N" label.
+        // ====================================================================================
+
+        private static void BuildStageChip(Canvas canvas, DesignTokens tokens)
+        {
+            var chip = new GameObject("StageChip", typeof(RectTransform), typeof(Image), typeof(StagePillView));
+            chip.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)chip.transform;
+            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -110);
+            rt.sizeDelta = new Vector2(280, 52);
+
+            var radius = Mathf.RoundToInt(rt.sizeDelta.y / 2f);
+            var bg = chip.GetComponent<Image>();
+            bg.sprite = PuffySprite.RoundedFill(radius);
+            bg.type = Image.Type.Sliced;
+            bg.color = new Color(0.11f, 0.13f, 0.14f, 0.95f);     // anthracite per spec
+            bg.raycastTarget = false;
+
+            // Floor (puffy depth).
+            var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
+            floor.transform.SetParent(chip.transform, false);
+            floor.transform.SetAsFirstSibling();
+            var frt = (RectTransform)floor.transform;
+            frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
+            frt.offsetMin = new Vector2(0, -5); frt.offsetMax = Vector2.zero;
+            var fi = floor.GetComponent<Image>();
+            fi.sprite = PuffySprite.RoundedFill(radius);
+            fi.type = Image.Type.Sliced;
+            fi.color = tokens.m3Outline;
+            fi.raycastTarget = false;
+
+            // Charcoal outline.
+            var outline = new GameObject("Outline", typeof(RectTransform), typeof(Image));
+            outline.transform.SetParent(chip.transform, false);
+            var olRt = (RectTransform)outline.transform;
+            olRt.anchorMin = Vector2.zero; olRt.anchorMax = Vector2.one;
+            olRt.offsetMin = Vector2.zero; olRt.offsetMax = Vector2.zero;
+            var olImg = outline.GetComponent<Image>();
+            olImg.sprite = PuffySprite.RoundedOutline(radius, 3);
+            olImg.type = Image.Type.Sliced;
+            olImg.color = tokens.m3OnSurface;
+            olImg.raycastTarget = false;
+
+            // Red skull icon débordant left.
+            var skull = BuildSkullIcon(chip.transform, tokens, diameter: 44);
+            var skullRt = (RectTransform)skull.transform;
+            skullRt.anchorMin = new Vector2(0, 0.5f); skullRt.anchorMax = new Vector2(0, 0.5f);
+            skullRt.pivot = new Vector2(0.5f, 0.5f);
+            skullRt.anchoredPosition = new Vector2(6, 0);
+
+            // "Stade N" label centered (skipping icon left padding).
+            var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lbl.transform.SetParent(chip.transform, false);
+            var lblRt = (RectTransform)lbl.transform;
+            lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
+            lblRt.offsetMin = new Vector2(48, 0); lblRt.offsetMax = new Vector2(-20, 0);
+            var lblTmp = lbl.GetComponent<TextMeshProUGUI>();
+            lblTmp.alignment = TextAlignmentOptions.Center;
+            lblTmp.font = tokens.DisplayFont;
+            lblTmp.fontSize = 26;
+            lblTmp.color = Color.white;
+            lblTmp.text = "Stade 1";
+            lblTmp.outlineColor = tokens.m3OnSurface;
+            lblTmp.outlineWidth = 0.22f;
+            lblTmp.raycastTarget = false;
+            lblTmp.textWrappingMode = TextWrappingModes.NoWrap;
+
+            var view = chip.GetComponent<StagePillView>();
+            view.Label = lblTmp;
+        }
+
+        // ====================================================================================
+        //  BOSS PROGRESS BAR — green glossy fill + red skull marker at right.
+        // ====================================================================================
+
+        private static void BuildBossProgressBar(Canvas canvas, DesignTokens tokens)
+        {
+            var root = new GameObject("StageBossBar",
+                typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireProgressBarView));
+            root.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)root.transform;
+            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -170);
+            rt.sizeDelta = new Vector2(660, 30);
+
+            var group = root.GetComponent<CanvasGroup>();
+            group.alpha = 1f; group.interactable = false; group.blocksRaycasts = false;
+
+            var radius = Mathf.RoundToInt(rt.sizeDelta.y / 2f);
+
+            // Track (charcoal, puffy).
+            var bg = new GameObject("Track", typeof(RectTransform), typeof(Image));
+            bg.transform.SetParent(rt, false);
+            var bgRt = (RectTransform)bg.transform;
+            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
+            var bgImg = bg.GetComponent<Image>();
+            bgImg.sprite = PuffySprite.RoundedFill(radius);
+            bgImg.type = Image.Type.Sliced;
+            bgImg.color = new Color(0.10f, 0.12f, 0.13f, 0.95f);
+            bgImg.raycastTarget = false;
+
+            // Track outline.
+            var olGo = new GameObject("Outline", typeof(RectTransform), typeof(Image));
+            olGo.transform.SetParent(rt, false);
+            var olRt = (RectTransform)olGo.transform;
+            olRt.anchorMin = Vector2.zero; olRt.anchorMax = Vector2.one;
+            olRt.offsetMin = Vector2.zero; olRt.offsetMax = Vector2.zero;
+            var olImg = olGo.GetComponent<Image>();
+            olImg.sprite = PuffySprite.RoundedOutline(radius, 3);
+            olImg.type = Image.Type.Sliced;
+            olImg.color = tokens.m3OnSurface;
+            olImg.raycastTarget = false;
+
+            // Green glossy fill.
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fill.transform.SetParent(rt, false);
+            var fillRt = (RectTransform)fill.transform;
+            fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
+            fillRt.offsetMin = new Vector2(4, 4); fillRt.offsetMax = new Vector2(-4, -4);
+            var fillImg = fill.GetComponent<Image>();
+            fillImg.sprite = PuffySprite.RoundedFill(radius - 4);
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fillImg.fillAmount = 0f;
+            fillImg.color = tokens.m3PrimaryContainer;             // #2ccb4c vert vif
+            fillImg.raycastTarget = false;
+
+            // Top gloss bar inside fill (subtle white sheen across upper half).
+            var gloss = new GameObject("Gloss", typeof(RectTransform), typeof(Image));
+            gloss.transform.SetParent(fill.transform, false);
+            var glRt = (RectTransform)gloss.transform;
+            glRt.anchorMin = new Vector2(0.02f, 0.55f); glRt.anchorMax = new Vector2(0.98f, 0.92f);
+            glRt.offsetMin = Vector2.zero; glRt.offsetMax = Vector2.zero;
+            var glImg = gloss.GetComponent<Image>();
+            glImg.sprite = PuffySprite.RoundedFill(radius - 6);
+            glImg.type = Image.Type.Sliced;
+            glImg.color = new Color(1f, 1f, 1f, 0.22f);
+            glImg.raycastTarget = false;
+
+            // Skull marker right end.
+            var skull = BuildSkullIcon(rt, tokens, diameter: 36);
+            var srt = (RectTransform)skull.transform;
+            srt.anchorMin = new Vector2(1f, 0.5f); srt.anchorMax = new Vector2(1f, 0.5f);
+            srt.pivot = new Vector2(0.5f, 0.5f);
+            srt.anchoredPosition = new Vector2(8, 0);
+
+            // Hidden label (the view requires a non-null label — we use a tiny invisible one).
+            var hiddenLbl = new GameObject("HiddenLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            hiddenLbl.transform.SetParent(rt, false);
+            var hLblRt = (RectTransform)hiddenLbl.transform;
+            hLblRt.anchorMin = Vector2.zero; hLblRt.anchorMax = Vector2.zero;
+            hLblRt.sizeDelta = new Vector2(0, 0);
+            var hLblTmp = hiddenLbl.GetComponent<TextMeshProUGUI>();
+            hLblTmp.fontSize = 1;
+            hLblTmp.color = new Color(0, 0, 0, 0);
+            hLblTmp.raycastTarget = false;
+
+            var view = root.GetComponent<AdversaireProgressBarView>();
+            view.Group = group;
+            view.FillImage = fillImg;
+            view.Label = hLblTmp;
+            view.PulseTarget = rt;
+        }
+
+        // ====================================================================================
+        //  SKULL ICON — small red circle + charcoal outline + 2 dark eye dots.
+        //  Procedural so we don't depend on Unicode 💀 / ☠ glyphs missing from Latin SDF atlases.
+        // ====================================================================================
+
+        private static GameObject BuildSkullIcon(Transform parent, DesignTokens tokens, int diameter)
+        {
+            var radius = diameter / 2;
+            var icon = new GameObject("Skull", typeof(RectTransform), typeof(Image));
+            icon.transform.SetParent(parent, false);
+            var rt = (RectTransform)icon.transform;
+            rt.sizeDelta = new Vector2(diameter, diameter);
+
+            var img = icon.GetComponent<Image>();
+            img.sprite = PuffySprite.RoundedFill(radius);
+            img.type = Image.Type.Sliced;
+            img.color = tokens.accentDanger;            // red puffy boss color
+            img.raycastTarget = false;
+
+            // Charcoal outline.
+            var outline = new GameObject("Outline", typeof(RectTransform), typeof(Image));
+            outline.transform.SetParent(icon.transform, false);
+            var olRt = (RectTransform)outline.transform;
+            olRt.anchorMin = Vector2.zero; olRt.anchorMax = Vector2.one;
+            olRt.offsetMin = Vector2.zero; olRt.offsetMax = Vector2.zero;
+            var olImg = outline.GetComponent<Image>();
+            olImg.sprite = PuffySprite.RoundedOutline(radius, 2);
+            olImg.type = Image.Type.Sliced;
+            olImg.color = tokens.m3OnSurface;
+            olImg.raycastTarget = false;
+
+            // 2 eye dots.
+            for (var x = 0; x < 2; x++)
+            {
+                var eye = new GameObject($"Eye{x}", typeof(RectTransform), typeof(Image));
+                eye.transform.SetParent(icon.transform, false);
+                var ert = (RectTransform)eye.transform;
+                ert.anchorMin = new Vector2(0.5f, 0.55f);
+                ert.anchorMax = new Vector2(0.5f, 0.55f);
+                ert.pivot = new Vector2(0.5f, 0.5f);
+                ert.anchoredPosition = new Vector2(x == 0 ? -diameter * 0.18f : diameter * 0.18f, 0);
+                ert.sizeDelta = new Vector2(diameter * 0.18f, diameter * 0.22f);
+                var eimg = eye.GetComponent<Image>();
+                eimg.sprite = PuffySprite.RoundedFill(3);
+                eimg.type = Image.Type.Sliced;
+                eimg.color = tokens.m3OnSurface;
+                eimg.raycastTarget = false;
+            }
+
+            return icon;
         }
     }
 }

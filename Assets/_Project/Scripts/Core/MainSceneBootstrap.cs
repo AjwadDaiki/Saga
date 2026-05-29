@@ -95,7 +95,6 @@ namespace Saga.Core
             BuildStadeTransitionOverlay(MainCanvas);
 
             // Sprint 4: combat active system UI
-            BuildAdversaireProgressBar(MainCanvas);
             BuildCombatHud(MainCanvas);
             SceneBuilder.BuildAdversaireSpawnView(MainCanvas);
             BuildDeathOverlay(MainCanvas);
@@ -626,70 +625,6 @@ namespace Saga.Core
         // ============================================================
         //  Combat overlays + bars
         // ============================================================
-
-        private static void BuildAdversaireProgressBar(Canvas canvas)
-        {
-            var root = new GameObject("AdversaireProgressBar",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireProgressBarView));
-            root.transform.SetParent(canvas.transform, false);
-            // Sprint 7.5 fix (BUG 2): sits BELOW the Force counter (14-18% band) so they never overlap.
-            var rootRt = (RectTransform)root.transform;
-            rootRt.anchorMin = new Vector2(0.5f, 1f);
-            rootRt.anchorMax = new Vector2(0.5f, 1f);
-            rootRt.pivot = new Vector2(0.5f, 1f);
-            rootRt.anchoredPosition = new Vector2(0, -270);
-            rootRt.sizeDelta = new Vector2(940, 64);
-
-            var group = root.GetComponent<CanvasGroup>();
-            group.alpha = 1f;
-            group.interactable = false;
-            group.blocksRaycasts = false;
-
-            // Background plate
-            var bg = new GameObject("Bg", typeof(RectTransform), typeof(Image));
-            bg.transform.SetParent(rootRt, false);
-            var bgRt = (RectTransform)bg.transform;
-            bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
-            bgRt.offsetMin = Vector2.zero; bgRt.offsetMax = Vector2.zero;
-            var bgImage = bg.GetComponent<Image>();
-            bgImage.color = new Color(0.10f, 0.10f, 0.10f, 0.85f);
-            bgImage.raycastTarget = false;
-
-            // Fill (horizontal)
-            var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fill.transform.SetParent(rootRt, false);
-            var fillRt = (RectTransform)fill.transform;
-            fillRt.anchorMin = new Vector2(0, 0); fillRt.anchorMax = new Vector2(1, 1);
-            fillRt.offsetMin = new Vector2(4, 4); fillRt.offsetMax = new Vector2(-4, -28);
-            var fillImage = fill.GetComponent<Image>();
-            fillImage.color = new Color(0.98f, 0.78f, 0.46f, 0.9f); // ambre
-            fillImage.type = Image.Type.Filled;
-            fillImage.fillMethod = Image.FillMethod.Horizontal;
-            fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
-            fillImage.fillAmount = 0f;
-            fillImage.raycastTarget = false;
-
-            // Label
-            var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-            label.transform.SetParent(rootRt, false);
-            var labelRt = (RectTransform)label.transform;
-            labelRt.anchorMin = new Vector2(0, 1); labelRt.anchorMax = new Vector2(1, 1);
-            labelRt.pivot = new Vector2(0.5f, 1f);
-            labelRt.anchoredPosition = new Vector2(0, -4);
-            labelRt.sizeDelta = new Vector2(0, 24);
-            var labelTmp = label.GetComponent<TextMeshProUGUI>();
-            labelTmp.alignment = TextAlignmentOptions.Center;
-            labelTmp.color = TextSecondaryColor;
-            labelTmp.fontSize = 22;
-            labelTmp.text = "Prochain adversaire";
-            labelTmp.raycastTarget = false;
-
-            var view = root.GetComponent<AdversaireProgressBarView>();
-            view.Group = group;
-            view.FillImage = fillImage;
-            view.Label = labelTmp;
-            view.PulseTarget = rootRt;
-        }
 
         private static void BuildCombatHud(Canvas canvas)
         {
