@@ -14,6 +14,7 @@ namespace Saga.UI.Builders
     {
         public static void Build(BuilderContext ctx)
         {
+            Debug.Log("[BG-PHASE3] Build called");
             // Sprint 7.5 Polish Phase 3 — refonte BG procédural simplifié palette DA.
             // 4 couches sans torii / foreground (reportés Sprint 7.6 par décision coordinator) :
             //   z=10  Sky dusk DA gradient (orange chaud → rose sakura → lavande UI → panel sombre2)
@@ -33,13 +34,19 @@ namespace Saga.UI.Builders
             var viewW = viewH * aspect;
             var coverW = viewW * 1.12f;
             var coverH = viewH * 1.12f;
+            Debug.Log($"[BG-PHASE3] cam={(cam != null)}, orthoSize={(cam != null ? cam.orthographicSize : -1)}, viewH={viewH}, viewW={viewW}");
 
             BuildSkyLayer(root.transform, tokens, coverW, coverH);
+            Debug.Log("[BG] Sky layer created");
             BuildMountainsLayer(root.transform, tokens, coverW, viewH);
+            Debug.Log("[BG] Mountains created");
             BuildPagodaLayer(root.transform, tokens, viewW, viewH);
+            Debug.Log("[BG] Pagoda created");
             BuildFloorLayer(root.transform, tokens, coverW, viewH);
+            Debug.Log("[BG] Floor created");
             BuildOverlayLayer(root.transform, coverW, coverH);
             BuildAmbientParticles(root.transform, tokens);
+            Debug.Log("[BG-PHASE3] Build complete");
         }
 
         // ====================================================================================

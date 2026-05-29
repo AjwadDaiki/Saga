@@ -20,8 +20,9 @@ namespace Saga.UI.Builders
     {
         public static void Build(BuilderContext ctx)
         {
+            Debug.Log("[STAGE] Build called, parent: " + (ctx.UIRoot != null ? "UIRoot" : "Canvas") + ", tokens=" + (ctx.Tokens != null));
             var tokens = ctx.Tokens;
-            if (ctx.Canvas == null || tokens == null) return;
+            if (ctx.Canvas == null || tokens == null) { Debug.LogWarning("[STAGE] EARLY RETURN: Canvas=" + (ctx.Canvas != null) + " tokens=" + (tokens != null)); return; }
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
 
             BuildStageChip(parent, tokens);
