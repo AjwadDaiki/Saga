@@ -45,21 +45,19 @@ namespace Saga.UI.Builders
 
         private static RectTransform BuildSkillsRow(Transform parent, DesignTokens tokens)
         {
-            // Row positioned in the 34-44% band of the canvas (above upgrade cards, below the scene).
-            // Anchor.x stretches 4-96% so the 28px padding rule matches the spec.
+            // Phase 4 wireframe SAGA §5 — skills row 230 px (12 %) hauteur, posée au-dessus du
+            // bottom nav (offset y = 192 px = hauteur du nav). 32 px inset latéral (sizeDelta.x = -64).
+            // Architecture asymétrique : SOUFFLE 280 (gauche) ≪ VAGUE 680 (droite), 56 px gap au milieu.
             var row = new GameObject("SkillsRow", typeof(RectTransform));
             row.transform.SetParent(parent, false);
             var rt = (RectTransform)row.transform;
-            rt.anchorMin = new Vector2(0.04f, 0.34f);
-            rt.anchorMax = new Vector2(0.96f, 0.44f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
+            rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0, 192);
+            rt.sizeDelta = new Vector2(-64, 230);
 
-            // Vague (left half).
-            BuildVagueButton(rt, tokens, anchorX0: 0f, anchorX1: 0.49f);
-
-            // Souffle (right half).
-            BuildSouffleButton(rt, tokens, anchorX0: 0.51f, anchorX1: 1f);
+            BuildSouffleButton(rt, tokens);
+            BuildVagueButton(rt, tokens);
 
             return rt;
         }
@@ -68,7 +66,7 @@ namespace Saga.UI.Builders
         //  VAGUE — cyan puffy + lightning icon + label + Élan gauge intégrée
         // ====================================================================================
 
-        private static void BuildVagueButton(RectTransform parent, DesignTokens tokens, float anchorX0, float anchorX1)
+        private static void BuildVagueButton(RectTransform parent, DesignTokens tokens)
         {
             var vagueCyan = new Color(0.169f, 0.776f, 1.000f, 1f);     // #2BC6FF
             var vagueDeep = new Color(0.122f, 0.576f, 0.761f, 1f);     // #1F93C2
@@ -77,8 +75,11 @@ namespace Saga.UI.Builders
                 typeof(RectTransform), typeof(CanvasGroup), typeof(VagueButtonView));
             btn.transform.SetParent(parent, false);
             var rt = (RectTransform)btn.transform;
-            rt.anchorMin = new Vector2(anchorX0, 0); rt.anchorMax = new Vector2(anchorX1, 1);
-            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            // Phase 4 §5 — VAGUE 680 × 180 anchored right de la row, centré vertical.
+            rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f);
+            rt.pivot = new Vector2(1, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(680, 180);
 
             var group = btn.GetComponent<CanvasGroup>();
             group.alpha = 1f; group.blocksRaycasts = true; group.interactable = true;
@@ -242,7 +243,7 @@ namespace Saga.UI.Builders
         //  SOUFFLE — vert menthe puffy + zen icon + label.
         // ====================================================================================
 
-        private static void BuildSouffleButton(RectTransform parent, DesignTokens tokens, float anchorX0, float anchorX1)
+        private static void BuildSouffleButton(RectTransform parent, DesignTokens tokens)
         {
             var souffleMint = new Color(0.239f, 0.839f, 0.549f, 1f);   // #3DD68C
             var souffleDeep = new Color(0.118f, 0.612f, 0.353f, 1f);   // #1E9C5A
@@ -251,8 +252,11 @@ namespace Saga.UI.Builders
                 typeof(RectTransform), typeof(CanvasGroup), typeof(SouffleButtonView));
             btn.transform.SetParent(parent, false);
             var rt = (RectTransform)btn.transform;
-            rt.anchorMin = new Vector2(anchorX0, 0); rt.anchorMax = new Vector2(anchorX1, 1);
-            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            // Phase 4 §5 — SOUFFLE 280 × 180 anchored left de la row, centré vertical.
+            rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(0, 0.5f);
+            rt.pivot = new Vector2(0, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(280, 180);
 
             var group = btn.GetComponent<CanvasGroup>();
             group.alpha = 1f; group.blocksRaycasts = true; group.interactable = true;
