@@ -114,8 +114,11 @@ namespace Saga.Core
             BuildPrestigeCinematicOverlay(MainCanvas, citationModal);
 
             // Sprint 7: Inventaire
-            var inventoryModal = BuildEquipmentInventoryModal(MainCanvas);
-            BottomNavBuilder.BuildInventaireButton(MainCanvas, inventoryModal);
+            // Sprint 7.5 zone 7 / Q8 decision : le side-rail INVENTAIRE legacy a été supprimé.
+            // L'inventaire migre dans l'onglet Artifacts (placeholder Coming Soon Sprint 7.5,
+            // full UI Sprint 8+). EquipmentInventoryModal reste built mais devient orphelin
+            // — il sera re-wire dans l'onglet Artifacts post-7.5.
+            BuildEquipmentInventoryModal(MainCanvas);
 
             // Sprint 7.5 refonte : top bar pills + bottom nav 5 onglets.
             StageBuilder.Build(ctx);               // Sprint 7.5 zone 3 — placeholder, Phase 3 stage chip.
