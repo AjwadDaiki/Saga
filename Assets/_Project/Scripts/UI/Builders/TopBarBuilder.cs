@@ -25,7 +25,6 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
-            Debug.Log("[TOPBAR] Build called, parent: " + (ctx.UIRoot != null ? "UIRoot" : "Canvas"));
             // Sprint 7.5 Polish Phase 3 — parent under safe-area-clamped UIRoot so currency pills
             // and settings stay clear of the iPhone notch.
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;

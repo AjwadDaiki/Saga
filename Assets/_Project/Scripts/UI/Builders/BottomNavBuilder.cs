@@ -28,7 +28,6 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
-            Debug.Log("[BOTTOMNAV] Build called, parent: " + (ctx.UIRoot != null ? "UIRoot" : "Canvas"));
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
             BuildBottomNav(parent);
         }

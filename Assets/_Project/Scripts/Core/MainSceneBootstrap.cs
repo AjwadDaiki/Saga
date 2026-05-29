@@ -54,15 +54,12 @@ namespace Saga.Core
 
         private void Awake()
         {
-            Debug.Log("[BOOT-PHASE3] Awake() entered, scene=" + SceneManager.GetActiveScene().name);
             // Build only once. If user authors the scene later, this short-circuits cleanly.
             if (FindFirstObjectByType<ForceCounterView>() != null)
             {
-                Debug.LogWarning("[BOOT-PHASE3] SHORT-CIRCUITED — ForceCounterView already in scene, skipping all builders");
                 MainCanvas = FindFirstObjectByType<Canvas>();
                 return;
             }
-            Debug.Log("[BOOT-PHASE3] Bootstrap starting (no short-circuit)");
 
             // Sprint 3 fix #3 — sweep any pre-existing SpriteRenderer in the scene (likely from
             // scene templates / URP 2D defaults that may have shipped a placeholder background quad).
@@ -91,7 +88,6 @@ namespace Saga.Core
             MainCanvas = BuildCanvas();
             ctx.Canvas = MainCanvas;
             ctx.UIRoot = BuildSafeAreaContainer(MainCanvas);
-            Debug.Log("[BOOT] SafeAreaContainer created: " + (ctx.UIRoot != null) + ", name=" + (ctx.UIRoot != null ? ctx.UIRoot.name : "null"));
 
             SceneBuilder.BuildComboMeter(MainCanvas);
             BuildTapHandler(MainCanvas);

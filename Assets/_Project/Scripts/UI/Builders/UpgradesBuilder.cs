@@ -42,7 +42,6 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
-            Debug.Log("[UPGRADES] Build called, parent: " + (ctx.UIRoot != null ? "UIRoot" : "Canvas"));
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
             BuildUpgradePanel(parent, ctx.Tokens);
         }
