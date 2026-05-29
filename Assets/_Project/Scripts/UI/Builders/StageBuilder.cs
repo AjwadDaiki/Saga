@@ -24,8 +24,19 @@ namespace Saga.UI.Builders
             if (ctx.Canvas == null || tokens == null) return;
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
 
-            BuildStageChip(parent, tokens);
-            BuildBossProgressBar(parent, tokens);
+            // Phase 4 wireframe SAGA §2 — Stage band 96 px haut (5 %), juste sous Top HUD (154 px).
+            // 32 px lat inset (sizeDelta.x = -64). Horizontal layout : chip 240 + gap 16 + bar stretch + gap 16 + skull 48.
+            var band = new GameObject("StageBand", typeof(RectTransform));
+            band.transform.SetParent(parent, false);
+            var bandRt = (RectTransform)band.transform;
+            bandRt.anchorMin = new Vector2(0, 1); bandRt.anchorMax = new Vector2(1, 1);
+            bandRt.pivot = new Vector2(0.5f, 1f);
+            bandRt.anchoredPosition = new Vector2(0, -154);
+            bandRt.sizeDelta = new Vector2(-64, 96);
+
+            BuildStageChip(bandRt, tokens);
+            BuildBossProgressBar(bandRt, tokens);
+            BuildBossSkullRight(bandRt, tokens);
         }
 
         // ====================================================================================
@@ -37,10 +48,11 @@ namespace Saga.UI.Builders
             var chip = new GameObject("StageChip", typeof(RectTransform), typeof(Image), typeof(StagePillView));
             chip.transform.SetParent(parent, false);
             var rt = (RectTransform)chip.transform;
-            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -110);
-            rt.sizeDelta = new Vector2(280, 52);
+            // Phase 4 §2 — chip anchored top-left de la band, centré vertical (pivot.y=0.5).
+            rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(0, 0.5f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(240, 60);
 
             var radius = Mathf.RoundToInt(rt.sizeDelta.y / 2f);
             var bg = chip.GetComponent<Image>();
@@ -74,23 +86,24 @@ namespace Saga.UI.Builders
             olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
-            // Red skull icon débordant left.
-            var skull = BuildSkullIcon(chip.transform, tokens, diameter: 44);
+            // Phase 4 §2 — Skull 48 × 48 débordant à gauche du chip.
+            var skull = BuildSkullIcon(chip.transform, tokens, diameter: 48);
             var skullRt = (RectTransform)skull.transform;
             skullRt.anchorMin = new Vector2(0, 0.5f); skullRt.anchorMax = new Vector2(0, 0.5f);
             skullRt.pivot = new Vector2(0.5f, 0.5f);
-            skullRt.anchoredPosition = new Vector2(6, 0);
+            skullRt.anchoredPosition = new Vector2(8, 0);
 
-            // "Stade N" label centered (skipping icon left padding).
+            // Phase 4 §2 — "Stade N" Lilita One bold 36 px à droite du skull.
             var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             lbl.transform.SetParent(chip.transform, false);
             var lblRt = (RectTransform)lbl.transform;
             lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
-            lblRt.offsetMin = new Vector2(48, 0); lblRt.offsetMax = new Vector2(-20, 0);
+            lblRt.offsetMin = new Vector2(56, 0); lblRt.offsetMax = new Vector2(-20, 0);
             var lblTmp = lbl.GetComponent<TextMeshProUGUI>();
             lblTmp.alignment = TextAlignmentOptions.Center;
             lblTmp.font = tokens.DisplayFont;
-            lblTmp.fontSize = 26;
+            lblTmp.fontSize = 36;
+            lblTmp.fontStyle = FontStyles.Bold;
             lblTmp.color = Color.white;
             lblTmp.text = "Stade 1";
             lblTmp.outlineColor = tokens.navyContour;
@@ -112,10 +125,12 @@ namespace Saga.UI.Builders
                 typeof(RectTransform), typeof(CanvasGroup), typeof(AdversaireProgressBarView));
             root.transform.SetParent(parent, false);
             var rt = (RectTransform)root.transform;
-            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -170);
-            rt.sizeDelta = new Vector2(660, 30);
+            // Phase 4 §2 — bar stretch H entre chip et skull droite. 24 px haut, centré vertical.
+            // offsetMin.x = 256 = 240 (chip) + 16 (gap). offsetMax.x = -64 = -(48 skull + 16 gap).
+            rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(1, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.offsetMin = new Vector2(256, -12); rt.offsetMax = new Vector2(-64, 12);
 
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = 1f; group.interactable = false; group.blocksRaycasts = false;
@@ -173,12 +188,7 @@ namespace Saga.UI.Builders
             glImg.color = new Color(1f, 1f, 1f, 0.22f);
             glImg.raycastTarget = false;
 
-            // Skull marker right end.
-            var skull = BuildSkullIcon(rt, tokens, diameter: 36);
-            var srt = (RectTransform)skull.transform;
-            srt.anchorMin = new Vector2(1f, 0.5f); srt.anchorMax = new Vector2(1f, 0.5f);
-            srt.pivot = new Vector2(0.5f, 0.5f);
-            srt.anchoredPosition = new Vector2(8, 0);
+            // Phase 4 §2 — skull boss déplacé hors du bar (élément séparé via BuildBossSkullRight).
 
             // Hidden label (the view requires a non-null label — we use a tiny invisible one).
             var hiddenLbl = new GameObject("HiddenLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -196,6 +206,19 @@ namespace Saga.UI.Builders
             view.FillImage = fillImg;
             view.Label = hLblTmp;
             view.PulseTarget = rt;
+        }
+
+        // ====================================================================================
+        //  BOSS SKULL RIGHT — 48 × 48 marker at right edge of stage band (Phase 4 §2).
+        // ====================================================================================
+
+        private static void BuildBossSkullRight(Transform parent, DesignTokens tokens)
+        {
+            var skull = BuildSkullIcon(parent, tokens, diameter: 48);
+            var rt = (RectTransform)skull.transform;
+            rt.anchorMin = new Vector2(1f, 0.5f); rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot = new Vector2(1f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
         }
 
         // ====================================================================================
