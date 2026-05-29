@@ -57,39 +57,39 @@ namespace Saga.UI.Builders
                 return;
             }
 
-            // Sprint 7.5 Polish Phase 3 — DA §3.2 : Panel upgrade 22-28% de l'écran. Bottom nav prend
-            // ~12 %, donc upgrade panel commence à 12-13 % et termine à 34-35 %. Skills row (34-44 %)
-            // suit juste au-dessus, scène commence à 44 %.
+            // Phase 4 wireframe SAGA §4 — Upgrades 15 % (288 ref) hauteur, posée au-dessus de Skills.
+            // Stack from bottom : BottomNav 192 + Skills 230 = 422 px. Panel bottom = parent.bottom + 422.
+            // 24 px inset latéral (sizeDelta.x = -48). Cards horizontales 333 × 248 avec 16 px gap.
             var panel = new GameObject("UpgradePanel", typeof(RectTransform));
             panel.transform.SetParent(parent, false);
             var panelRt = (RectTransform)panel.transform;
-            panelRt.anchorMin = new Vector2(0.04f, 0.12f);
-            panelRt.anchorMax = new Vector2(0.96f, 0.34f);
-            panelRt.offsetMin = Vector2.zero;
-            panelRt.offsetMax = Vector2.zero;
+            panelRt.anchorMin = new Vector2(0, 0); panelRt.anchorMax = new Vector2(1, 0);
+            panelRt.pivot = new Vector2(0.5f, 0f);
+            panelRt.anchoredPosition = new Vector2(0, 422);
+            panelRt.sizeDelta = new Vector2(-48, 288);
 
             var count = upgrades.Count;
             var frac = 1f / count;
-            const float spacing = 8f;   // px of inner-spacing between cards
             for (var i = 0; i < count; i++)
             {
-                BuildCard(panelRt, tokens, upgrades[i], i, frac, spacing);
+                BuildCard(panelRt, tokens, upgrades[i], i, frac);
             }
         }
 
         private static void BuildCard(RectTransform panel, DesignTokens tokens,
-            UpgradeData data, int index, float frac, float spacing)
+            UpgradeData data, int index, float frac)
         {
-            // Each card stretches full width, stacks top→bottom.
+            // Phase 4 §4 — cards horizontales (3 côte-à-côte). 8 px de padding lat par carte
+            // (= 16 px entre 2 cartes adjacentes). Contenu interne vertical : icon top + nom + level + cost.
             var card = new GameObject($"Card_{data.UpgradeId}",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(UpgradeCardView));
             card.transform.SetParent(panel, false);
             var rt = (RectTransform)card.transform;
-            rt.anchorMin = new Vector2(0, 1f - (index + 1) * frac);
-            rt.anchorMax = new Vector2(1, 1f - index * frac);
+            rt.anchorMin = new Vector2(index * frac, 0);
+            rt.anchorMax = new Vector2((index + 1) * frac, 1);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(0, spacing * 0.5f);
-            rt.offsetMax = new Vector2(0, -spacing * 0.5f);
+            rt.offsetMin = new Vector2(8, 20);
+            rt.offsetMax = new Vector2(-8, -20);
 
             // ---- Floor (puffy 3D depth — 5px darker, sits BEHIND the body) -----------------
             var floorGo = new GameObject("Floor", typeof(RectTransform), typeof(Image));
@@ -150,13 +150,14 @@ namespace Saga.UI.Builders
         private static RectTransform BuildIconCircle(Transform parent, DesignTokens tokens,
             Color faceColor, string upgradeId)
         {
+            // Phase 4 §4 — icône 96 × 96 px en haut, centrée (10 px de marge sous le bord card).
             var go = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(0, 0.5f);
-            rt.pivot = new Vector2(0, 0.5f);
-            rt.anchoredPosition = new Vector2(14, 0);
-            rt.sizeDelta = new Vector2(56, 56);
+            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -10);
+            rt.sizeDelta = new Vector2(96, 96);
 
             // Floor (puffy depth).
             var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
@@ -164,15 +165,15 @@ namespace Saga.UI.Builders
             floor.transform.SetAsFirstSibling();
             var frt = (RectTransform)floor.transform;
             frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
-            frt.offsetMin = new Vector2(0, -4); frt.offsetMax = Vector2.zero;
+            frt.offsetMin = new Vector2(0, -5); frt.offsetMax = Vector2.zero;
             var fImg = floor.GetComponent<Image>();
-            fImg.sprite = PuffySprite.RoundedFill(28);
+            fImg.sprite = PuffySprite.RoundedFill(48);
             fImg.type = Image.Type.Sliced;
             fImg.color = DesignTokens.Darken(faceColor, 0.30f);
             fImg.raycastTarget = false;
 
             var bg = go.GetComponent<Image>();
-            bg.sprite = PuffySprite.RoundedFill(28);
+            bg.sprite = PuffySprite.RoundedFill(48);
             bg.type = Image.Type.Sliced;
             bg.color = faceColor;
             bg.raycastTarget = false;
@@ -184,13 +185,22 @@ namespace Saga.UI.Builders
             olRt.anchorMin = Vector2.zero; olRt.anchorMax = Vector2.one;
             olRt.offsetMin = Vector2.zero; olRt.offsetMax = Vector2.zero;
             var olImg = outline.GetComponent<Image>();
-            olImg.sprite = PuffySprite.RoundedOutline(28, 2);
+            olImg.sprite = PuffySprite.RoundedOutline(48, 3);
             olImg.type = Image.Type.Sliced;
             olImg.color = tokens.navyContour;
             olImg.raycastTarget = false;
 
-            // Glyph (white procedural inside).
-            BuildGlyph(rt, upgradeId);
+            // Phase 4 — glyph container kept at original 56 ref size, scaled to match 96 icon.
+            var glyphContainer = new GameObject("GlyphContainer", typeof(RectTransform));
+            glyphContainer.transform.SetParent(rt, false);
+            var gcRt = (RectTransform)glyphContainer.transform;
+            gcRt.anchorMin = new Vector2(0.5f, 0.5f); gcRt.anchorMax = new Vector2(0.5f, 0.5f);
+            gcRt.pivot = new Vector2(0.5f, 0.5f);
+            gcRt.sizeDelta = new Vector2(56, 56);
+            gcRt.anchoredPosition = Vector2.zero;
+            gcRt.localScale = Vector3.one * (96f / 56f);
+
+            BuildGlyph(gcRt, upgradeId);
 
             return rt;
         }
@@ -294,19 +304,20 @@ namespace Saga.UI.Builders
 
         private static TextMeshProUGUI BuildNameLabel(Transform parent, DesignTokens tokens)
         {
+            // Phase 4 §4 — nom centré sous l'icône (offset y = -(10 + 96 + 8) = -114 du top).
             var go = new GameObject("Name", typeof(RectTransform), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(0, 0.5f);
-            rt.anchorMax = new Vector2(0.66f, 1f);
-            rt.pivot = new Vector2(0, 0.5f);
-            rt.offsetMin = new Vector2(84, 4);
-            rt.offsetMax = new Vector2(0, -6);
+            rt.anchorMin = new Vector2(0, 1f);
+            rt.anchorMax = new Vector2(1, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -114);
+            rt.sizeDelta = new Vector2(0, 32);
 
             var tmp = go.GetComponent<TextMeshProUGUI>();
             tmp.font = tokens.DisplayFont;
-            tmp.fontSize = 26;
-            tmp.alignment = TextAlignmentOptions.BottomLeft;
+            tmp.fontSize = 28;
+            tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = tokens.navyContour;
             tmp.text = "Strike";
             tmp.outlineColor = tokens.navyContour;
@@ -318,20 +329,21 @@ namespace Saga.UI.Builders
 
         private static TextMeshProUGUI BuildLevelLabel(Transform parent, DesignTokens tokens)
         {
+            // Phase 4 §4 — niveau "Lvl X" centré sous le nom (offset y = -(114 + 32 + 4) = -150).
             var go = new GameObject("Level", typeof(RectTransform), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(0, 0.5f);
-            rt.anchorMax = new Vector2(0.66f, 1f);
-            rt.pivot = new Vector2(0, 0.5f);
-            rt.offsetMin = new Vector2(84, 4);
-            rt.offsetMax = new Vector2(0, -6);
+            rt.anchorMin = new Vector2(0, 1f);
+            rt.anchorMax = new Vector2(1, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0, -150);
+            rt.sizeDelta = new Vector2(0, 24);
 
             var tmp = go.GetComponent<TextMeshProUGUI>();
             tmp.font = tokens.NumbersFont;
-            tmp.fontSize = 18;
+            tmp.fontSize = 20;
             tmp.fontStyle = FontStyles.Bold;
-            tmp.alignment = TextAlignmentOptions.BottomRight;
+            tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.65f);
             tmp.text = "Lv.0";
             tmp.raycastTarget = false;
@@ -341,19 +353,20 @@ namespace Saga.UI.Builders
 
         private static TextMeshProUGUI BuildEffectLabel(Transform parent, DesignTokens tokens)
         {
+            // Phase 4 §4 — effect label small, placé au-dessus du cost pill (y = 60 du bas).
             var go = new GameObject("Effect", typeof(RectTransform), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0, 0);
-            rt.anchorMax = new Vector2(0.66f, 0.5f);
-            rt.pivot = new Vector2(0, 0.5f);
-            rt.offsetMin = new Vector2(84, 6);
-            rt.offsetMax = new Vector2(0, -2);
+            rt.anchorMax = new Vector2(1, 0);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0, 60);
+            rt.sizeDelta = new Vector2(-16, 20);
 
             var tmp = go.GetComponent<TextMeshProUGUI>();
             tmp.font = tokens.PrimaryFont;
-            tmp.fontSize = 13;
-            tmp.alignment = TextAlignmentOptions.TopLeft;
+            tmp.fontSize = 14;
+            tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.72f);
             tmp.text = "";
             tmp.raycastTarget = false;
@@ -368,15 +381,16 @@ namespace Saga.UI.Builders
         private static TextMeshProUGUI BuildCostPill(Transform parent, DesignTokens tokens,
             out GameObject buttonGo)
         {
+            // Phase 4 §4 — cost pill pleine largeur 48 px haut en bas de la card.
             buttonGo = new GameObject("CostPill",
                 typeof(RectTransform), typeof(Image), typeof(Button));
             buttonGo.transform.SetParent(parent, false);
             var rt = (RectTransform)buttonGo.transform;
-            rt.anchorMin = new Vector2(1, 0.5f);
-            rt.anchorMax = new Vector2(1, 0.5f);
-            rt.pivot = new Vector2(1, 0.5f);
-            rt.anchoredPosition = new Vector2(-14, 0);
-            rt.sizeDelta = new Vector2(126, 56);
+            rt.anchorMin = new Vector2(0, 0);
+            rt.anchorMax = new Vector2(1, 0);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0, 8);
+            rt.sizeDelta = new Vector2(-16, 48);
 
             // Floor.
             var floor = new GameObject("Floor", typeof(RectTransform), typeof(Image));
