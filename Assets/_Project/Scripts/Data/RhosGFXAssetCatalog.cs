@@ -112,9 +112,9 @@ namespace Saga.Data
         public Sprite framePointedYellow;
 
         // ----- Icons 64px (HUD/buttons) -----
-        [Header("Icons 64px")]
-        public Sprite iconCoinGold;       // Force counter
-        public Sprite iconGem;            // Échos counter (re-tint Lavande)
+        [Header("Icons 64px (full color for HUD)")]
+        public Sprite iconCoinGold;       // Force counter (native gold)
+        public Sprite iconGem;            // Gem multi-color (Échos fallback if tint outline trop maigre)
         public Sprite iconGearOutline;    // Settings
         public Sprite iconSkull;          // Stage boss markers
         public Sprite iconHome;           // BottomNav Dojo
@@ -130,5 +130,12 @@ namespace Saga.Data
         public Sprite iconXButton;        // Modal close
         public Sprite iconScroll;         // Citation Maître / lore
         public Sprite iconPotion;         // VAGUE icon alt
+
+        [Header("Icons Outline 64px (white tintable — pour palette DA)")]
+        public Sprite iconGemOutline;     // Échos tint Violet DA #9A7BFF
+        public Sprite iconSwordOutline;   // Card Strike tint encre
+        public Sprite iconBellOutline;    // Card Focus tint encre
+        public Sprite iconFriendsOutline; // Card Power tint encre
+        public Sprite iconHomeOutline;    // BottomNav Dojo actif tint encre
     }
 }

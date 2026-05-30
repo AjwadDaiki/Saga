@@ -28,6 +28,11 @@ namespace Saga.UI
         private Tween _pulse;
         private bool _pressed;
 
+        // Sprint 7.6 — RhosGFX path : sprite-swap on press (no Tween Y, no Floor procédural).
+        private Image _rhosFace;
+        private RhosGFXAssetCatalog.ButtonStateSet _rhosStates;
+        private bool _useRhosSpriteSwap;
+
         public Button Button { get; private set; }
         public TextMeshProUGUI Label { get; private set; }
         public Image Fill { get; private set; }
@@ -148,6 +153,69 @@ namespace Saga.UI
         }
 
         /// <summary>
+        /// Sprint 7.6 — RhosGFX puffy 3D button using pre-baked Cartoony UI Pack sprites.
+        /// Replaces the procedural PuffySprite stack (Floor + Outline + Gloss) with a single
+        /// Image whose sprite carries the relief / contour / shine baked-in. Press behavior =
+        /// sprite swap to the <c>pressed</c> variant (RhosGFX states), no Tween Y.
+        ///
+        /// Tint to DA palette via <paramref name="tint"/> (Image.color multiplier) — works
+        /// cleanly on neutral-ish color sprites; for full-saturation sprites pass <c>Color.white</c>.
+        ///
+        /// Hierarchy : root (Button + this + Image) ─ Label (optional). No Floor/Outline/Gloss
+        /// children — RhosGFX already provides them. Ready-pulse and Primary variant still supported.
+        /// </summary>
+        public static SagaButton Create(Transform parent, string name,
+            RhosGFXAssetCatalog.ButtonStateSet sprites, Variant variant,
+            Color tint, string label = "", float labelSize = 22,
+            Color? labelColor = null, TMPro.TMP_FontAsset labelFont = null)
+        {
+            var tokens = DesignTokens.Get();
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(SagaButton));
+            go.transform.SetParent(parent, false);
+
+            var sb = go.GetComponent<SagaButton>();
+            sb.Button = go.GetComponent<Button>();
+            sb.Button.transition = Selectable.Transition.None;
+            sb._floorPx = 0; // no procedural floor — RhosGFX 3D baked.
+            sb._face = (RectTransform)go.transform;
+            sb._useRhosSpriteSwap = true;
+            sb._rhosStates = sprites;
+
+            var img = go.GetComponent<Image>();
+            sb._rhosFace = img;
+            sb.Fill = img;
+            sb.Button.targetGraphic = img;
+            img.sprite = sprites.standard;
+            img.type = Image.Type.Simple; // RhosGFX state sprites match the host RectTransform size; switch to Sliced if 9-slice borders are set.
+            img.preserveAspect = false;
+            img.color = tint;
+
+            // Optional label (RhosGFX sprite has no built-in text).
+            if (!string.IsNullOrEmpty(label))
+            {
+                var lblGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                lblGo.transform.SetParent(go.transform, false);
+                var lblRt = (RectTransform)lblGo.transform;
+                lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
+                lblRt.offsetMin = Vector2.zero; lblRt.offsetMax = Vector2.zero;
+                var tmp = lblGo.GetComponent<TextMeshProUGUI>();
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.font = labelFont != null ? labelFont : tokens.DisplayFont;
+                tmp.fontSize = labelSize;
+                tmp.color = labelColor ?? Color.white;
+                tmp.text = label;
+                tmp.raycastTarget = false;
+                tmp.textWrappingMode = TextWrappingModes.NoWrap;
+                tmp.outlineColor = tokens.navyContour;
+                tmp.outlineWidth = 0.2f;
+                sb.Label = tmp;
+            }
+
+            if (variant == Variant.Primary) sb.SetReady(true);
+            return sb;
+        }
+
+        /// <summary>
         /// Back-compat: apply puffy styling in-place to an existing Image+Button GO (used by legacy
         /// buttons not yet rebuilt via <see cref="Create"/>). Adds a floor + outline + gloss around the
         /// existing fill image. Press moves the whole host down.
@@ -219,16 +287,30 @@ namespace Saga.UI
             if (Button != null && !Button.interactable) return;
             _pressed = true;
             _pulse?.Kill();
-            TweenFaceY(-_floorPx, 0.06f, Ease.OutQuad);
-            if (_floor != null) _floor.SetActive(false);
+            if (_useRhosSpriteSwap && _rhosFace != null && _rhosStates.pressed != null)
+            {
+                _rhosFace.sprite = _rhosStates.pressed;
+            }
+            else
+            {
+                TweenFaceY(-_floorPx, 0.06f, Ease.OutQuad);
+                if (_floor != null) _floor.SetActive(false);
+            }
         }
 
         public void OnPointerUp(PointerEventData _)
         {
             if (!_pressed) return;
             _pressed = false;
-            TweenFaceY(0f, 0.10f, Ease.OutBack);
-            if (_floor != null) _floor.SetActive(true);
+            if (_useRhosSpriteSwap && _rhosFace != null && _rhosStates.standard != null)
+            {
+                _rhosFace.sprite = _rhosStates.standard;
+            }
+            else
+            {
+                TweenFaceY(0f, 0.10f, Ease.OutBack);
+                if (_floor != null) _floor.SetActive(true);
+            }
             if (_ready) SetReady(true);
         }
 

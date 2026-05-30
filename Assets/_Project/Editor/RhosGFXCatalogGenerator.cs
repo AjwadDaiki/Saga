@@ -107,6 +107,13 @@ namespace Saga.EditorTools
             catalog.iconScroll = LoadSprite($"{Icons}/Scroll/Scroll 64.png");
             catalog.iconPotion = LoadSprite($"{Icons}/Potion 1/Potion 1 64.png");
 
+            // ----- Icons Outline 64px (white shapes — tintables palette DA) -----
+            catalog.iconGemOutline = LoadSprite($"{Icons}/Gem/Gem Outline 64.png");
+            catalog.iconSwordOutline = LoadSprite($"{Icons}/Sword/Sword 2 Blue Outline 64.png");
+            catalog.iconBellOutline = LoadSprite($"{Icons}/Bell/Bell Outline 64.png");
+            catalog.iconFriendsOutline = LoadSprite($"{Icons}/Friends 2/Friends 2 Outline 64.png");
+            catalog.iconHomeOutline = LoadSprite($"{Icons}/Home 2/Home 2 Blue Outline 64.png");
+
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
