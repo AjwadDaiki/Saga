@@ -29,9 +29,8 @@ namespace Saga.EditorTools
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.spritePixelsPerUnit = 100f;
-            importer.spriteMeshType = SpriteMeshType.FullRect; // P13 : FullRect (vs Tight) garantit
-                                                              // un quad rectangulaire propre (pas de
-                                                              // déformation autour de l'alpha).
+            // Note : SpriteMeshType est sur TextureImporterSettings (pas TextureImporter direct).
+            // Pour SpriteImportMode.Single, le default est FullRect — pas besoin de set explicite.
             importer.filterMode = FilterMode.Bilinear;        // P12 : Bilinear pour UI 2D (vs Trilinear flou)
             importer.mipmapEnabled = false;                   // P12 : pas de mipmaps en UI overlay
             importer.textureCompression = TextureImporterCompression.Uncompressed;
@@ -64,7 +63,7 @@ namespace Saga.EditorTools
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
             }
-            Debug.Log($"[Saga RhosGFX] Reimported {n} sprites with Trilinear + MipMaps + Uncompressed + maxSize 1024.");
+            Debug.Log($"[Saga RhosGFX] Reimported {n} sprites with Bilinear + no MipMaps + Uncompressed + maxSize 1024 (UI 2D crisp).");
         }
     }
 }
