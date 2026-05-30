@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Saga.Core;
 using Saga.Data;
+using Saga.Save;
 using UnityEngine;
 
 namespace Saga.Tutorial
@@ -29,13 +30,20 @@ namespace Saga.Tutorial
         private TutorialStep _current;
         private int _runtimeTapsAccumulator; // for TapsReached triggers (counted from boot)
 
-        public TutorialService(GameState state, SaveService save)
+        public TutorialService(GameState state, SaveService save, IList<TutorialStep> testSteps = null)
         {
             _state = state;
             _save = save;
-            _steps = Resources.LoadAll<TutorialStep>("Tutorial")
-                .OrderBy(s => s.name)
-                .ToList();
+            if (testSteps != null)
+            {
+                _steps = new List<TutorialStep>(testSteps);
+            }
+            else
+            {
+                _steps = Resources.LoadAll<TutorialStep>("Tutorial")
+                    .OrderBy(s => s.name)
+                    .ToList();
+            }
         }
 
         /// <summary>True if the tutorial is currently active (not yet done + has remaining steps).</summary>
@@ -93,7 +101,7 @@ namespace Saga.Tutorial
             UnsubscribeTrigger(_current);
             var completedId = _current.id;
             _state.tutorialStepIndex++;
-            _save.ForceSave(_state);
+            _save?.ForceSave(_state);
             GameEvents.RaiseTutorialStepCompleted(completedId);
 
             if (_state.tutorialStepIndex >= _steps.Count)
@@ -108,7 +116,7 @@ namespace Saga.Tutorial
         private void MarkDone()
         {
             _state.tutorialDone = true;
-            _save.ForceSave(_state);
+            _save?.ForceSave(_state);
             _current = null;
             GameEvents.RaiseTutorialFinished();
         }

@@ -99,8 +99,9 @@ namespace Saga.Save
         /// <summary>
         /// Apply incremental schema migrations. New fields default to safe values;
         /// renamed/removed fields are mapped explicitly. Migrations are idempotent.
+        /// Public to allow direct testing of migration behavior (EditMode tests).
         /// </summary>
-        private static GameState Migrate(GameState state)
+        public static GameState Migrate(GameState state)
         {
             const int currentVersion = 10;
 
