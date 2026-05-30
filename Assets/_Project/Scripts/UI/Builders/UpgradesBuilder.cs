@@ -44,10 +44,11 @@ namespace Saga.UI.Builders
             panelRt.pivot = new Vector2(0.5f, 0f);
             panelRt.anchoredPosition = new Vector2(0, 422);
             panelRt.sizeDelta = new Vector2(-48, 288);
-            // Panel background = container flat brown, dojo wood feel.
+            // Panel background = container flat brown Sliced (borders 20 du postprocessor)
+            // → corners propres sur largeur 1080. Tint boisDojoDark α 0.85 dojo wood feel.
             var panelImg = panel.GetComponent<Image>();
             panelImg.sprite = catalog.containerFlatBrown;
-            panelImg.type = Image.Type.Simple;
+            panelImg.type = Image.Type.Sliced;
             panelImg.preserveAspect = false;
             panelImg.color = new Color(tokens.boisDojoDark.r, tokens.boisDojoDark.g, tokens.boisDojoDark.b, 0.85f);
             panelImg.raycastTarget = false;
@@ -70,37 +71,25 @@ namespace Saga.UI.Builders
             rt.anchorMin = new Vector2(index * frac, 0);
             rt.anchorMax = new Vector2((index + 1) * frac, 1);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(8, 16);
-            rt.offsetMax = new Vector2(-8, -16);
+            rt.offsetMin = new Vector2(10, 18);
+            rt.offsetMax = new Vector2(-10, -18);
 
-            // Background (cream interior — container flat used as inner panel, tinted DA cream/sable).
+            // P4 fix — UN SEUL container (container-3d-darkbrown Sliced) avec border + ombre
+            // 3D baked dans le sprite. Plus de double frame+container sandwich. Tint panelClair
+            // cream DA pour intérieur lisible.
             var bodyImg = card.AddComponent<Image>();
-            bodyImg.sprite = catalog.containerFlatBrown;
-            bodyImg.type = Image.Type.Simple;
+            bodyImg.sprite = catalog.container3DBrown;
+            bodyImg.type = Image.Type.Sliced;
             bodyImg.preserveAspect = false;
             bodyImg.color = tokens.panelClair; // cream DA #F9E6C8
             bodyImg.raycastTarget = true;
 
-            // Outer frame (decorative) — RhosGFX Basic Brown frame.
-            var frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
-            frame.transform.SetParent(card.transform, false);
-            var frameRt = (RectTransform)frame.transform;
-            frameRt.anchorMin = Vector2.zero; frameRt.anchorMax = Vector2.one;
-            frameRt.offsetMin = Vector2.zero; frameRt.offsetMax = Vector2.zero;
-            var frameImg = frame.GetComponent<Image>();
-            frameImg.sprite = catalog.frameBasicBrown;
-            frameImg.type = Image.Type.Simple;
-            frameImg.preserveAspect = false;
-            frameImg.color = Color.white;
-            frameImg.raycastTarget = false;
-
-            // Icon (96×96) — RhosGFX outline icon tinted DA voie color.
+            // Icon (96×96 top) — RhosGFX outline icon tinted DA voie color.
             var iconImg = BuildIconForUpgrade(card.transform, tokens, catalog, data.UpgradeId);
 
-            // Text labels.
+            // Hierarchy : icône → titre → niveau → coût. Pas de description (P4 spec).
             var nameLabel = BuildNameLabel(card.transform, tokens);
             var levelLabel = BuildLevelLabel(card.transform, tokens);
-            var effectLabel = BuildEffectLabel(card.transform, tokens);
 
             // Cost pill (full-width bottom).
             var costLabel = BuildCostPill(card.transform, tokens, catalog, out var costButtonGo);
@@ -111,9 +100,9 @@ namespace Saga.UI.Builders
             pulse.Peak = 1.015f;
             pulse.Period = 3.0f;
 
-            // Wire driver to keep affordability/click refresh logic.
+            // Wire driver — effectLbl passed null (driver null-safe sur _effectLabel).
             var driver = card.AddComponent<UpgradeCardDriver>();
-            driver.Bind(data, bodyImg, nameLabel, effectLabel, levelLabel, costLabel,
+            driver.Bind(data, bodyImg, nameLabel, effectLbl: null, levelLabel, costLabel,
                 costButtonGo.GetComponent<Button>(), iconImg);
         }
 
@@ -170,18 +159,19 @@ namespace Saga.UI.Builders
             var rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0, 1f); rt.anchorMax = new Vector2(1, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -120);
-            rt.sizeDelta = new Vector2(0, 36);
+            rt.anchoredPosition = new Vector2(0, -124);
+            rt.sizeDelta = new Vector2(0, 40);
 
             var tmp = go.GetComponent<TextMeshProUGUI>();
             tmp.font = tokens.DisplayFont;
-            tmp.fontSize = 30;
+            tmp.fontSize = 32;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = tokens.navyContour;
             tmp.text = "Strike";
             tmp.outlineColor = tokens.cremeText;
-            tmp.outlineWidth = 0.18f;
+            tmp.outlineWidth = 0.20f;
+            tmp.characterSpacing = 5f;
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             return tmp;
@@ -194,39 +184,18 @@ namespace Saga.UI.Builders
             var rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0, 1f); rt.anchorMax = new Vector2(1, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0, -158);
-            rt.sizeDelta = new Vector2(0, 24);
-
-            var tmp = go.GetComponent<TextMeshProUGUI>();
-            tmp.font = tokens.NumbersFont;
-            tmp.fontSize = 22;
-            tmp.fontStyle = FontStyles.Bold;
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.7f);
-            tmp.text = "Lv.0";
-            tmp.raycastTarget = false;
-            tmp.textWrappingMode = TextWrappingModes.NoWrap;
-            return tmp;
-        }
-
-        private static TextMeshProUGUI BuildEffectLabel(Transform parent, DesignTokens tokens)
-        {
-            var go = new GameObject("Effect", typeof(RectTransform), typeof(TextMeshProUGUI));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0);
-            rt.pivot = new Vector2(0.5f, 0f);
-            rt.anchoredPosition = new Vector2(0, 68);
-            rt.sizeDelta = new Vector2(-20, 22);
+            rt.anchoredPosition = new Vector2(0, -168);
+            rt.sizeDelta = new Vector2(0, 28);
 
             var tmp = go.GetComponent<TextMeshProUGUI>();
             tmp.font = tokens.PrimaryFont;
-            tmp.fontSize = 16;
+            tmp.fontSize = 22;
+            tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.75f);
-            tmp.text = "";
+            tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.78f);
+            tmp.text = "Lv.0";
             tmp.raycastTarget = false;
-            tmp.textWrappingMode = TextWrappingModes.Normal;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
             return tmp;
         }
 
@@ -246,10 +215,11 @@ namespace Saga.UI.Builders
             rt.anchoredPosition = new Vector2(0, 10);
             rt.sizeDelta = new Vector2(-20, 52);
 
-            // Background sprite = RhosGFX square 3D green.
+            // Background sprite = RhosGFX square 3D green Sliced (border 20,14,20,14 du
+            // postprocessor) → corners ronds préservés à toute largeur.
             var face = buttonGo.GetComponent<Image>();
             face.sprite = catalog.square3DGreen25.standard;
-            face.type = Image.Type.Simple;
+            face.type = Image.Type.Sliced;
             face.preserveAspect = false;
             face.color = tokens.vertBouton; // #7DE34F vif DA
             face.raycastTarget = true;
