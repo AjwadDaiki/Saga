@@ -35,10 +35,22 @@ namespace Saga.UI.Builders
 
             var bg = nav.GetComponent<Image>();
             bg.sprite = catalog.containerFlatBrown;
-            bg.type = Image.Type.Simple;
+            bg.type = Image.Type.Sliced; // P8 : 9-slice borders (20) → centre stretch propre sur 1048 wide
             bg.preserveAspect = false;
             bg.color = new Color(tokens.boisDojoDark.r, tokens.boisDojoDark.g, tokens.boisDojoDark.b, 0.92f);
             bg.raycastTarget = false;
+
+            // O1 — TopBorder Navy liseré 3px en haut du nav (séparation visuelle avec Skills).
+            var border = new GameObject("TopBorder", typeof(RectTransform), typeof(Image));
+            border.transform.SetParent(nav.transform, false);
+            var brt = (RectTransform)border.transform;
+            brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1);
+            brt.pivot = new Vector2(0.5f, 1f);
+            brt.sizeDelta = new Vector2(0, 3);
+            brt.anchoredPosition = Vector2.zero;
+            var brdImg = border.GetComponent<Image>();
+            brdImg.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.75f);
+            brdImg.raycastTarget = false;
 
             const int count = 5;
             var frac = 1f / count;
@@ -62,7 +74,7 @@ namespace Saga.UI.Builders
             if (active) trt.localScale = new Vector3(1.05f, 1.05f, 1f);
 
             var timg = tab.GetComponent<Image>();
-            timg.type = Image.Type.Simple;
+            timg.type = Image.Type.Sliced; // P7 : 9-slice borders du postprocessor → corners propres
             timg.preserveAspect = false;
             if (active)
             {
@@ -72,7 +84,7 @@ namespace Saga.UI.Builders
             else
             {
                 timg.sprite = catalog.roundFlatGrey1.standard;
-                // Brown tint + reduced alpha for "visible but desaturated" inactive tab (Eatventure pattern).
+                // Brown tint + reduced alpha for "visible but desaturated" inactive tab.
                 timg.color = new Color(tokens.boisDojoLight.r, tokens.boisDojoLight.g, tokens.boisDojoLight.b, 0.55f);
             }
             timg.raycastTarget = true;
