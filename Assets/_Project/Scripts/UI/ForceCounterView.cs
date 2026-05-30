@@ -166,9 +166,9 @@ namespace Saga.UI
                 _glow.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
                 glowRt.localScale = Vector3.one;
                 var gseq = DOTween.Sequence();
-                gseq.Join(_glow.DOFade(0.55f, 0.10f).SetEase(Ease.OutQuad));
+                gseq.Join(UIFadeUtil.Fade(_glow, 0.55f, 0.10f).SetEase(Ease.OutQuad));
                 gseq.Join(glowRt.DOScale(1.18f, 0.10f).SetEase(Ease.OutQuad));
-                gseq.Append(_glow.DOFade(0f, 0.15f).SetEase(Ease.InQuad));
+                gseq.Append(UIFadeUtil.Fade(_glow, 0f, 0.15f).SetEase(Ease.InQuad));
                 gseq.Join(glowRt.DOScale(1.0f, 0.15f).SetEase(Ease.InQuad));
                 gseq.SetLink(_glow.gameObject, LinkBehaviour.KillOnDestroy);
             }

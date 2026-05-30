@@ -40,11 +40,11 @@ namespace Saga.UI
                 yield return new WaitForSeconds(Random.Range(_minDelay, _maxDelay));
                 if (_shine == null) yield break;
                 _shine.DOKill();
-                _shine.DOFade(_peakAlpha, _fadeIn).SetEase(Ease.OutQuad)
+                UIFadeUtil.Fade(_shine, _peakAlpha, _fadeIn).SetEase(Ease.OutQuad)
                     .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
                 yield return new WaitForSeconds(_fadeIn + _hold);
                 if (_shine == null) yield break;
-                _shine.DOFade(0f, _fadeOut).SetEase(Ease.InQuad)
+                UIFadeUtil.Fade(_shine, 0f, _fadeOut).SetEase(Ease.InQuad)
                     .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
                 yield return new WaitForSeconds(_fadeOut);
             }
