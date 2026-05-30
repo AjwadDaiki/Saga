@@ -62,15 +62,16 @@ namespace Saga.UI.Builders
             var glow = BuildGlowHalo(pill.transform, catalog.round3DYellow25.standard, tokens.jauneReward);
             view.Glow = glow;
 
-            // M2-fix P1 : icon 56→48 + offsetX 18→32 pour rester DANS le container.
+            // M2-fix P1 : icon 56→48 + offsetX 32→38 (P15 : légèrement plus à droite, demande Ajwad).
             // M2-fix P2/P3 : offsetY = ShadowCompPill (lift 4px) compense l'ombre baked-in.
             var iconGo = BuildIconImage(pill.transform, "ForceIcon", catalog.iconCoinGold, Color.white, diameter: 48,
-                anchor: new Vector2(0, 0.5f), offsetX: 32, offsetY: ShadowCompPill);
+                anchor: new Vector2(0, 0.5f), offsetX: 38, offsetY: ShadowCompPill);
             // E4 — Shimmer permanent (subtle 4-6s flash sur le coin doré).
             AddShimmerOverlay(iconGo.transform);
 
             // Value label : encre sur fond or, font 32 + outline 0.35 (P5 : moins fin).
-            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: tokens.navyContour,
+            // leftMargin suit l'icon shifté à droite (P15) : 66 → 72.
+            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 72, color: tokens.navyContour,
                 liftY: ShadowCompPill);
             view.Compact = true;
             view.Label = label;
@@ -89,14 +90,15 @@ namespace Saga.UI.Builders
                 bgSprite: catalog.round3DPurple25.standard,
                 bgTint: tokens.lavandeUI);
 
-            // M2-fix P1/P2/P3 : icon 48 + offsetX 32 dedans + lift 4px shadow comp.
+            // M2-fix P1/P2/P3 + P15 : icon 48 + offsetX 38 dedans + lift 4px shadow comp.
             BuildIconImage(pill.transform, "EchosIcon",
                 catalog.iconGemOutline != null ? catalog.iconGemOutline : catalog.iconGem,
                 tokens.cremeText, diameter: 48,
-                anchor: new Vector2(0, 0.5f), offsetX: 32, offsetY: ShadowCompPill);
+                anchor: new Vector2(0, 0.5f), offsetX: 38, offsetY: ShadowCompPill);
 
             // Value label : blanc sur fond lavande, font 32 + outline plus épais (P5).
-            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: Color.white,
+            // leftMargin légèrement augmenté pour suivre l'icon (38+24=62→72 environ).
+            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 72, color: Color.white,
                 liftY: ShadowCompPill);
             var gm = GameManager.Instance;
             label.text = gm?.State != null ? Saga.Math.NumberFormatter.Format(gm.State.totalEchos) : "0";
