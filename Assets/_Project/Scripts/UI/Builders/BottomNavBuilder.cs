@@ -110,12 +110,13 @@ namespace Saga.UI.Builders
             var tmp = lbl.GetComponent<TextMeshProUGUI>();
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.font = tokens.PrimaryFont;
-            tmp.fontSize = 22;
+            tmp.fontSize = 24; // P9 : labels nav ≥ 24 sp
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = active ? tokens.navyContour : tokens.cremeText;
             tmp.text = label;
-            tmp.outlineColor = tokens.navyContour;
-            tmp.outlineWidth = active ? 0.15f : 0.20f;
+            tmp.outlineColor = active ? tokens.cremeText : tokens.navyContour;
+            tmp.outlineWidth = active ? 0.18f : 0.22f;
+            tmp.characterSpacing = 3f;
             tmp.raycastTarget = false;
 
             if (!active)

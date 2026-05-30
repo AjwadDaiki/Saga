@@ -23,9 +23,10 @@ namespace Saga.UI.Builders
             rt.sizeDelta = new Vector2(620, 140);
 
             // Background — RhosGFX Frame Basic Grey, tint Neutre DA panelSombre alpha 92%.
+            // Sliced (borders 20 du postprocessor) → corners propres sur 620×140.
             var bg = go.GetComponent<Image>();
             bg.sprite = catalog.frameBasicGrey;
-            bg.type = Image.Type.Simple;
+            bg.type = Image.Type.Sliced;
             bg.preserveAspect = false;
             bg.color = new Color(tokens.panelSombre.r, tokens.panelSombre.g, tokens.panelSombre.b, 0.92f);
             bg.raycastTarget = false;
@@ -54,11 +55,12 @@ namespace Saga.UI.Builders
             var tmp = lbl.GetComponent<TextMeshProUGUI>();
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.font = tokens.DisplayFont;
-            tmp.fontSize = 26;
+            tmp.fontSize = 28; // P9 : titre toast aligné sur min 28sp
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = tokens.cremeText;
             tmp.outlineColor = tokens.navyContour;
-            tmp.outlineWidth = 0.24f;
+            tmp.outlineWidth = 0.26f;
+            tmp.characterSpacing = 4f;
             tmp.text = "Bientôt disponible";
             tmp.raycastTarget = false;
 

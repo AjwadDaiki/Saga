@@ -382,6 +382,7 @@ namespace Saga.UI.Builders
             tmp.text = text;
             tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.32f;
+            tmp.characterSpacing = 6f; // P9 : tracking +6 sur titres Lilita
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             return tmp;

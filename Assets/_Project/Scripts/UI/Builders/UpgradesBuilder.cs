@@ -194,6 +194,8 @@ namespace Saga.UI.Builders
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = new Color(tokens.navyContour.r, tokens.navyContour.g, tokens.navyContour.b, 0.78f);
             tmp.text = "Lv.0";
+            tmp.outlineColor = tokens.cremeText;
+            tmp.outlineWidth = 0.15f;
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             return tmp;
@@ -248,13 +250,14 @@ namespace Saga.UI.Builders
 
             var tmp = lblGo.GetComponent<TextMeshProUGUI>();
             tmp.font = tokens.DisplayFont;
-            tmp.fontSize = 26;
+            tmp.fontSize = 28; // P9 : boutons ≥ 28 sp
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
             tmp.text = "1.2K";
             tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.28f;
+            tmp.characterSpacing = 4f;
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             return tmp;

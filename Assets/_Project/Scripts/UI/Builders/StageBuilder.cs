@@ -82,7 +82,7 @@ namespace Saga.UI.Builders
             lblTmp.color = tokens.navyContour;
             lblTmp.text = "Stade 1";
             lblTmp.outlineColor = tokens.cremeText;
-            lblTmp.outlineWidth = 0.18f;
+            lblTmp.outlineWidth = 0.22f;
             lblTmp.characterSpacing = 6f;
             lblTmp.raycastTarget = false;
             lblTmp.textWrappingMode = TextWrappingModes.NoWrap;
