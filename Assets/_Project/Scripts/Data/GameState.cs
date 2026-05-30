@@ -13,7 +13,7 @@ namespace Saga.Data
     public class GameState
     {
         /// <summary>Schema version. Bump on breaking change. Migration handled by SaveService.</summary>
-        public int saveVersion = 9;
+        public int saveVersion = 10;
 
         // -- Currencies (BigDouble — protect against 1e15+ ceiling) -------
         public BigDouble force;
@@ -115,6 +115,16 @@ namespace Saga.Data
         public string voieSelectedId = string.Empty;
         /// <summary>Voies mastered (one Maître of this voie defeated). PERSISTS.</summary>
         public List<string> voiesMastered = new List<string>();
+
+        // -- Tutorial onboarding (Sprint 8 Phase A) -----------------------
+        /// <summary>True once the player completed (or skipped) the first-session tutorial.
+        /// Default false for fresh saves ; the v9→v10 migration force-sets true on existing
+        /// saves (legacy players ne re-jouent pas le tutorial). PERSISTS across prestige.</summary>
+        public bool tutorialDone;
+        /// <summary>Index of the next tutorial step to display (0..N). 0 = first prompt.
+        /// Ignored once <see cref="tutorialDone"/> = true. PERSISTS so the player can resume mid-tuto
+        /// après une fermeture d'app.</summary>
+        public int tutorialStepIndex;
 
         // Sprint 8+ : esprits, regions, lore fragments, achievements detail, etc.
     }

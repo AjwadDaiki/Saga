@@ -102,7 +102,7 @@ namespace Saga.Save
         /// </summary>
         private static GameState Migrate(GameState state)
         {
-            const int currentVersion = 9;
+            const int currentVersion = 10;
 
             if (state.saveVersion < 2)
             {
@@ -190,6 +190,16 @@ namespace Saga.Save
                 if (state.voieSelectedId == null) state.voieSelectedId = string.Empty;
                 if (state.voiesMastered == null) state.voiesMastered = new System.Collections.Generic.List<string>();
                 Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v9 (modular sprites + equipment + voies).");
+            }
+
+            if (state.saveVersion < 10)
+            {
+                // v9 -> v10: tutorial onboarding (Sprint 8 Phase A). Existing saves = legacy
+                // players → auto-skip tutorial (tutorialDone=true). Fresh saves keep default
+                // false (constructor) and play the tutorial on next boot.
+                state.tutorialDone = true;
+                state.tutorialStepIndex = 0;
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v10 (tutorial auto-skip for legacy player).");
             }
 
             // Defensive: always ensure non-null collections + valid scalars post-deserialization.
