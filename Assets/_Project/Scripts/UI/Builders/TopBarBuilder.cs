@@ -27,11 +27,12 @@ namespace Saga.UI.Builders
         private const float SidePad = 32f;
         private const float GapPills = 28f;  // Sprint 7.6 M2-fix P6 : 16→28 (pills moins collés)
 
-        // M2-fix P2/P3/P7 — sprite RhosGFX a une ombre baked-in en bas.
-        // Settings (round 80×80) a une ombre proportionnellement plus grosse que les pills ovales
-        // → lift plus marqué (8px vs 4px) confirmé par retour visuel Ajwad.
+        // M2-fix P2/P3/P7 + 7.7 P1 — sprite RhosGFX a une ombre baked-in en bas.
+        // ShadowCompSettings rebaissé 8→6 : l'ancien lift 8 montait trop le gear, créant la
+        // perception "Settings étiré vers le haut" (P1). 6 reste un lift visible sans
+        // sortir du centre visuel de la zone ronde du sprite.
         private const float ShadowCompPill = 4f;
-        private const float ShadowCompSettings = 8f;
+        private const float ShadowCompSettings = 6f;
 
         public static void Build(BuilderContext ctx)
         {
