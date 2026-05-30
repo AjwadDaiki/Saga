@@ -4,11 +4,17 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 7 + Sprint 7.5 **VALIDÉS PAR AJWAD** (test Play + Simulator iPhone 12 le 2026-05-30, verdict "70% mieux"). Sprint 7 = modulaire sprites + Voies + Equipment + Inventaire + Reliques. Sprint 7.5 = design system mobile pro (DesignTokens SO, background dojo procédural, SafeArea wrapping, mannequin redesign, SagaButton, AudioService + HapticService) + **Phase 4 LAYOUT wireframe SAGA officiel** (Top HUD 154 + Stage 96 + Combat 960 + Upgrades 288 + Skills 230 + BottomNav 192 = 1920 px). Ready to merge `dev` → `main` → tag `v0.7.5`, puis Sprint 7.6 RhosGFX visual premium.
+**Phase**: Sprints 7 / 7.5 / 7.6 / 7.7 **MERGÉS ET TAGGÉS** (v0.7.5 puis v0.7.7). Sprint 7.7 marque la baseline UI avant **pivot stratégique** : Ajwad va produire ses propres assets art custom (style SAGA unique). Pendant ce temps Sprint 8+ continue côté gameplay sans toucher au UI. Pas de nouveau sprint UI tant qu'Ajwad n'a pas livré ses customs.
 
 **Dernière session**: 2026-05-30, dev Claude (Opus 4.7) sur Claude Code.
 
-**Branche active**: `feat/sprint-7.5-polish-mobile-pro` (depuis `feat/sprint-7-voies-modulaire`) — VALIDÉE, prête merge.
+**Branche active**: `feat/sprint-8-gameplay-content` (créée depuis main post tag v0.7.7).
+
+**Sprint 8 next — GAMEPLAY CONTENT** (sans UI) :
+- Voie Samurai complète jusqu'au boss final voie
+- Tutorial onboarding première session
+- Système Esprits Compagnons (foundations)
+- Polish gameplay (équilibrage drop rates, etc.)
 
 ## Sprints terminés
 
@@ -22,7 +28,9 @@
 | 5 | `v0.5.0` | Boss Mineurs (8 Capitaines) + Élan + Vague AOE | ✅ closed |
 | 6 | `v0.6.0` | Maîtres légendaires (8) + Prestige + Souffle | ✅ closed |
 | 7 | `v0.7.0` (skipped) | Sprites modulaires (Body/Armor/Weapon) + 8 Voies + EquipmentService + Inventaire + Reliques équipables | 🟡 implémenté, mergé dans 7.5 |
-| 7.5 | `v0.7.5` (pending tag) | Design system mobile pro 2026 + Phase 4 LAYOUT wireframe SAGA officiel (TopHUD 154 / Stage 96 / Combat 960 / Upgrades 288 / Skills 230 / BottomNav 192 = 1920 px) | ✅ **VALIDÉ AJWAD 2026-05-30** (Play + Simulator iPhone 12, verdict "70% mieux") |
+| 7.5 | `v0.7.5` | Design system mobile pro 2026 + Phase 4 LAYOUT wireframe SAGA officiel (TopHUD 154 / Stage 96 / Combat 960 / Upgrades 288 / Skills 230 / BottomNav 192 = 1920 px) | ✅ closed |
+| 7.6 | (mergé dans 7.7) | RhosGFX Cartoony UI Pack intégré sur 100 % du HUD : sprites tinted DA + ButtonStateSet swap on press + BreathingPulse/PressBounce/ReadyGlow + UpgradesCards mono-container + Skills VAGUE/SOUFFLE + Élan thin bar + BottomNav 5 tabs | ✅ closed (rolled into 7.7) |
+| 7.7 | `v0.7.7` | Polish premium baseline : 9-slice borders postprocessor (corner-preserve sur tous sprites RhosGFX), Settings P1, Stage chip pill, Cards mono-container, VAGUE 620 + Halo derrière face, BottomNav Sliced + TopBorder, textes outline+tracking standardisés | ✅ **closed — baseline avant refonte art custom Ajwad** |
 
 ## Sprint 6 — accomplissements clés (validés en play)
 
