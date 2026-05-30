@@ -28,6 +28,7 @@ namespace Saga.UI
 
         [SerializeField] private TextMeshProUGUI _label;
         [SerializeField] private bool _compact;
+        [SerializeField] private UnityEngine.UI.Image _glow; // E3 — halo derrière le pill, pulse on change.
 
         private BigDouble _displayed;
         private BigDouble _target;
@@ -45,6 +46,7 @@ namespace Saga.UI
         }
 
         public bool Compact { get => _compact; set => _compact = value; }
+        public UnityEngine.UI.Image Glow { get => _glow; set => _glow = value; }
 
         private void OnEnable()
         {
@@ -153,6 +155,23 @@ namespace Saga.UI
                 seq.Append(_rect.DOScale(1.0f, 0.12f).SetEase(Ease.OutBack));
             }
             _tickTween = seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+
+            // E3 — glow halo pulse alpha 0 → 0.55 → 0 + scale 1.0 → 1.18 sur ~0.25s.
+            if (_glow != null)
+            {
+                var glowRt = _glow.rectTransform;
+                _glow.DOKill();
+                glowRt.DOKill();
+                var baseColor = _glow.color;
+                _glow.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+                glowRt.localScale = Vector3.one;
+                var gseq = DOTween.Sequence();
+                gseq.Join(_glow.DOFade(0.55f, 0.10f).SetEase(Ease.OutQuad));
+                gseq.Join(glowRt.DOScale(1.18f, 0.10f).SetEase(Ease.OutQuad));
+                gseq.Append(_glow.DOFade(0f, 0.15f).SetEase(Ease.InQuad));
+                gseq.Join(glowRt.DOScale(1.0f, 0.15f).SetEase(Ease.InQuad));
+                gseq.SetLink(_glow.gameObject, LinkBehaviour.KillOnDestroy);
+            }
         }
 
         // ----- Display -----

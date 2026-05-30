@@ -56,17 +56,22 @@ namespace Saga.UI.Builders
                 bgSprite: catalog.round3DYellow25.standard,
                 bgTint: tokens.jauneReward);
 
-            pill.AddComponent<ForceCounterView>();
+            var view = pill.AddComponent<ForceCounterView>();
+
+            // E3 — Glow halo derrière le pill (alpha 0 idle, pulse Or sur big change).
+            var glow = BuildGlowHalo(pill.transform, catalog.round3DYellow25.standard, tokens.jauneReward);
+            view.Glow = glow;
 
             // M2-fix P1 : icon 56→48 + offsetX 18→32 pour rester DANS le container.
             // M2-fix P2/P3 : offsetY = ShadowCompPill (lift 4px) compense l'ombre baked-in.
-            BuildIconImage(pill.transform, "ForceIcon", catalog.iconCoinGold, Color.white, diameter: 48,
+            var iconGo = BuildIconImage(pill.transform, "ForceIcon", catalog.iconCoinGold, Color.white, diameter: 48,
                 anchor: new Vector2(0, 0.5f), offsetX: 32, offsetY: ShadowCompPill);
+            // E4 — Shimmer permanent (subtle 4-6s flash sur le coin doré).
+            AddShimmerOverlay(iconGo.transform);
 
             // Value label : encre sur fond or, font 32 + outline 0.35 (P5 : moins fin).
             var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: tokens.navyContour,
                 liftY: ShadowCompPill);
-            var view = pill.GetComponent<ForceCounterView>();
             view.Compact = true;
             view.Label = label;
         }
@@ -143,6 +148,47 @@ namespace Saga.UI.Builders
             bg.raycastTarget = false;
 
             return pill;
+        }
+
+        /// <summary>
+        /// E3 — Glow halo : Image clone du sprite pill, alpha 0 idle, anim par ForceCounterView.Bounce.
+        /// Stretched 12px outside les bords du pill pour déborder légèrement → halo.
+        /// </summary>
+        private static Image BuildGlowHalo(Transform parent, Sprite sprite, Color color)
+        {
+            var glow = new GameObject("Glow", typeof(RectTransform), typeof(Image));
+            glow.transform.SetParent(parent, false);
+            glow.transform.SetAsFirstSibling(); // sous le BG du pill
+            var rt = (RectTransform)glow.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(-12, -12); rt.offsetMax = new Vector2(12, 12);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            var img = glow.GetComponent<Image>();
+            img.sprite = sprite;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = false;
+            img.color = new Color(color.r, color.g, color.b, 0f);
+            img.raycastTarget = false;
+            return img;
+        }
+
+        /// <summary>
+        /// E4 — Shimmer overlay : élipse blanche douce posée sur l'icône, alpha 0 idle, flash
+        /// toutes les 4-6s via ShimmerLoopView (random delay = pas robotique).
+        /// </summary>
+        private static void AddShimmerOverlay(Transform iconTransform)
+        {
+            var shineGo = new GameObject("Shine", typeof(RectTransform), typeof(Image));
+            shineGo.transform.SetParent(iconTransform, false);
+            var rt = (RectTransform)shineGo.transform;
+            rt.anchorMin = new Vector2(0.1f, 0.55f); rt.anchorMax = new Vector2(0.55f, 0.92f);
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            var img = shineGo.GetComponent<Image>();
+            img.sprite = PuffySprite.Gloss();
+            img.color = new Color(1f, 1f, 1f, 0f);
+            img.raycastTarget = false;
+            var loop = shineGo.AddComponent<ShimmerLoopView>();
+            loop.Shine = img;
         }
 
         /// <summary>Single Image with RhosGFX icon sprite. Caller positions via anchor + offsetX/Y.</summary>
