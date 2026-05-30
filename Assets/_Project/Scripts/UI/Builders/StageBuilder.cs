@@ -49,37 +49,41 @@ namespace Saga.UI.Builders
             rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(0, 0.5f);
             rt.pivot = new Vector2(0f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(240, 60);
+            rt.sizeDelta = new Vector2(260, 68);
 
+            // P3 fix : sprite pill horizontal (button-round-3d-2.5-yellow 160×64 ratio 2.5:1) +
+            // Image.Type.Sliced avec borders 9-slice du postprocessor → forme capsule nette,
+            // corners ronds préservés, center stretch propre. Tint Or DA jauneReward (contraste fort).
             var bg = chip.GetComponent<Image>();
-            bg.sprite = catalog.container3DBrown != null ? catalog.container3DBrown : catalog.container3DYellow;
-            bg.type = Image.Type.Simple;
+            bg.sprite = catalog.round3DYellow25.standard;
+            bg.type = Image.Type.Sliced;
             bg.preserveAspect = false;
-            bg.color = tokens.boisDojoDark;
+            bg.color = tokens.jauneReward;
             bg.raycastTarget = false;
 
-            // Skull icon left (RhosGFX), tinted Rouge DA coral.
-            var skull = BuildSkullIcon(chip.transform, tokens, catalog, diameter: 44);
+            // Skull icon left (RhosGFX), tinted Coral.
+            var skull = BuildSkullIcon(chip.transform, tokens, catalog, diameter: 40);
             var skullRt = (RectTransform)skull.transform;
             skullRt.anchorMin = new Vector2(0, 0.5f); skullRt.anchorMax = new Vector2(0, 0.5f);
             skullRt.pivot = new Vector2(0.5f, 0.5f);
-            skullRt.anchoredPosition = new Vector2(28, 4);
+            skullRt.anchoredPosition = new Vector2(28, 2);
 
-            // "Stade N" label, Lilita One bold 36, crème.
+            // "Stade N" label, Lilita Bold 30, encre sur Or (contraste optimal).
             var lbl = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             lbl.transform.SetParent(chip.transform, false);
             var lblRt = (RectTransform)lbl.transform;
             lblRt.anchorMin = Vector2.zero; lblRt.anchorMax = Vector2.one;
-            lblRt.offsetMin = new Vector2(58, 4); lblRt.offsetMax = new Vector2(-16, 4);
+            lblRt.offsetMin = new Vector2(56, 2); lblRt.offsetMax = new Vector2(-16, 2);
             var lblTmp = lbl.GetComponent<TextMeshProUGUI>();
             lblTmp.alignment = TextAlignmentOptions.Center;
             lblTmp.font = tokens.DisplayFont;
-            lblTmp.fontSize = 32;
+            lblTmp.fontSize = 30;
             lblTmp.fontStyle = FontStyles.Bold;
-            lblTmp.color = tokens.cremeText;
+            lblTmp.color = tokens.navyContour;
             lblTmp.text = "Stade 1";
-            lblTmp.outlineColor = tokens.navyContour;
-            lblTmp.outlineWidth = 0.25f;
+            lblTmp.outlineColor = tokens.cremeText;
+            lblTmp.outlineWidth = 0.18f;
+            lblTmp.characterSpacing = 6f;
             lblTmp.raycastTarget = false;
             lblTmp.textWrappingMode = TextWrappingModes.NoWrap;
 
@@ -101,12 +105,13 @@ namespace Saga.UI.Builders
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
             // Bar stretches between chip (240 + 24 gap = 264) and skull right (48 + 16 gap = 64).
-            rt.offsetMin = new Vector2(264, -18); rt.offsetMax = new Vector2(-64, 18);
+            rt.offsetMin = new Vector2(284, -16); rt.offsetMax = new Vector2(-56, 16);
 
             var group = root.GetComponent<CanvasGroup>();
             group.alpha = 1f; group.interactable = false; group.blocksRaycasts = false;
 
-            // Container (track) — RhosGFX progress-container-regular-red-regular.
+            // Container (track) — Sliced 9-slice (borders 8,8,8,8 du postprocessor) → capsule
+            // horizontale nette, corners ronds préservés à toute largeur.
             var track = new GameObject("Track", typeof(RectTransform), typeof(Image));
             track.transform.SetParent(rt, false);
             var trackRt = (RectTransform)track.transform;
@@ -114,17 +119,16 @@ namespace Saga.UI.Builders
             trackRt.offsetMin = Vector2.zero; trackRt.offsetMax = Vector2.zero;
             var trackImg = track.GetComponent<Image>();
             trackImg.sprite = catalog.barRegularRedContainer;
-            trackImg.type = Image.Type.Simple;
+            trackImg.type = Image.Type.Sliced;
             trackImg.preserveAspect = false;
             trackImg.color = Color.white; // sprite already red — keep native tint
             trackImg.raycastTarget = false;
 
-            // Fill — RhosGFX progress-bar-regular-red-regular, Image.Filled horizontal driven by view.
+            // Fill — Sliced (borders 4,4,4,4) Filled Horizontal driven par AdversaireProgressBarView.
             var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
             fill.transform.SetParent(rt, false);
             var fillRt = (RectTransform)fill.transform;
             fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
-            // Inset 4px du container pour respirer (le sprite container a une bordure).
             fillRt.offsetMin = new Vector2(6, 6); fillRt.offsetMax = new Vector2(-6, -6);
             var fillImg = fill.GetComponent<Image>();
             fillImg.sprite = catalog.barRegularRedFill;
@@ -133,7 +137,6 @@ namespace Saga.UI.Builders
             fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
             fillImg.fillAmount = 0f;
             fillImg.preserveAspect = false;
-            // Override la teinte rouge sprite par Mint DA (positive progress feel) — peut être ajusté.
             fillImg.color = tokens.mintPositif;
             fillImg.raycastTarget = false;
 
