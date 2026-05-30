@@ -125,6 +125,11 @@ namespace Saga.Core
             StageBuilder.Build(ctx);               // Sprint 7.5 zone 3 — placeholder, Phase 3 stage chip.
             TopBarBuilder.Build(ctx);              // Sprint 7.5 zone 2 — currency pills + settings.
             BottomNavBuilder.Build(ctx);           // Sprint 7.5 zone 7 — 5-tab bottom nav.
+
+            // Sprint 8 Phase A — tutorial onboarding overlay. Built LAST pour que les targets
+            // (ForcePill, VagueButton, StageChip, etc.) existent dans la hiérarchie au lookup.
+            // Builder no-op si State.tutorialDone (legacy player auto-skip via SaveService v10).
+            TutorialOverlayBuilder.Build(ctx);
         }
 
         // ============================================================
