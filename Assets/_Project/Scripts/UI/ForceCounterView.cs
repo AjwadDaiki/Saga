@@ -81,7 +81,10 @@ namespace Saga.UI
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
             _target = gm.State.force;
-            PunchTick();
+            // Sprint 7.6 M2-fix : currency pills (Compact mode) restent statiques en idle —
+            // les ticks Force/sec passifs déclenchaient un pulse permanent. Punch réservé au
+            // big counter (Compact = false). Trigger animations on change reviendront Sprint 7.7.
+            if (!_compact) PunchTick();
         }
 
         private void Refresh()

@@ -25,7 +25,12 @@ namespace Saga.UI.Builders
         private static readonly Vector2 SettingsSize = new Vector2(80, 80);
         private const float TopY = -16f;     // 16 px sous le bord top du SafeAreaContainer
         private const float SidePad = 32f;
-        private const float GapPills = 16f;
+        private const float GapPills = 28f;  // Sprint 7.6 M2-fix P6 : 16→28 (pills moins collés)
+
+        // M2-fix P2/P3 — sprite RhosGFX a une ombre baked-in en bas (~10% du sprite).
+        // Compenser en lift Y de ~half-shadow pour que le contenu paraisse centré sur la "face".
+        private const float ShadowCompPill = 4f;     // pill 80px tall, ombre ~8px → lift 4px
+        private const float ShadowCompSettings = 4f; // bouton 80×80 idem
 
         public static void Build(BuilderContext ctx)
         {
@@ -52,12 +57,14 @@ namespace Saga.UI.Builders
 
             pill.AddComponent<ForceCounterView>();
 
-            // Icône Coin 2 Gold native (déjà dorée, pas de tint).
-            BuildIconImage(pill.transform, "ForceIcon", catalog.iconCoinGold, Color.white, diameter: 56,
-                anchor: new Vector2(0, 0.5f), offsetX: 18);
+            // M2-fix P1 : icon 56→48 + offsetX 18→32 pour rester DANS le container.
+            // M2-fix P2/P3 : offsetY = ShadowCompPill (lift 4px) compense l'ombre baked-in.
+            BuildIconImage(pill.transform, "ForceIcon", catalog.iconCoinGold, Color.white, diameter: 48,
+                anchor: new Vector2(0, 0.5f), offsetX: 32, offsetY: ShadowCompPill);
 
-            // Value label : JetBrains Mono Bold, encre sur fond or (vs blanc sur charcoal avant).
-            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: tokens.navyContour);
+            // Value label : encre sur fond or, font 32 + outline 0.35 (P5 : moins fin).
+            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: tokens.navyContour,
+                liftY: ShadowCompPill);
             var view = pill.GetComponent<ForceCounterView>();
             view.Compact = true;
             view.Label = label;
@@ -76,14 +83,15 @@ namespace Saga.UI.Builders
                 bgSprite: catalog.round3DPurple25.standard,
                 bgTint: tokens.lavandeUI);
 
-            // Icône Gem Outline tinted Lavande (sprite outline = blanc → tint propre).
+            // M2-fix P1/P2/P3 : icon 48 + offsetX 32 dedans + lift 4px shadow comp.
             BuildIconImage(pill.transform, "EchosIcon",
                 catalog.iconGemOutline != null ? catalog.iconGemOutline : catalog.iconGem,
-                tokens.cremeText, diameter: 56,
-                anchor: new Vector2(0, 0.5f), offsetX: 18);
+                tokens.cremeText, diameter: 48,
+                anchor: new Vector2(0, 0.5f), offsetX: 32, offsetY: ShadowCompPill);
 
-            // Value label : encre sur fond violet (lisible).
-            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: Color.white);
+            // Value label : blanc sur fond lavande, font 32 + outline plus épais (P5).
+            var label = BuildValueLabel(pill.transform, tokens, leftMargin: 66, color: Color.white,
+                liftY: ShadowCompPill);
             var gm = GameManager.Instance;
             label.text = gm?.State != null ? Saga.Math.NumberFormatter.Format(gm.State.totalEchos) : "0";
         }
@@ -102,9 +110,10 @@ namespace Saga.UI.Builders
             rt.anchoredPosition = new Vector2(-SidePad, TopY);
             rt.sizeDelta = SettingsSize;
 
-            // Gear icon centered, tinted encre (Outline sprite = blanc tintable).
+            // M2-fix P2 : gear icon lifted ShadowCompSettings pour rester centré sur la face.
+            // M2-fix P1 : diameter 48→44 (icon dans bouton 80×80 avec marge confortable).
             BuildIconImage(btn.transform, "GearIcon", catalog.iconGearOutline, tokens.navyContour,
-                diameter: 48, anchor: new Vector2(0.5f, 0.5f), offsetX: 0);
+                diameter: 44, anchor: new Vector2(0.5f, 0.5f), offsetX: 0, offsetY: ShadowCompSettings);
         }
 
         // ====================================================================================
@@ -135,15 +144,15 @@ namespace Saga.UI.Builders
             return pill;
         }
 
-        /// <summary>Single Image with RhosGFX icon sprite. Caller positions via anchor + offsetX.</summary>
+        /// <summary>Single Image with RhosGFX icon sprite. Caller positions via anchor + offsetX/Y.</summary>
         private static GameObject BuildIconImage(Transform parent, string name, Sprite sprite, Color tint,
-            int diameter, Vector2 anchor, float offsetX)
+            int diameter, Vector2 anchor, float offsetX, float offsetY = 0f)
         {
             var icon = new GameObject(name, typeof(RectTransform), typeof(Image));
             icon.transform.SetParent(parent, false);
             var rt = (RectTransform)icon.transform;
             rt.anchorMin = anchor; rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(offsetX, 0);
+            rt.anchoredPosition = new Vector2(offsetX, offsetY);
             rt.sizeDelta = new Vector2(diameter, diameter);
 
             var img = icon.GetComponent<Image>();
@@ -155,26 +164,31 @@ namespace Saga.UI.Builders
             return icon;
         }
 
-        /// <summary>JetBrains Mono Bold value label with charcoal outline (puffy text recipe).</summary>
-        private static TextMeshProUGUI BuildValueLabel(Transform parent, DesignTokens tokens, int leftMargin, Color color)
+        /// <summary>
+        /// JetBrains Mono Bold value label with charcoal outline (puffy text recipe).
+        /// M2-fix P5 : fontSize 26→32, outlineWidth 0.2→0.35 pour matcher l'épaisseur cartoony RhosGFX.
+        /// liftY décale tout le label vers le haut pour compenser l'ombre baked-in du sprite container.
+        /// </summary>
+        private static TextMeshProUGUI BuildValueLabel(Transform parent, DesignTokens tokens, int leftMargin,
+            Color color, float liftY = 0f)
         {
             var val = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
             val.transform.SetParent(parent, false);
             var rt = (RectTransform)val.transform;
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-            rt.offsetMin = new Vector2(leftMargin, 0);
-            rt.offsetMax = new Vector2(-14, 0);
+            rt.offsetMin = new Vector2(leftMargin, liftY);
+            rt.offsetMax = new Vector2(-14, liftY);
 
             var tmp = val.GetComponent<TextMeshProUGUI>();
             tmp.alignment = TextAlignmentOptions.Left;
             tmp.font = tokens.NumbersFont;
-            tmp.fontSize = 26;
+            tmp.fontSize = 32;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = color;
             tmp.text = "0";
             tmp.raycastTarget = false;
             tmp.outlineColor = tokens.navyContour;
-            tmp.outlineWidth = 0.2f;
+            tmp.outlineWidth = 0.35f;
             return tmp;
         }
     }
