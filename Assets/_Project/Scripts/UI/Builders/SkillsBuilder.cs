@@ -54,37 +54,44 @@ namespace Saga.UI.Builders
 
         private static void BuildVagueButton(RectTransform parent, DesignTokens tokens, RhosGFXAssetCatalog catalog)
         {
+            // P5 fix : VAGUE 680→620 (évite débordement sur SOUFFLE 280 + gap, total 920 < 1016 row).
             var btn = new GameObject("VagueButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(VagueButtonView));
+                typeof(RectTransform), typeof(CanvasGroup), typeof(VagueButtonView));
             btn.transform.SetParent(parent, false);
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = new Vector2(1, 0.5f); rt.anchorMax = new Vector2(1, 0.5f);
             rt.pivot = new Vector2(1, 0.5f);
             rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(680, 180);
+            rt.sizeDelta = new Vector2(620, 180);
 
             var group = btn.GetComponent<CanvasGroup>();
             group.alpha = 1f; group.blocksRaycasts = true; group.interactable = true;
 
-            // Background sprite — RhosGFX 3D square blue regular tinted Sky DA #65C8FF.
-            var face = btn.GetComponent<Image>();
+            // P6 fix : halo en PREMIER sibling + Face Image en CHILD → halo derrière, pas
+            // d'empilement face×halo qui créait l'effet "ombre+contour doublonné". Face est
+            // un child séparé avec Image dédiée + raycastTarget.
+            var glow = BuildHalo(rt, catalog.square3DBlue25.standard, tokens.jauneReward);
+
+            var faceGo = new GameObject("Face", typeof(RectTransform), typeof(Image));
+            faceGo.transform.SetParent(rt, false);
+            var faceRt = (RectTransform)faceGo.transform;
+            faceRt.anchorMin = Vector2.zero; faceRt.anchorMax = Vector2.one;
+            faceRt.offsetMin = Vector2.zero; faceRt.offsetMax = Vector2.zero;
+            var face = faceGo.GetComponent<Image>();
             face.sprite = catalog.square3DBlue25.standard;
-            face.type = Image.Type.Simple;
+            face.type = Image.Type.Sliced; // 9-slice borders 20,14,20,14 → corners ronds nets
             face.preserveAspect = false;
             face.color = tokens.skyBlue;
             face.raycastTarget = true;
 
-            // Ready glow halo behind (under bg).
-            var glow = BuildHalo(rt, catalog.square3DBlue25.standard, tokens.jauneReward);
-
             // Lightning bolt icon (procedural — pack has no lightning).
-            BuildLightningBolt(rt, tokens);
+            BuildLightningBolt(faceRt, tokens);
 
             // Main label "VAGUE" (centered top).
-            var lbl = BuildBigLabel(rt, tokens, "VAGUE", topMargin: 16, bottomMargin: 60);
+            var lbl = BuildBigLabel(faceRt, tokens, "VAGUE", topMargin: 16, bottomMargin: 60);
 
             // Élan inner gauge bottom.
-            BuildElanGauge(rt, tokens, catalog, out var gaugeFill, out var gaugeLabel, out var gaugeGlow);
+            BuildElanGauge(faceRt, tokens, catalog, out var gaugeFill, out var gaugeLabel, out var gaugeGlow);
 
             var view = btn.GetComponent<VagueButtonView>();
             view.Group = group;
@@ -235,7 +242,7 @@ namespace Saga.UI.Builders
         private static void BuildSouffleButton(RectTransform parent, DesignTokens tokens, RhosGFXAssetCatalog catalog)
         {
             var btn = new GameObject("SouffleButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(SouffleButtonView));
+                typeof(RectTransform), typeof(CanvasGroup), typeof(SouffleButtonView));
             btn.transform.SetParent(parent, false);
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(0, 0.5f);
@@ -246,16 +253,23 @@ namespace Saga.UI.Builders
             var group = btn.GetComponent<CanvasGroup>();
             group.alpha = 1f; group.blocksRaycasts = true; group.interactable = true;
 
-            var face = btn.GetComponent<Image>();
+            // P6 fix : Face en child séparé (cohérence avec VAGUE), Image.Type.Sliced (border
+            // 20,14,20,14 du postprocessor) pour corners ronds nets.
+            var faceGo = new GameObject("Face", typeof(RectTransform), typeof(Image));
+            faceGo.transform.SetParent(rt, false);
+            var faceRt = (RectTransform)faceGo.transform;
+            faceRt.anchorMin = Vector2.zero; faceRt.anchorMax = Vector2.one;
+            faceRt.offsetMin = Vector2.zero; faceRt.offsetMax = Vector2.zero;
+            var face = faceGo.GetComponent<Image>();
             face.sprite = catalog.square3DForestGreen25.standard;
-            face.type = Image.Type.Simple;
+            face.type = Image.Type.Sliced;
             face.preserveAspect = false;
             face.color = tokens.mintPositif;
             face.raycastTarget = true;
 
             // Bell icon (RhosGFX, méditation zen).
             var iconGo = new GameObject("Bell", typeof(RectTransform), typeof(Image));
-            iconGo.transform.SetParent(rt, false);
+            iconGo.transform.SetParent(faceRt, false);
             var iconRt = (RectTransform)iconGo.transform;
             iconRt.anchorMin = new Vector2(0.5f, 1f); iconRt.anchorMax = new Vector2(0.5f, 1f);
             iconRt.pivot = new Vector2(0.5f, 1f);
@@ -269,7 +283,7 @@ namespace Saga.UI.Builders
             iconImg.raycastTarget = false;
 
             // Label "SOUFFLE" bottom.
-            var lbl = BuildBigLabel(rt, tokens, "SOUFFLE", topMargin: 100, bottomMargin: 18);
+            var lbl = BuildBigLabel(faceRt, tokens, "SOUFFLE", topMargin: 100, bottomMargin: 18);
             lbl.fontSize = 32;
 
             var view = btn.GetComponent<SouffleButtonView>();
@@ -294,7 +308,7 @@ namespace Saga.UI.Builders
             if (parent == null) return;
 
             var btn = new GameObject("AffronterMaitreButton",
-                typeof(RectTransform), typeof(CanvasGroup), typeof(Image), typeof(AffronterMaitreButtonView));
+                typeof(RectTransform), typeof(CanvasGroup), typeof(AffronterMaitreButtonView));
             btn.transform.SetParent(parent, false);
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f);
@@ -305,14 +319,19 @@ namespace Saga.UI.Builders
             var group = btn.GetComponent<CanvasGroup>();
             group.alpha = 0f; group.blocksRaycasts = false; group.interactable = false;
 
-            var face = btn.GetComponent<Image>();
+            var faceGo = new GameObject("Face", typeof(RectTransform), typeof(Image));
+            faceGo.transform.SetParent(rt, false);
+            var faceRt = (RectTransform)faceGo.transform;
+            faceRt.anchorMin = Vector2.zero; faceRt.anchorMax = Vector2.one;
+            faceRt.offsetMin = Vector2.zero; faceRt.offsetMax = Vector2.zero;
+            var face = faceGo.GetComponent<Image>();
             face.sprite = catalog.round3DYellow25.standard;
-            face.type = Image.Type.Simple;
+            face.type = Image.Type.Sliced;
             face.preserveAspect = false;
             face.color = tokens.jauneReward;
             face.raycastTarget = true;
 
-            var lbl = BuildBigLabel(rt, tokens, "AFFRONTER UN MAÎTRE", topMargin: 6, bottomMargin: 6);
+            var lbl = BuildBigLabel(faceRt, tokens, "AFFRONTER UN MAÎTRE", topMargin: 6, bottomMargin: 6);
             lbl.fontSize = 20;
             lbl.color = tokens.navyContour;
 
