@@ -27,10 +27,11 @@ namespace Saga.UI.Builders
         private const float SidePad = 32f;
         private const float GapPills = 28f;  // Sprint 7.6 M2-fix P6 : 16→28 (pills moins collés)
 
-        // M2-fix P2/P3 — sprite RhosGFX a une ombre baked-in en bas (~10% du sprite).
-        // Compenser en lift Y de ~half-shadow pour que le contenu paraisse centré sur la "face".
-        private const float ShadowCompPill = 4f;     // pill 80px tall, ombre ~8px → lift 4px
-        private const float ShadowCompSettings = 4f; // bouton 80×80 idem
+        // M2-fix P2/P3/P7 — sprite RhosGFX a une ombre baked-in en bas.
+        // Settings (round 80×80) a une ombre proportionnellement plus grosse que les pills ovales
+        // → lift plus marqué (8px vs 4px) confirmé par retour visuel Ajwad.
+        private const float ShadowCompPill = 4f;
+        private const float ShadowCompSettings = 8f;
 
         public static void Build(BuilderContext ctx)
         {
@@ -182,13 +183,17 @@ namespace Saga.UI.Builders
             var tmp = val.GetComponent<TextMeshProUGUI>();
             tmp.alignment = TextAlignmentOptions.Left;
             tmp.font = tokens.NumbersFont;
-            tmp.fontSize = 32;
+            // M2-fix P9 : auto-size pour que "12.3K" / "1.5M" ne déborde jamais verticalement.
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 22;
+            tmp.fontSizeMax = 32;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = color;
             tmp.text = "0";
             tmp.raycastTarget = false;
             tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.35f;
+            tmp.overflowMode = TextOverflowModes.Ellipsis;
             return tmp;
         }
     }
