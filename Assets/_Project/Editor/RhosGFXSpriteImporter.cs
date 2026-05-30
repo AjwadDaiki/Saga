@@ -4,9 +4,14 @@ using UnityEngine;
 namespace Saga.EditorTools
 {
     /// <summary>
-    /// Sprint 7.6 M2-fix P8 — Auto-imports RhosGFX Cartoony UI Pack PNGs as crisp Sprite assets.
-    /// Settings : Trilinear + MipMaps + Uncompressed + maxSize 1024 (sprites UI critiques zoom-friendly).
-    /// alphaIsTransparency garantit un alpha propre (pas de halo noir au filtrage).
+    /// Sprint 7.6 M2-fix P12 — Auto-imports RhosGFX Cartoony UI Pack PNGs as crisp UI Sprites.
+    ///
+    /// IMPORTANT (changement M2-fix-5) : <b>Bilinear + NO mipmaps</b> pour UI 2D au pixel près.
+    /// L'itération précédente utilisait Trilinear + MipMaps (préconisé pour textures 3D qui
+    /// réduisent à distance) — résultat : sprites flous au scale natif HUD. Pour UI ScreenSpaceOverlay
+    /// avec CanvasScaler ScaleWithScreenSize, on veut un sampling 1:1 sans LOD.
+    ///
+    /// FullRect + Uncompressed garantit la netteté + alpha propre.
     ///
     /// Fires automatically on any (re)import under <c>cartoony-ui-pack-full/</c>. Use the menu
     /// <b>Saga > Sprint 7.6 > Reimport All RhosGFX Sprites</b> to force-apply on the existing pack.
@@ -24,8 +29,11 @@ namespace Saga.EditorTools
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.spritePixelsPerUnit = 100f;
-            importer.filterMode = FilterMode.Trilinear;
-            importer.mipmapEnabled = true;
+            importer.spriteMeshType = SpriteMeshType.FullRect; // P13 : FullRect (vs Tight) garantit
+                                                              // un quad rectangulaire propre (pas de
+                                                              // déformation autour de l'alpha).
+            importer.filterMode = FilterMode.Bilinear;        // P12 : Bilinear pour UI 2D (vs Trilinear flou)
+            importer.mipmapEnabled = false;                   // P12 : pas de mipmaps en UI overlay
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.maxTextureSize = 1024;
             importer.alphaIsTransparency = true;

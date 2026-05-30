@@ -111,6 +111,9 @@ namespace Saga.UI.Builders
             var btn = SagaButton.Create(parent, "SettingsButton", catalog.round3DGrey1,
                 SagaButton.Variant.Standard, Color.white, label: "",
                 labelSize: 22, labelColor: null, labelFont: null);
+            // M2-fix P13 : sprite round-3d-1 a ratio ~5:6 (round + ombre baked-in) ; preserveAspect=true
+            // force le sprite à garder son ratio dans le RectTransform 80×80 carré → bouton reste rond.
+            if (btn.Fill != null) btn.Fill.preserveAspect = true;
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = new Vector2(1f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
             rt.anchoredPosition = new Vector2(-SidePad, TopY);

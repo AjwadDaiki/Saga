@@ -991,6 +991,7 @@ namespace Saga.Core
             var canvas = go.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 0;
+            canvas.pixelPerfect = true; // Sprint 7.6 M2-fix P14 : aligne UI sur pixels → TMP SDF + sprites crisp
 
             var scaler = go.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
