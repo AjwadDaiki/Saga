@@ -137,6 +137,23 @@ namespace Saga.Core
         /// <summary>Fired when the prestige cinematic completes and gameplay resumes at stade 1.</summary>
         public static event Action OnPrestigeCompleted;
 
+        // ----- Sprint 7: Equipment + Voies + Sprite Layers --------------
+
+        /// <summary>
+        /// Fired when an equipment slot changes. Args: slot, new SpriteLayerSet (null if cleared),
+        /// previous SpriteLayerSet (null if slot was empty). UI + character renderer subscribe.
+        /// </summary>
+        public static event Action<EquipmentSlot, SpriteLayerSet, SpriteLayerSet> OnEquipmentChanged;
+
+        /// <summary>Fired when a SpriteLayerSet is added to the inventory (drop, prestige, debug). Args: the added layer set.</summary>
+        public static event Action<SpriteLayerSet> OnItemAddedToInventory;
+
+        /// <summary>Fired when the player selects a Voie. Args: previous, new.</summary>
+        public static event Action<Voie, Voie> OnVoieSelected;
+
+        /// <summary>Fired when the player masters a new Voie (Sprint 7+ progression). Args: voie.</summary>
+        public static event Action<Voie> OnVoieMastered;
+
         // ----- Raisers --------------------------------------------------
 
         public static void RaiseForceChanged() => OnForceChanged?.Invoke();
@@ -217,5 +234,17 @@ namespace Saga.Core
         public static void RaisePrestigeTriggered(MaitreData defeatedBy, BigDouble echos)
             => OnPrestigeTriggered?.Invoke(defeatedBy, echos);
         public static void RaisePrestigeCompleted() => OnPrestigeCompleted?.Invoke();
+
+        public static void RaiseEquipmentChanged(EquipmentSlot slot, SpriteLayerSet next, SpriteLayerSet previous)
+            => OnEquipmentChanged?.Invoke(slot, next, previous);
+
+        public static void RaiseItemAddedToInventory(SpriteLayerSet layerSet)
+            => OnItemAddedToInventory?.Invoke(layerSet);
+
+        public static void RaiseVoieSelected(Voie previous, Voie next)
+            => OnVoieSelected?.Invoke(previous, next);
+
+        public static void RaiseVoieMastered(Voie voie)
+            => OnVoieMastered?.Invoke(voie);
     }
 }

@@ -102,6 +102,7 @@ namespace Saga.UI
 
         private void SpawnFloatingNumber(Vector2 anchored, BigDouble gain, int tier)
         {
+            var tokens = DesignTokens.Get();
             var go = new GameObject("FloatingNumber",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(FloatingNumberView));
             go.transform.SetParent(_canvasRect, false);
@@ -113,7 +114,12 @@ namespace Saga.UI
 
             var label = go.GetComponent<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.Center;
+            // Sprint 7.5 zone 4 — JetBrains Mono Bold + outline charcoal (puffy text recipe).
+            label.font = tokens.NumbersFont;
             label.fontSize = 56;
+            label.fontStyle = FontStyles.Bold;
+            label.outlineColor = tokens.navyContour;
+            label.outlineWidth = 0.28f;
             label.text = "";
 
             var view = go.GetComponent<FloatingNumberView>();
@@ -125,6 +131,7 @@ namespace Saga.UI
 
         private void SpawnFloatingDamage(Vector2 anchored, BigDouble damage)
         {
+            var tokens = DesignTokens.Get();
             var go = new GameObject("FloatingDamage",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(FloatingNumberView));
             go.transform.SetParent(_canvasRect, false);
@@ -136,9 +143,13 @@ namespace Saga.UI
 
             var label = go.GetComponent<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.Center;
+            // Sprint 7.5 zone 4 — JetBrains Mono Bold + outline charcoal pour damage numbers signature.
+            label.font = tokens.NumbersFont;
             label.fontSize = 64;
             label.fontStyle = FontStyles.Bold;
             label.color = DamageColor;
+            label.outlineColor = tokens.navyContour;
+            label.outlineWidth = 0.30f;
             label.text = "-" + Saga.Math.NumberFormatter.Format(damage);
 
             // Tween directly on this damage label — bypass FloatingNumberView so we keep the red color.

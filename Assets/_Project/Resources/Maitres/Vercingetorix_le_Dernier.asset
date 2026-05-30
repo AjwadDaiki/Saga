@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ccf2b8fccd8e54db96ce6dc4201d5e, type: 3}
+  m_Name: Vercingetorix_le_Dernier
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.MaitreData
+  _id: vercingetorix_le_dernier
+  _displayName: "Vercing\xE9torix le Dernier"
+  _voie: 8
+  _hp: 9500
+  _rewardForce: 4600
+  _chronoSeconds: 180
+  _phaseThresholds:
+  - 0.75
+  - 0.5
+  - 0.25
+  _phaseColors:
+  - {r: 0.36, g: 0.54, b: 0.31, a: 1}
+  - {r: 0.32, g: 0.48, b: 0.27, a: 1}
+  - {r: 0.28, g: 0.42, b: 0.23, a: 1}
+  - {r: 0.95, g: 0.18, b: 0.13, a: 1}
+  _introCitation: Nous sommes peu. Nous tombons debout.
+  _victoryCitation: "Tu nous as honor\xE9s. Reviens vers le couchant."
+  _defeatCitation: Vae victis. Mais nous sommes debout.
+  _reliqueUniqueName: "\xC9p\xE9e de Vercing\xE9torix"
+  _reliqueUniqueDescription: "Lev\xE9e une derni\xE8re fois, \xE0 jamais."
+  _reliqueStatsBonus: 650
+  _arenaBackgroundColor: {r: 0.36, g: 0.54, b: 0.31, a: 1}
+  _drumHitPitch: 0.9

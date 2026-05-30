@@ -13,7 +13,7 @@ namespace Saga.Data
     public class GameState
     {
         /// <summary>Schema version. Bump on breaking change. Migration handled by SaveService.</summary>
-        public int saveVersion = 8;
+        public int saveVersion = 9;
 
         // -- Currencies (BigDouble — protect against 1e15+ ceiling) -------
         public BigDouble force;
@@ -102,6 +102,20 @@ namespace Saga.Data
         /// <summary>Hall des Légendes — one record per death vs a Maître. PERSISTS.</summary>
         public List<DeathRecord> deathRecords = new List<DeathRecord>();
 
-        // Sprint 7+ : voies, esprits, regions, lore fragments, etc.
+        // -- Equipment + Voies (Sprint 7) ---------------------------------
+        /// <summary>SpriteLayerSet IDs the player owns. PERSISTS through prestige.</summary>
+        public List<string> inventoryLayerSetIds = new List<string>();
+        /// <summary>Currently equipped Body slot id. Defaults to <see cref="EquipmentConstants.DefaultBodyId"/>.</summary>
+        public string equippedBodyId = EquipmentConstants.DefaultBodyId;
+        /// <summary>Currently equipped Armor slot id (null = bare).</summary>
+        public string equippedArmorId;
+        /// <summary>Currently equipped Weapon slot id (null = bare hands).</summary>
+        public string equippedWeaponId;
+        /// <summary>Active voie id (Sprint 8+ adds full voie-switching). Empty = unaffiliated.</summary>
+        public string voieSelectedId = string.Empty;
+        /// <summary>Voies mastered (one Maître of this voie defeated). PERSISTS.</summary>
+        public List<string> voiesMastered = new List<string>();
+
+        // Sprint 8+ : esprits, regions, lore fragments, achievements detail, etc.
     }
 }

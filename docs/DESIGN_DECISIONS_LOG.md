@@ -48,6 +48,48 @@
 
 ---
 
+## 2026-05-28 — Sprint 7 pre-decisions (tranchées par coordinateur post-Sprint-6)
+
+### Roadmap allongée à 14 sprints
+**Décision**: lancement officiel envisagé **octobre 2026** (vs août-septembre prévu initialement). 14 sprints total au lieu de 11-12.
+
+**Raison**: Sprint 7 enrichi (système modulaire des sprites) demande 6-7 jours au lieu de 5. Plus de marge polish + features bonus (carte du monde, esprits compagnons, hub features Daily Ronin) sur les sprints suivants.
+
+**Conséquence**: Sprint 7 = 6-7 jours estimés. Roadmap docs/08_ROADMAP.md à amender côté coordinateur.
+
+### Système modulaire des sprites perso (Sprint 7)
+**Décision**: Le character rendering passe d'un seul sprite atlas (rvros adventurer) à **3 couches layered et interchangeables** :
+- **Corps** : silhouette base + animations (idle, attack, hurt, die, etc.)
+- **Armure** : sprite overlay sur le corps (par voie / stade / Relique)
+- **Arme** : sprite overlay (par voie / Relique / arme communautaire)
+
+Implementation pattern attendu :
+- `Data/SpriteLayerSet.cs` SO (références aux 3 layers + animations sync)
+- `Gameplay/LayeredCharacterRenderer.cs` MonoBehaviour (gère 3 SpriteRenderer enfants, drive en parallèle via le même frame index)
+- `CharacterView` consomme un `SpriteLayerSet` au lieu du single library
+- AdventurerAnimationLibrary devient le "Corps Stade 1 Mendiant", on ajoute des layers Armure + Arme par-dessus
+
+**Raison**: Le brief original (Sprint 4 GAME_DESIGN_v2) parle d'évolution visuelle perso aux Stades 1-6 + custom par voie/Relique. Single-atlas ne scale pas. Modularité = production friendly + ouvre la porte au tier "Armes communautaires" post-MVP (D6 ci-dessous).
+
+**Conséquence**:
+- Sprint 7 effort +1-2 jours
+- 6 nouveaux SpriteLayerSet SOs minimum (1 corps base + 2 armures + 2 armes pour MVP)
+- `MainSceneBootstrap.BuildCharacter` refactor pour spawn 3 SpriteRenderer enfants
+- `SpriteAnimator` peut rester intact (gère 1 renderer) ou être étendu en `LayeredSpriteAnimator` qui sync N renderers
+
+### D6 — Système d'armes communautaires (post-MVP, mois 3-4)
+**Décision**: Une fois le système modulaire en place Sprint 7, le tier "Custom Hero" (armes designées par la communauté) devient implémentable.
+
+**Modèle** (post-MVP roadmap):
+- 3 tiers : Easter Egg (1/10000 drop, stats 1/1/1, descriptions libres), Communauté Standard (drops normaux, stats équilibrées, descriptions mythiques), Officiel (canon HiddenLab)
+- Outil dessin recommandé pour contributeurs : Piskel (gratuit web) ou Aseprite (~20€)
+- Approval pipeline simple (Ajwad valide les soumissions communautaires Tier Standard)
+- Distribution via VPS HiddenLab + JSON manifest
+
+**Statut**: Hors scope Sprint 7. Référencé pour anticiper que l'archi modulaire Sprint 7 doit supporter ce use case sans refactor.
+
+---
+
 ## 2026-05-27 — Sprint 6 pre-decisions (tranchées par coordinateur post-Sprint-5)
 
 ### Q1 — Maîtres visuels (Boss Majeurs)
@@ -488,6 +530,99 @@ avec `EchosMinReward = 10` et `EchosFormulaBase = 10`. La valeur d'entrée est `
 **Raison**: Le Maître a HP énormes (8-11k). En phase 3, le joueur est proche de la victoire — l'enrage doit punir, pas être un coup symbolique. ×2 sur le chrono restant force le joueur à finir ou mourir. Plus dramatique que ×1.5 (déjà utilisé par Capitaine au Sprint 5), Maître mérite le pire.
 
 **Conséquence**: `CombatProcessor.TickMaitreActive` checke `currentMaitrePhase == 3` et multiplie `dt` par 2 avant décrémentation. La mort vs Maître par chrono déclenche `OnPlayerDeathFromMaitre` → `PrestigeService.TriggerPrestige`.
+
+---
+
+## 2026-05-28 — Sprint 7: Système layered sprite à 3 couches (Body / Armor / Weapon)
+
+**Décision**: Le personnage est rendu par 3 `SpriteRenderer` enfants stackés (Body z=0, Armor z=1, Weapon z=2), pilotés par un seul `LayeredCharacterRenderer` MonoBehaviour. Une seule horloge — le Body layer — fournit le frame index, les 3 renderers se synchronisent sur ce même index. Une couche manquant l'animation demandée tombe sur son `SpriteIdle` (et donc null si vide). Looping policy : idle + meditation, one-shots : attack1/2/3/hurt/die.
+
+**Raison**: Unity Animator est trop rigide pour hot-swap d'animations par slot (les state graphs sont per-clip, pas per-layer). Un driver custom permet à n'importe quel slot d'omettre n'importe quelle anim ; la fallback chain garde le perso visible même si l'art Sprint 7 ne couvre que le Body. Le pattern scale au D6 (système d'armes communautaires post-MVP) sans refactor — chaque nouveau set est juste un nouvel asset `SpriteLayerSet` chargé dynamiquement.
+
+**Conséquence**: `BuildCharacter` crée 3 enfants + LayeredCharacterRenderer + CharacterView. Sprint 7 MVP : seul le Body porte des frames rvros ; Armor + Weapon sont stats-only (D3) avec sprite arrays vides. Sprint 8+ wire l'art layered. `SpriteAnimator` legacy reste pour compat mais n'est plus instancié par `BuildCharacter`.
+
+---
+
+## 2026-05-28 — Sprint 7: Equipment persiste à travers le Prestige
+
+**Décision**: Les nouveaux champs Sprint 7 (`inventoryLayerSetIds`, `equippedBodyId`, `equippedArmorId`, `equippedWeaponId`, `voieSelectedId`, `voiesMastered`) **PERSISTENT** à travers le Prestige. `PrestigeService.CompletePrestige` ne les touche pas, et un commentaire explicite l'indique.
+
+**Raison**: SAGA n'est pas un roguelike — la progression d'équipement et de voies est un ladder long-terme, pas une carotte par-run. Le joueur qui drop une Lame de Yoshitsune au Maître garde son skin + ses stats à travers tous les prestiges suivants. Cohérent avec `relicsOwned` (Sprint 6) qui persistait déjà. La RESET matrix reste run-scoped (force, upgrades, stade, élan, chrono).
+
+**Conséquence**: Au prestige, le perso renait Stade 1 avec son équipement intact. Si plus tard on veut "vendre" une relique pour des Échos bonus, c'est une feature opt-in via UI dédié, pas un reset automatique.
+
+---
+
+## 2026-05-28 — Sprint 7: Voie de démarrage = Samouraï (Décision D2 coordinateur)
+
+**Décision**: Tous les nouveaux saves démarrent avec `voieSelectedId = ""` (string vide). Sprint 7 MVP n'expose pas encore d'UI de sélection — la Voie Samouraï est le starter implicite parce que l'unique armure légendaire Sprint 7 est `armor_kimono_yamato` (Samurai) et l'unique katana voie-tinté est `weapon_katana_samurai`. La voie effective du joueur dérive donc de son équipement Sprint 7, pas d'un choix explicite.
+
+**Raison**: Coordinateur a tranché Samurai pour son universalité culturelle ("japon = entrée mainstream pour un public mobile occidental"). MVP UI de sélection reportée Sprint 8+ quand on aura 8 sets complets par voie. Pendant Sprint 7, on évite de demander un choix au joueur sur quelque chose dont les conséquences mécaniques ne sont pas encore implémentées (bonus de voie = Sprint 8+).
+
+**Conséquence**: `VoieData` SO existe pour les 8 voies mais aucun champ GameState n'est lu pour les bonus actifs Sprint 7. Le `voieSelectedId` reste dormant — il sera consommé Sprint 8+ par un futur `VoieBonusCalculator`.
+
+---
+
+## 2026-05-28 — Sprint 7: Reliques de Maître = stats-only Sprint 7, visuelles Sprint 8+ (Décision D3)
+
+**Décision**: Les 8 reliques de Maître sont créées comme `SpriteLayerSet` weapon-slot dès Sprint 7 (avec stats, rarity Mythique, voie tintée). MAIS les sprite arrays restent vides — la relique se voit dans l'inventaire et boost les stats, mais ne change pas le rendu du perso quand équipée. Le visuel layered relique attendra Sprint 8 quand l'art layered sera disponible.
+
+**Raison**: Le coordinateur a vu que faire l'art layered de 8 reliques uniques en Sprint 7 explosait le budget de 6-7 jours. Découper en deux : le système de drop + équip est fonctionnel + testé Sprint 7, l'art layered est un swap-in Sprint 8 sans changer de code (juste populer les sprite arrays via Editor utility).
+
+**Conséquence**: `MaitreReliqueLayerSetsCreator` ne wire pas de sprite frames. `CombatProcessor.OnMaitreDefeated` grant la relique via `EquipmentService.AddToInventory(state, data.ReliqueSpriteLayerSetId)`. Le bonus stats (500-720 Force selon le Maître) est immédiatement actif si le joueur équipe la relique. Sprint 8+ : un patch des SO en place suffit pour activer le visuel — pas de refactor service nécessaire.
+
+---
+
+## 2026-05-28 — Sprint 7: Body slot non-déséquipable
+
+**Décision**: `EquipmentService.Unequip(EquipmentSlot.Body)` retourne `false` et log un warning. Le slot Body est toujours équipé — par défaut, `body_chibi_neutral` (forcé en inventaire par `SaveService.Migrate`).
+
+**Raison**: Un perso sans body = renderer null = écran vide. C'est un cas dégénéré qu'on bloque au niveau du service. Le pattern "default toujours équipé" évite l'edge case "j'ai déséquipé tout puis fermé le jeu, je reload avec un perso invisible".
+
+**Conséquence**: L'UI Inventaire affiche le bouton "Équipé" disabled sur le body actuel. Sprint 8+ quand on aura plusieurs body skins (transformations Stade-based ?), le mécanisme reste — c'est juste que `Equip(otherBody)` remplacera le body courant, jamais le clear.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Design system via SO unique (DesignTokens)
+
+**Décision**: Tous les colors / spacing / typography scale / radii sont centralisés dans une seule ScriptableObject `DesignTokens` chargée via `DesignTokens.Get()` depuis `Resources/DesignTokens/SagaDesignTokens.asset`. Plus aucun `new Color(0.98f, 0.78f, 0.46f, 1f)` hardcodé dans les UI scripts.
+
+**Raison**: Le re-skin d'un jeu mobile c'est un cycle d'itération constant. Avec des couleurs hardcodées partout, changer le ton du jeu = touch 30 files. Avec un SO unique, c'est 1 file (l'asset) et l'inspector le reload immédiatement en play. Permet aussi à Ajwad d'expérimenter en runtime sans recompile. Sprint 8+ on pourra avoir des theme variants par région monde (palette froide en Hokkaido, palette chaude en Aztèque) en swappant l'asset référencé.
+
+**Conséquence**: Pattern à respecter dans tout code UI à partir de Sprint 8+ : lire les couleurs/spacings via `DesignTokens.Get()`. Les Sprint 1-7 legacy ont encore quelques hardcodes — refactor incrémental au fil des passes de polish. Editor utility `Saga > Design > Generate Design Tokens` matérialise l'asset avec les valeurs spec du brief 7.5.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Fonts en TODO Ajwad (Inter / JetBrains Mono / Cinzel)
+
+**Décision**: Les 3 Google Fonts (Inter UI primary, JetBrains Mono numbers, Cinzel lore) ne sont PAS shipped dans le commit Sprint 7.5. `DesignTokens` expose 3 slots `TMP_FontAsset fontPrimary/fontNumbers/fontLore` nullables avec fallback automatique vers `TMP_Settings.defaultFontAsset`. Ajwad télécharge les .ttf, les passe au Font Asset Creator (Window > TextMeshPro > Font Asset Creator, atlas 1024² pour Inter / 512² pour les autres), et assigne les 3 Font Assets dans l'inspector DesignTokens.
+
+**Raison**: dev Claude ne peut pas télécharger de binaires (fonts .ttf de Google) en filesystem-only. Mock Font Assets pointant vers TMP default créerait une fausse impression de complétion et des références bizarres dans la scène. Mieux vaut un slot nullable explicite + warning console + doc d'install claire que de faux assets.
+
+**Conséquence**: Le jeu run en Sprint 7.5 avec TMP default (LiberationSans). Quand Ajwad drop les vraies fonts (5-10 min via Font Asset Creator), tout le UI bascule automatiquement vers Inter/JetBrains Mono/Cinzel sans recompile.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Audio 100% procédural Sprint 7-10
+
+**Décision**: Pas de fichiers .wav/.mp3 dans le repo pendant les Sprints 7-10. `ProceduralSoundGenerator` synthétise tous les SFX au boot via primitives `Sine` + `Noise` + `Mix` + envelope ASR. 9 sons définis : tap, combo, upgrade buy, vague, adversaire arrive, capitaine arrive, maître arrive, death, prestige phase.
+
+**Raison**: Ajwad est beatmaker et compositeur, il veut faire le sound design lui-même quand il aura la version polish-final du jeu (Sprint 11). En attendant, des sons procéduraux sont :
+- 0 footprint dans le repo (économie de Mo de binaires versionnés)
+- Ajustables instantanément (changer une fréquence, recompile, écouter)
+- Plus pro qu'un silence total — le jeu "respire" sonorement
+
+**Conséquence**: `AudioService` POCO + `AudioBindings` MonoBehaviour subscribe sur 9 GameEvents. Sprint 11, swap = changer `ProceduralSoundGenerator.TapBasic()` etc. pour `Resources.Load<AudioClip>("Sfx/tap_basic")`. Le reste du code ne bouge pas.
+
+---
+
+## 2026-05-28 — Sprint 7.5: Haptic via Handheld.Vibrate, plugin natif reporté Sprint 8+
+
+**Décision**: `HapticService` MVP utilise `Handheld.Vibrate()` (Unity API standard). Sur Android = ~250ms pulse fixe. Sur iOS = même API mappée par Unity sur UIImpactFeedbackGenerator depuis Unity 2021+ donc OK MVP. Les strengths Light/Medium/Heavy sont juste un hint sémantique pour Sprint 7.5 ; Sprint 8+ on implémentera la durée réelle via `AndroidJavaObject(Vibrator).vibrate(ms)` pour Android et un plugin iOS natif pour le tactile fin.
+
+**Raison**: Plugin natif iOS = effort non-négligeable (Swift bridge + .a + Build Settings). Sprint 7.5 a un budget polish de 3-4 jours, pas le temps de refaire la stack mobile. Le MVP avec Handheld.Vibrate donne un feedback OK sur device, et la couche d'abstraction (HapticService POCO) garantit qu'on n'aura rien à refactor quand le plugin arrivera.
+
+**Conséquence**: Tests EditMode ne testent que le gate `Enabled`. Validation réelle = device build. Si Ajwad teste sur un iPhone et trouve les vibrations trop "uniformes", c'est attendu — le plugin natif Sprint 8 raffinera.
 
 ---
 

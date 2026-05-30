@@ -33,6 +33,8 @@ namespace Saga.Data
         [SerializeField] private string _reliqueUniqueName;
         [TextArea(2, 3)] [SerializeField] private string _reliqueUniqueDescription;
         [SerializeField] private double _reliqueStatsBonus = 500;
+        [Tooltip("Sprint 7+: id of the SpriteLayerSet dropped on victory (weapon-slot Relique).")]
+        [SerializeField] private string _reliqueSpriteLayerSetId;
 
         [Header("Identité visuelle/sonore")]
         [SerializeField] private Color _arenaBackgroundColor = new Color(0.08f, 0.08f, 0.08f, 1f);
@@ -52,6 +54,7 @@ namespace Saga.Data
         public string ReliqueUniqueName => _reliqueUniqueName;
         public string ReliqueUniqueDescription => _reliqueUniqueDescription;
         public BigDouble ReliqueStatsBonus => new BigDouble(_reliqueStatsBonus);
+        public string ReliqueSpriteLayerSetId => _reliqueSpriteLayerSetId;
         public Color ArenaBackgroundColor => _arenaBackgroundColor;
         public float DrumHitPitch => _drumHitPitch;
 
@@ -77,7 +80,7 @@ namespace Saga.Data
         public static MaitreData CreateForTests(string id, string displayName, Voie voie,
             double hp, double rewardForce, float chronoSeconds,
             string introCitation = null, string victoryCitation = null, string defeatCitation = null,
-            string reliqueName = null, double reliqueBonus = 500)
+            string reliqueName = null, double reliqueBonus = 500, string reliqueSpriteLayerSetId = null)
         {
             var m = CreateInstance<MaitreData>();
             m._id = id;
@@ -94,6 +97,7 @@ namespace Saga.Data
             m._reliqueUniqueName = reliqueName ?? $"Relique de {displayName ?? id}";
             m._reliqueUniqueDescription = string.Empty;
             m._reliqueStatsBonus = reliqueBonus;
+            m._reliqueSpriteLayerSetId = reliqueSpriteLayerSetId ?? string.Empty;
             m._arenaBackgroundColor = new Color(0.08f, 0.08f, 0.08f, 1f);
             m._drumHitPitch = 1f;
             return m;
