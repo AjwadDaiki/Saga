@@ -154,6 +154,20 @@ namespace Saga.Core
         /// <summary>Fired when the player masters a new Voie (Sprint 7+ progression). Args: voie.</summary>
         public static event Action<Voie> OnVoieMastered;
 
+        // ----- Sprint 8 Phase A: tutorial onboarding --------------------
+
+        /// <summary>Fired when TutorialService surfaces a new step (overlay should render it).
+        /// Args: the step SO to display.</summary>
+        public static event Action<TutorialStep> OnTutorialStepShown;
+
+        /// <summary>Fired when the current step trigger condition is met (overlay should dismiss).
+        /// Args: the completed step id.</summary>
+        public static event Action<string> OnTutorialStepCompleted;
+
+        /// <summary>Fired when the tutorial is fully done (last step completed or Skip pressed).
+        /// Overlay tears itself down.</summary>
+        public static event Action OnTutorialFinished;
+
         // ----- Raisers --------------------------------------------------
 
         public static void RaiseForceChanged() => OnForceChanged?.Invoke();
@@ -246,5 +260,12 @@ namespace Saga.Core
 
         public static void RaiseVoieMastered(Voie voie)
             => OnVoieMastered?.Invoke(voie);
+
+        public static void RaiseTutorialStepShown(TutorialStep step)
+            => OnTutorialStepShown?.Invoke(step);
+        public static void RaiseTutorialStepCompleted(string stepId)
+            => OnTutorialStepCompleted?.Invoke(stepId);
+        public static void RaiseTutorialFinished()
+            => OnTutorialFinished?.Invoke();
     }
 }

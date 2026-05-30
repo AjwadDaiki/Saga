@@ -2,6 +2,7 @@ using Saga.Audio;
 using Saga.Data;
 using Saga.Gameplay;
 using Saga.Save;
+using Saga.Tutorial;
 using UnityEngine;
 
 namespace Saga.Core
@@ -36,6 +37,7 @@ namespace Saga.Core
         public EquipmentService Equipment { get; private set; }
         public AudioService Audio { get; private set; }
         public HapticService Haptic { get; private set; }
+        public TutorialService Tutorial { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
@@ -96,6 +98,13 @@ namespace Saga.Core
                 audioBindings.Init(Audio);
                 var hapticBindings = gameObject.AddComponent<HapticBindings>();
                 hapticBindings.Init(Haptic);
+
+                // Sprint 8 Phase A — tutorial onboarding. Service loads steps from
+                // Resources/Tutorial/ ; Start() is no-op if State.tutorialDone (legacy or skipped).
+                // TutorialOverlayBuilder consomme GameEvents.OnTutorialStepShown/Completed/Finished
+                // pour rendre l'overlay. Start() différé à OnEnable du Main scene (voir
+                // MainSceneBootstrap) pour s'assurer que les builders UI sont posés avant le 1er prompt.
+                Tutorial = new TutorialService(State, Save);
 
                 // Route per-tap progress to the spawner. DamageDealer, ElanService, VagueResolver,
                 // CapitaineSpawner, MaitreSpawner all subscribe themselves in their constructors.
