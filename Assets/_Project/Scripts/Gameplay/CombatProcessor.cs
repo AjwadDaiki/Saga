@@ -223,6 +223,11 @@ namespace Saga.Gameplay
             state.force += reward;
             // Track the relic drop. Sprint 6 MVP: just record the Maître ID.
             if (data != null && !state.relicsOwned.Contains(data.Id)) state.relicsOwned.Add(data.Id);
+            // Sprint 7: also grant the equippable SpriteLayerSet relique (weapon-slot, stats only this sprint).
+            if (data != null && !string.IsNullOrEmpty(data.ReliqueSpriteLayerSetId))
+            {
+                GameManager.Instance?.Equipment?.AddToInventory(state, data.ReliqueSpriteLayerSetId);
+            }
             GameEvents.RaiseForceChanged();
             if (data != null) GameEvents.RaiseMaitreDefeated(data, reward);
 

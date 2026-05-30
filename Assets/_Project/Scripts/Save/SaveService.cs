@@ -102,7 +102,7 @@ namespace Saga.Save
         /// </summary>
         private static GameState Migrate(GameState state)
         {
-            const int currentVersion = 8;
+            const int currentVersion = 9;
 
             if (state.saveVersion < 2)
             {
@@ -177,6 +177,21 @@ namespace Saga.Save
                 Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v8 (Prestige + Hall des Légendes).");
             }
 
+            if (state.saveVersion < 9)
+            {
+                // v8 -> v9: modular sprite system + equipment + voies (Sprint 7).
+                if (state.inventoryLayerSetIds == null)
+                    state.inventoryLayerSetIds = new System.Collections.Generic.List<string>();
+                if (string.IsNullOrEmpty(state.equippedBodyId))
+                    state.equippedBodyId = Saga.Data.EquipmentConstants.DefaultBodyId;
+                // Ensure default body is always in the inventory (the player can never un-own the base layer).
+                if (!state.inventoryLayerSetIds.Contains(state.equippedBodyId))
+                    state.inventoryLayerSetIds.Add(state.equippedBodyId);
+                if (state.voieSelectedId == null) state.voieSelectedId = string.Empty;
+                if (state.voiesMastered == null) state.voiesMastered = new System.Collections.Generic.List<string>();
+                Debug.Log($"[SaveService] Migrated save v{state.saveVersion} -> v9 (modular sprites + equipment + voies).");
+            }
+
             // Defensive: always ensure non-null collections + valid scalars post-deserialization.
             if (state.upgradeLevels == null)
                 state.upgradeLevels = new System.Collections.Generic.Dictionary<string, int>();
@@ -187,6 +202,14 @@ namespace Saga.Save
             if (state.deathRecords == null) state.deathRecords = new System.Collections.Generic.List<Saga.Data.DeathRecord>();
             if (state.playerCitation == null) state.playerCitation = string.Empty;
             if (state.currentStade <= 0) state.currentStade = 1;
+            if (state.inventoryLayerSetIds == null)
+                state.inventoryLayerSetIds = new System.Collections.Generic.List<string>();
+            if (string.IsNullOrEmpty(state.equippedBodyId))
+                state.equippedBodyId = Saga.Data.EquipmentConstants.DefaultBodyId;
+            if (!state.inventoryLayerSetIds.Contains(state.equippedBodyId))
+                state.inventoryLayerSetIds.Add(state.equippedBodyId);
+            if (state.voieSelectedId == null) state.voieSelectedId = string.Empty;
+            if (state.voiesMastered == null) state.voiesMastered = new System.Collections.Generic.List<string>();
 
             // Always boot in Training to avoid loading mid-combat with a stale chrono / dangling enemy ref.
             state.currentPhase = Saga.Data.CombatPhase.Training;

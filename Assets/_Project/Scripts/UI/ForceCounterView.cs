@@ -1,5 +1,7 @@
 using BreakInfinity;
+using DG.Tweening;
 using Saga.Core;
+using Saga.Data;
 using Saga.Math;
 using TMPro;
 using UnityEngine;
@@ -11,8 +13,12 @@ namespace Saga.UI
     /// animates a "displayed" value toward the new target via exponential smoothing
     /// (per 02_GAME_DESIGN §1 — "ticker, jamais teleport").
     ///
-    /// Sprint 3 number juice: font size + color scale with the magnitude
-    /// (gris &lt; 100 → blanc &lt; 10k → ambre &lt; 10M → coral 10M+).
+    /// Sprint 7.5 polish:
+    ///   - Color + font size pulled from <see cref="DesignTokens"/> so the entire game re-themes
+    ///     by editing one SO.
+    ///   - Tick scale punch on every OnForceChanged event (visual tap feedback).
+    ///   - 10M+ tier gets a soft glow via TMP outline.
+    ///   - Optional small "FORCE" label above is set elsewhere (BuildForceCounter) using textSecondary.
     /// </summary>
     [DisallowMultipleComponent]
     public class ForceCounterView : MonoBehaviour
@@ -21,22 +27,12 @@ namespace Saga.UI
         [SerializeField] private float _smoothing = 0.12f;
 
         [SerializeField] private TextMeshProUGUI _label;
-
-        // Tier palette per 05_VISUAL_STYLE.md (text-secondary / text-primary / accent-primary / accent-warm).
-        private static readonly Color TierGris  = new Color(0.53f, 0.53f, 0.53f, 1f); // #888
-        private static readonly Color TierBlanc = new Color(0.98f, 0.98f, 0.98f, 1f); // #fafafa
-        private static readonly Color TierAmbre = new Color(0.98f, 0.78f, 0.46f, 1f); // #FAC775
-        private static readonly Color TierCoral = new Color(0.99f, 0.45f, 0.20f, 1f); // ~#993C1D-ish
-
-        // Font size by magnitude tier. Sprint 5 round-2: reduced by ~30% to free visual space
-        // for the gameplay zone (compteur was overpowering the character + mannequin).
-        private const float SizeSmall = 56f;   // < 100
-        private const float SizeMid   = 64f;   // < 10k
-        private const float SizeLarge = 72f;   // < 10M
-        private const float SizeHuge  = 84f;   // 10M+
+        [SerializeField] private bool _compact; // pill mode : fixed font size, no magnitude scaling
 
         private BigDouble _displayed;
         private BigDouble _target;
+        private Tween _tickTween;
+        private RectTransform _rect;
 
         public TextMeshProUGUI Label
         {
@@ -44,8 +40,13 @@ namespace Saga.UI
             set => _label = value;
         }
 
+        /// <summary>Sprint 7.5: when true (top-bar pill), keep a fixed font size and skip the big
+        /// magnitude scaling — only the color tier + value text update.</summary>
+        public bool Compact { get => _compact; set => _compact = value; }
+
         private void OnEnable()
         {
+            _rect = transform as RectTransform;
             GameEvents.OnForceChanged += HandleForceChanged;
             HandleForceChanged();
             // Snap on first show (no animation from 0).
@@ -56,6 +57,15 @@ namespace Saga.UI
         private void OnDisable()
         {
             GameEvents.OnForceChanged -= HandleForceChanged;
+        }
+
+        private void PunchTick()
+        {
+            if (_rect == null) return;
+            _tickTween?.Kill();
+            _rect.localScale = Vector3.one;
+            _tickTween = _rect.DOPunchScale(Vector3.one * 0.04f, 0.15f, 4, 0.5f)
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         private void Update()
@@ -71,6 +81,7 @@ namespace Saga.UI
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
             _target = gm.State.force;
+            PunchTick();
         }
 
         private void Refresh()
@@ -87,15 +98,28 @@ namespace Saga.UI
             var compare = value;
             if (value.Sign() < 0) compare = -value;
 
-            Color color;
-            float size;
-            if      (compare < 100)        { color = TierGris;  size = SizeSmall; }
-            else if (compare < 10_000)     { color = TierBlanc; size = SizeMid;   }
-            else if (compare < 10_000_000) { color = TierAmbre; size = SizeLarge; }
-            else                            { color = TierCoral; size = SizeHuge;  }
+            var tokens = DesignTokens.Get();
 
-            _label.color = color;
-            _label.fontSize = size;
+            if (_compact)
+            {
+                // Pill mode : white value, fixed size (set at build), no magnitude scaling/glow.
+                if (tokens.NumbersFont != null && _label.font != tokens.NumbersFont)
+                    _label.font = tokens.NumbersFont;
+                return;
+            }
+
+            _label.color = tokens.ForceTierColor(compare);
+            _label.fontSize = tokens.ForceFontSize(compare);
+
+            // 10M+ tier earns a soft accent glow via TMP outline.
+            var huge = compare >= new BigDouble(10_000_000);
+            _label.fontStyle = huge ? FontStyles.Bold : FontStyles.Normal;
+            _label.outlineColor = new Color(tokens.accentPrimary.r, tokens.accentPrimary.g, tokens.accentPrimary.b, huge ? 0.65f : 0f);
+            _label.outlineWidth = huge ? 0.18f : 0f;
+
+            // Use the JetBrains Mono font for the numeric counter.
+            if (tokens.NumbersFont != null && _label.font != tokens.NumbersFont)
+                _label.font = tokens.NumbersFont;
         }
     }
 }

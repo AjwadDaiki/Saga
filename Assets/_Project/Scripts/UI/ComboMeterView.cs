@@ -67,7 +67,8 @@ namespace Saga.UI
                 : 1f;
             var finalMult = _lastBaseMult * bonus;
 
-            _label.text = "x" + finalMult.ToString("0.0", CultureInfo.InvariantCulture);
+            // Sprint 7.5 zone 4 — signature "×N COMBO" tilted (mockup) instead of plain "x1.0".
+            _label.text = "×" + finalMult.ToString("0.0", CultureInfo.InvariantCulture) + " COMBO";
 
             if (_group != null)
             {

@@ -16,6 +16,9 @@ namespace Saga.Gameplay
     ///   PERSIST: totalEchos, relicsOwned, titlesUnlocked, achievementsUnlocked, deathRecords,
     ///            prestigeCount, lastPrestigeAt, playerCitation, lastSouffleTime (Souffle cooldown
     ///            is a learned skill — persists)
+    ///   PERSIST (Sprint 7): inventoryLayerSetIds, equippedBodyId, equippedArmorId, equippedWeaponId,
+    ///            voieSelectedId, voiesMastered. Gear + voie progression are long-term ladders, not
+    ///            run-scoped. Reliques dropped by Maîtres remain owned forever.
     ///
     /// Formula: <c>echos = max(EchosMinReward, floor(log10(forceMax) × EchosFormulaBase))</c>.
     /// </summary>
@@ -106,6 +109,8 @@ namespace Saga.Gameplay
             state.currentCapitainePhase = 0;
             state.currentMaitrePhase = 0;
             state.currentElan = 0f;
+            // Sprint 7 fields intentionally NOT reset here: inventoryLayerSetIds, equippedBodyId,
+            // equippedArmorId, equippedWeaponId, voieSelectedId, voiesMastered. See class doc.
 
             // Phase back to Training; gameplay loop resumes.
             var prevPhase = state.currentPhase;

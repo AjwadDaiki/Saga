@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SAGA — Preview bouton puffy (VAGUE)</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Lilita+One&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    /* Material 3 + or SAGA (DesignTokens.cs) */
+    --ink:#161d1f;            /* outline charcoal */
+    --outline:#6d7b69;        /* plancher neutre */
+    --gold:#FAC775;           /* Force */
+    --green:#2ccb4c; --green-deep:#1f9e3a;
+    --red:#db3237;  --red-deep:#a8242a;
+    --blue:#67b6ff; --blue-deep:#3a82c9;
+    --vague:#2BC6FF; --vague-deep:#1f93c2;   /* cyan AOE */
+    --souffle:#3DD68C; --souffle-deep:#1E9C5A;/* menthe */
+    --surface:#f4fafd; --surface-c:#e8eff1;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Plus Jakarta Sans',sans-serif;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    /* fond illustré dusk samouraï (placeholder gradient) */
+    background:linear-gradient(180deg,#ff9a6b 0%,#f0617a 42%,#7d3b73 78%,#3a2350 100%);
+    padding:28px 18px 60px;
+    color:var(--ink);
+  }
+  .phone{
+    width:380px; max-width:100%;
+    display:flex; flex-direction:column; gap:26px;
+  }
+  h1{
+    font-family:'Lilita One',cursive; color:#fff; font-size:26px; text-align:center;
+    text-shadow:-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink),2px 2px 0 var(--ink),0 5px 0 rgba(22,29,31,.6);
+    letter-spacing:.5px;
+  }
+  .caption{font-size:13px; color:rgba(255,255,255,.85); text-align:center; font-weight:700; margin-top:-16px;}
+  .row{display:flex; gap:14px; align-items:flex-end; justify-content:center;}
+  .label-sm{font-size:11px;font-weight:800;color:rgba(255,255,255,.8);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;}
+
+  /* ====== RECETTE PUFFY ====== */
+  .puffy{
+    position:relative;
+    border:3px solid var(--ink);
+    border-radius:16px;
+    border-bottom-width:6px;                 /* le "sol" 3D */
+    cursor:pointer; user-select:none;
+    transition:transform .07s, border-bottom-width .07s;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .puffy:active{
+    transform:translateY(4px);               /* clic physique */
+    border-bottom-width:2px;
+    margin-bottom:4px;
+  }
+  /* gloss ovale top-left */
+  .gloss{
+    position:absolute; top:5px; left:9px; width:42%; height:26%;
+    background:rgba(255,255,255,.35); border-radius:9999px;
+    transform:rotate(-12deg); pointer-events:none;
+  }
+  .lbl{font-family:'Lilita One',cursive; color:#fff; letter-spacing:.5px;
+    text-shadow:-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink),1.5px 1.5px 0 var(--ink);}
+  .num{font-family:'JetBrains Mono',monospace; font-weight:700;}
+
+  /* VAGUE — cyan, avec fill % d'Élan */
+  .skill{width:150px; height:78px;}
+  .vague{background:#1a3a47; border-bottom-color:#0d2630;}      /* fond sombre quand pas plein */
+  .vague .fill{position:absolute; left:0; bottom:0; width:100%; background:linear-gradient(180deg,var(--vague),var(--vague-deep));}
+  .souffle{background:var(--souffle); border-bottom-color:var(--souffle-deep);}
+  .skill .lbl{font-size:18px; position:relative;}
+  .skill .sub{font-family:'Lilita One',cursive;color:#fff;font-size:12px;position:relative;
+    text-shadow:1px 1px 0 var(--ink);}
+
+  /* VAGUE prête : glow + pulse */
+  .vague.ready{background:var(--vague); border-bottom-color:var(--vague-deep);
+    box-shadow:0 0 22px 4px rgba(43,198,255,.65); animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+  /* START / Affronter — rouge massif */
+  .cta{width:100%; height:74px; background:var(--red); border-bottom-color:var(--red-deep);}
+  .cta .lbl{font-size:26px; text-transform:uppercase;}
+
+  /* upgrade card puffy (contexte) */
+  .card{width:170px; background:var(--surface); border-bottom-color:var(--outline);
+    padding:12px; gap:8px;}
+  .card .icon{width:48px;height:48px;border-radius:50%;background:var(--blue);
+    border:2px solid var(--ink); box-shadow:0 3px 0 var(--ink); display:flex;align-items:center;justify-content:center;
+    color:var(--ink);font-family:'Lilita One';font-size:24px;}
+  .card .name{font-weight:800;font-size:15px;color:var(--ink);text-align:center;line-height:1.1;}
+  .card .lv{font-size:11px;color:#5a6b58;font-weight:700;}
+  .card .cost{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;
+    background:var(--green); border:2px solid var(--ink); border-radius:9999px; padding:4px 0;
+    color:#fff;}
+  .card .cost .num{font-size:13px;text-shadow:1px 1px 0 var(--ink);}
+  .coin{width:18px;height:18px;border-radius:50%;background:var(--gold);border:2px solid var(--ink);
+    display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-family:'Lilita One';}
+
+  /* currency pill (contexte top bar) */
+  .pill{position:relative; height:34px; background:rgba(22,29,31,.82); border:3px solid var(--outline);
+    border-radius:9999px; box-shadow:0 4px 0 var(--outline); display:flex;align-items:center;
+    padding:0 16px 0 26px; color:#fff;}
+  .pill .pin{position:absolute; left:-6px; width:34px;height:34px;border-radius:50%;
+    border:3px solid var(--ink); display:flex;align-items:center;justify-content:center;
+    font-family:'Lilita One';font-size:14px;color:var(--ink);}
+  .pill .num{font-size:15px;text-shadow:1px 1px 0 var(--ink);}
+  .divider{height:1px;background:rgba(255,255,255,.25);margin:4px 0;}
+</style>
+</head>
+<body>
+  <div class="phone">
+    <h1>SAGA — Style Puffy 3D</h1>
+    <div class="caption">Reproduction Unity à valider · palette M3 + or Force · Lilita One / Plus Jakarta / JetBrains Mono</div>
+
+    <!-- contexte : currency pills -->
+    <div class="row" style="gap:10px;">
+      <div class="pill"><span class="pin" style="background:var(--gold)">力</span><span class="num">106.5K</span></div>
+      <div class="pill"><span class="pin" style="background:#b07bff">◆</span><span class="num">287</span></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- LE bouton à valider : VAGUE -->
+    <div>
+      <div class="label-sm">Skills (Élan / Souffle)</div>
+      <div class="row">
+        <!-- VAGUE en charge 78% -->
+        <div>
+          <div class="puffy skill vague">
+            <div class="fill" style="height:78%"></div>
+            <div class="gloss"></div>
+            <div class="lbl">⚡ VAGUE</div>
+            <div class="sub num">78%</div>
+          </div>
+        </div>
+        <!-- SOUFFLE prêt -->
+        <div>
+          <div class="puffy skill souffle">
+            <div class="gloss"></div>
+            <div class="lbl">☯ SOUFFLE</div>
+            <div class="sub">PRÊT !</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VAGUE prête (glow + pulse) -->
+    <div>
+      <div class="label-sm">VAGUE prête — glow + pulse</div>
+      <div class="row">
+        <div class="puffy skill vague ready">
+          <div class="fill" style="height:100%"></div>
+          <div class="gloss"></div>
+          <div class="lbl">⚡ VAGUE</div>
+          <div class="sub">PRÊT !</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA rouge (contexte START / Affronter) -->
+    <div>
+      <div class="label-sm">CTA principal (Affronter / Start)</div>
+      <div class="puffy cta">
+        <div class="gloss" style="width:30%"></div>
+        <div class="lbl">☠ AFFRONTER !</div>
+      </div>
+    </div>
+
+    <!-- upgrade cards (contexte) -->
+    <div>
+      <div class="label-sm">Upgrade cards puffy</div>
+      <div class="row">
+        <div class="puffy card">
+          <div class="icon">✊</div>
+          <div class="name">Frappe<br/><span class="lv">Lv. 42</span></div>
+          <div class="cost"><span class="coin">力</span><span class="num">1.2K</span></div>
+        </div>
+        <div class="puffy card">
+          <div class="icon" style="background:var(--green)">❀</div>
+          <div class="name">Méditation<br/><span class="lv">Lv. 15</span></div>
+          <div class="cost"><span class="coin">力</span><span class="num">850</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="caption" style="margin-top:8px;">👆 Touche les boutons pour voir le pressed (translateY + sol qui disparaît)</div>
+  </div>
+</body>
+</html>

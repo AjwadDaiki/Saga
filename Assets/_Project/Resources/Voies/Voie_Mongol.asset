@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c32172c66c8cde428391ca6faaa56a7, type: 3}
+  m_Name: Voie_Mongol
+  m_EditorClassIdentifier: Saga.Runtime::Saga.Data.VoieData
+  _voieEnum: 5
+  _displayName: Mongol
+  _mainColor: {r: 0.72, g: 0.61, b: 0.42, a: 1}
+  _accentColor: {r: 0.92, g: 0.85, b: 0.62, a: 1}
+  _introCitation: Les steppes connaissent ton nom avant que tu n'arrives.
+  _description: Voie des cavaliers du levant. Arcs, chevaux, horizons.
+  _bonusDescription: 'Bonus Mongol : +20% Force/seconde passive.'

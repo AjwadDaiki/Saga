@@ -11,7 +11,10 @@ namespace Saga.Gameplay
     /// </summary>
     public static class StatsCalculator
     {
-        /// <summary>Base Force/tap before combo. 1 (constant) + Σ ForcePerTap upgrades × level.</summary>
+        /// <summary>
+        /// Base Force/tap before combo. 1 (constant) + Σ ForcePerTap upgrades × level + Σ equipment Force bonus.
+        /// Sprint 7 adds the equipment bonus aggregated from currently-equipped <see cref="SpriteLayerSet"/>s.
+        /// </summary>
         public static BigDouble GetForcePerTap(GameState state, ContentDatabase content)
         {
             if (state == null || content == null) return new BigDouble(1);
@@ -23,7 +26,30 @@ namespace Saga.Gameplay
                 if (level <= 0) continue;
                 total += upgrade.EffectValue * level;
             }
+            total += GetEquipmentForceBonus(state, content);
             return total;
+        }
+
+        /// <summary>
+        /// Sum of Force bonuses across all equipped SpriteLayerSets. Mirrors
+        /// <see cref="Saga.Gameplay.EquipmentService.GetTotalStatsBonus"/> but as a pure read of GameState IDs
+        /// (so it can be called without a service handle, e.g. from offline progress code).
+        /// </summary>
+        public static BigDouble GetEquipmentForceBonus(GameState state, ContentDatabase content)
+        {
+            if (state == null || content == null) return new BigDouble(0);
+            var total = new BigDouble(0);
+            total += LayerForce(content, state.equippedBodyId);
+            total += LayerForce(content, state.equippedArmorId);
+            total += LayerForce(content, state.equippedWeaponId);
+            return total;
+        }
+
+        private static BigDouble LayerForce(ContentDatabase content, string id)
+        {
+            if (string.IsNullOrEmpty(id)) return new BigDouble(0);
+            var l = content.GetSpriteLayerSet(id);
+            return l != null ? l.StatsBonusForce : new BigDouble(0);
         }
 
         /// <summary>Total Force/second from passive upgrades (Disciple etc.). 0 if no levels.</summary>
