@@ -4,11 +4,11 @@
 
 ## État actuel du projet
 
-**Phase**: Sprint 7 + Sprint 7.5 implémentés (feat branch `feat/sprint-7.5-polish-mobile-pro` empilée sur `feat/sprint-7-voies-modulaire`). Sprint 7 = modulaire sprites + Voies + Equipment + Inventaire + Reliques. Sprint 7.5 = design system mobile pro (DesignTokens SO, background dojo, mannequin redesign, ForceCounter polish, Élan bar glow, cards glass morphism, SagaButton, AudioService procédural, HapticService). En attente validation in-play avant merge `dev` → tag `v0.7.5` (skip v0.7.0 separate, on tag direct la version polish).
+**Phase**: Sprint 7 + Sprint 7.5 **VALIDÉS PAR AJWAD** (test Play + Simulator iPhone 12 le 2026-05-30, verdict "70% mieux"). Sprint 7 = modulaire sprites + Voies + Equipment + Inventaire + Reliques. Sprint 7.5 = design system mobile pro (DesignTokens SO, background dojo procédural, SafeArea wrapping, mannequin redesign, SagaButton, AudioService + HapticService) + **Phase 4 LAYOUT wireframe SAGA officiel** (Top HUD 154 + Stage 96 + Combat 960 + Upgrades 288 + Skills 230 + BottomNav 192 = 1920 px). Ready to merge `dev` → `main` → tag `v0.7.5`, puis Sprint 7.6 RhosGFX visual premium.
 
-**Dernière session**: 2026-05-28, dev Claude (Opus 4.7) sur Claude Code.
+**Dernière session**: 2026-05-30, dev Claude (Opus 4.7) sur Claude Code.
 
-**Branche active**: `feat/sprint-7.5-polish-mobile-pro` (depuis `feat/sprint-7-voies-modulaire`).
+**Branche active**: `feat/sprint-7.5-polish-mobile-pro` (depuis `feat/sprint-7-voies-modulaire`) — VALIDÉE, prête merge.
 
 ## Sprints terminés
 
@@ -22,7 +22,7 @@
 | 5 | `v0.5.0` | Boss Mineurs (8 Capitaines) + Élan + Vague AOE | ✅ closed |
 | 6 | `v0.6.0` | Maîtres légendaires (8) + Prestige + Souffle | ✅ closed |
 | 7 | `v0.7.0` (skipped) | Sprites modulaires (Body/Armor/Weapon) + 8 Voies + EquipmentService + Inventaire + Reliques équipables | 🟡 implémenté, mergé dans 7.5 |
-| 7.5 | `v0.7.5` (pending) | Design system mobile pro 2026 : DesignTokens SO + background dojo (gradient + particles + plancher) + mannequin redesign 3-sections + SagaButton unified + Cards glass morphism + ForceCounter polish + AudioService procédural + HapticService | 🟡 implémenté, en attente play validation |
+| 7.5 | `v0.7.5` (pending tag) | Design system mobile pro 2026 + Phase 4 LAYOUT wireframe SAGA officiel (TopHUD 154 / Stage 96 / Combat 960 / Upgrades 288 / Skills 230 / BottomNav 192 = 1920 px) | ✅ **VALIDÉ AJWAD 2026-05-30** (Play + Simulator iPhone 12, verdict "70% mieux") |
 
 ## Sprint 6 — accomplissements clés (validés en play)
 
