@@ -36,6 +36,7 @@ namespace Saga.UI
         {
             _canvas = canvas;
             _canvasRect = canvas.transform as RectTransform;
+            Debug.Log($"[TapFxSpawner] Init OK — canvas '{canvas.name}' renderMode={canvas.renderMode} sortingOrder={canvas.sortingOrder}.");
         }
 
         /// <summary>Set by MainSceneBootstrap so combat damage numbers can spawn at the enemy.</summary>
@@ -96,7 +97,12 @@ namespace Saga.UI
 
         private Vector2 ScreenToCanvasLocal(Vector2 screenPos)
         {
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPos, null, out var local);
+            // Sprint 9 fix R2 — pass camera for non-Overlay canvas modes (Ajwad's authored Canvas
+            // peut être Screen Space - Camera ou World Space — null camera ne marche que pour Overlay).
+            var cam = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? (_canvas.worldCamera != null ? _canvas.worldCamera : Camera.main)
+                : null;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPos, cam, out var local);
             return local;
         }
 
@@ -106,6 +112,7 @@ namespace Saga.UI
             var go = new GameObject("FloatingNumber",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(FloatingNumberView));
             go.transform.SetParent(_canvasRect, false);
+            go.transform.SetAsLastSibling(); // R2 fix : render au-dessus de Background_Dojo authored
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -135,6 +142,7 @@ namespace Saga.UI
             var go = new GameObject("FloatingDamage",
                 typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI), typeof(FloatingNumberView));
             go.transform.SetParent(_canvasRect, false);
+            go.transform.SetAsLastSibling();
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
@@ -179,6 +187,7 @@ namespace Saga.UI
         {
             var go = new GameObject("Dust", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
             go.transform.SetParent(_canvasRect, false);
+            go.transform.SetAsLastSibling();
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);

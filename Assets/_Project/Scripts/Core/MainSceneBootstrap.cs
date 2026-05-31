@@ -142,6 +142,10 @@ namespace Saga.Core
                 ? (FindFirstObjectByType<Canvas>() ?? BuildCanvas())
                 : BuildCanvas();
             ctx.Canvas = MainCanvas;
+            if (designerFirst)
+            {
+                Debug.Log($"[Bootstrap] Using authored Canvas '{MainCanvas.name}' (renderMode={MainCanvas.renderMode}, sortingOrder={MainCanvas.sortingOrder}, pixelPerfect={MainCanvas.pixelPerfect}).");
+            }
             // UIRoot (SafeAreaContainer) : créé seulement en procédural (les builders dual-mode
             // n'en ont pas besoin — ils wire directement sur les GO Registry).
             ctx.UIRoot = designerFirst ? null : BuildSafeAreaContainer(MainCanvas);
