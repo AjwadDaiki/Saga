@@ -25,5 +25,12 @@ namespace Saga.UI.Builders
         public Transform MaitreTransform;
         // Filled by SkillsBuilder, consumed by Bootstrap when wiring Affronter Maître button to its modal.
         public RectTransform ElanRow;
+
+        // Sprint 9 Phase 1 — Designer-First wiring.
+        /// <summary>Populated par MainSceneBootstrap au boot. null si Ajwad n'a pas authored la scène.</summary>
+        public SceneRegistry Registry;
+        /// <summary>True si Registry est non-null ET sentinel (Force) trouvé. Les builders Sprint 9
+        /// utilisent ce flag pour basculer entre <c>WireFromAuthored(ctx)</c> et le path procédural.</summary>
+        public bool DesignerFirstActive;
     }
 }

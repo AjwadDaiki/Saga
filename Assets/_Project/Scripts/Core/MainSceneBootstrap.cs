@@ -82,10 +82,20 @@ namespace Saga.Core
 
             EnsureMainCamera();
 
+            // Sprint 9 Phase 1 — Designer-First detection. Scan la scène pour les GO authored
+            // par Ajwad (Force, Echos, Settings, ...). Si trouvés, ctx.DesignerFirstActive=true
+            // → les builders Sprint 9+ WireFromAuthored(ctx) attache components aux GO existants
+            // au lieu de re-créer une hiérarchie procédurale. Si non trouvés, fallback procédural.
+            var registry = new SceneRegistry();
+            registry.TryAutoPopulate();
+            registry.LogDetectedLayout();
+
             var ctx = new BuilderContext
             {
                 WorldRoot = new GameObject("WorldRoot").transform,
                 Tokens = DesignTokens.Get(),
+                Registry = registry,
+                DesignerFirstActive = registry.IsDesignerLayoutDetected,
             };
 
             BackgroundBuilder.Build(ctx);          // Sprint 7.5 zone 1 — dojo dusk background + particles.
