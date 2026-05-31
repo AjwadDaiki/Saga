@@ -80,7 +80,7 @@ namespace Saga.UI.Builders
             if (go.GetComponent<ForceCounterView>() != null) return; // already wired (re-entry safe)
 
             // Lilita One (DisplayFont) 40sp pour lisibilité maximale dans pill — autoSize 28..44.
-            var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 40);
+            var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 50);
             var view = go.AddComponent<ForceCounterView>();
             view.Compact = true;
             view.Label = label;
@@ -95,7 +95,7 @@ namespace Saga.UI.Builders
         /// </summary>
         private static void WireEchosPill(GameObject go, DesignTokens tokens)
         {
-            var label = EnsureLabel(go.transform, tokens, color: Color.white, fontSize: 40);
+            var label = EnsureLabel(go.transform, tokens, color: Color.white, fontSize: 50);
             var gm = GameManager.Instance;
             label.text = gm?.State != null
                 ? Saga.Math.NumberFormatter.Format(gm.State.totalEchos, 1)
@@ -164,23 +164,21 @@ namespace Saga.UI.Builders
         private static void ConfigureLabel(TextMeshProUGUI tmp, DesignTokens tokens, Color color, int fontSize)
         {
             tmp.alignment = TextAlignmentOptions.Center;
-            // Sprint 9 Phase 2 fix R1 — Lilita One (DisplayFont SAGA) pour lisibilité cartoony +
-            // outline 0.2 navy DA pour contraste max. autoSize bornes raised pour éviter pixelisation
-            // (min 28 au lieu de 18 — en-dessous le SDF devient bouillie).
+            // Sprint 9 Phase 2 fix R1bis — fontSize FIXE (no autoSize), Lilita One Bold + outline navy.
+            // autoSize choisissait toujours 20sp dans pill 346×116 sans raison claire — disable et
+            // force la taille demandée. Pills d'Ajwad sont assez généreuses pour 50sp Bold visible.
             tmp.font = tokens.DisplayFont;
             tmp.fontSize = fontSize;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = color;
-            tmp.enableAutoSizing = true;
-            tmp.fontSizeMin = 20;
-            tmp.fontSizeMax = fontSize + 12; // élargi pour profiter d'une pill spacieuse
+            tmp.enableAutoSizing = false;
             tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.20f;
             tmp.characterSpacing = 4f;
             tmp.text = "0";
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
-            tmp.overflowMode = TextOverflowModes.Ellipsis;
+            tmp.overflowMode = TextOverflowModes.Overflow;
         }
 
         private static void EnsureBreathingPulse(GameObject go, float peak, float period)
