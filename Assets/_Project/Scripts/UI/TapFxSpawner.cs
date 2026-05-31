@@ -63,23 +63,29 @@ namespace Saga.UI
 
         private void HandleTapResolved(BigDouble value, float multiplier, Vector2 screenPos)
         {
-            if (_canvas == null || _canvasRect == null) return;
+            if (_canvas == null || _canvasRect == null)
+            {
+                Debug.LogWarning($"[TapFxSpawner] HandleTapResolved early-out — _canvas={_canvas != null} _canvasRect={_canvasRect != null}. Init() jamais appelé ?");
+                return;
+            }
 
             var phase = GameManager.Instance?.State?.currentPhase ?? CombatPhase.Training;
             var isCombat = phase == CombatPhase.AdversaireActive || phase == CombatPhase.CapitaineActive;
+            Debug.Log($"[TapFxSpawner] HandleTapResolved fired — value={value}, phase={phase}, screenPos={screenPos}");
 
             // Floating number — Training "+X" at tap pos, Combat "-X" at enemy pos.
             if (isCombat && _enemyAnchor != null)
             {
                 var enemyScreen = WorldToScreenWithCamera(_enemyAnchor.position);
                 var local = ScreenToCanvasLocal(enemyScreen);
-                // Slight jitter so consecutive damage numbers don't stack at the same pixel.
                 local += new Vector2(Random.Range(-40f, 40f), Random.Range(20f, 60f));
+                Debug.Log($"[TapFxSpawner] Spawning FloatingDamage at canvas local {local} (enemy screen {enemyScreen})");
                 SpawnFloatingDamage(local, value);
             }
             else
             {
                 var local = ScreenToCanvasLocal(screenPos);
+                Debug.Log($"[TapFxSpawner] Spawning FloatingNumber at canvas local {local} (screen {screenPos})");
                 SpawnFloatingNumber(local, value, _currentTier);
             }
 

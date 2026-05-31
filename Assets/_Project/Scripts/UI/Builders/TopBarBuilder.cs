@@ -134,15 +134,22 @@ namespace Saga.UI.Builders
         /// </summary>
         private static TextMeshProUGUI EnsureLabel(Transform parent, DesignTokens tokens, Color color, int fontSize)
         {
+            var parentRt = parent as RectTransform;
+            var parentSize = parentRt != null ? parentRt.rect.size : Vector2.zero;
+            Debug.Log($"[EnsureLabel] Parent={parent.name}, parentSize={parentSize}, parentChildCount={parent.childCount}");
+
             var existing = parent.Find("Label");
             if (existing != null)
             {
+                Debug.Log($"[EnsureLabel] Found existing Label child on {parent.name}");
                 var tmp = existing.GetComponent<TextMeshProUGUI>();
                 if (tmp != null) return tmp;
                 tmp = existing.gameObject.AddComponent<TextMeshProUGUI>();
                 ConfigureLabel(tmp, tokens, color, fontSize);
                 return tmp;
             }
+
+            Debug.Log($"[EnsureLabel] Creating new Label child on {parent.name} (fontSize={fontSize})");
             var go = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
@@ -150,6 +157,7 @@ namespace Saga.UI.Builders
             rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
             var newTmp = go.GetComponent<TextMeshProUGUI>();
             ConfigureLabel(newTmp, tokens, color, fontSize);
+            Debug.Log($"[EnsureLabel] Label created on {parent.name}, rectSize={rt.rect.size}, font={(newTmp.font != null ? newTmp.font.name : "NULL")}, autoSizeRange=[{newTmp.fontSizeMin}..{newTmp.fontSizeMax}]");
             return newTmp;
         }
 
@@ -164,8 +172,8 @@ namespace Saga.UI.Builders
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = color;
             tmp.enableAutoSizing = true;
-            tmp.fontSizeMin = 28;
-            tmp.fontSizeMax = fontSize;
+            tmp.fontSizeMin = 20;
+            tmp.fontSizeMax = fontSize + 12; // élargi pour profiter d'une pill spacieuse
             tmp.outlineColor = tokens.navyContour;
             tmp.outlineWidth = 0.20f;
             tmp.characterSpacing = 4f;
