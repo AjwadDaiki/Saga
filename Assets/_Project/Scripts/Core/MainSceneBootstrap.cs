@@ -993,7 +993,7 @@ namespace Saga.Core
             }
 
             // Image transparente, raycastTarget=true pour catch les clicks.
-            var img = tapZone.GetComponent<Image>() ?? tapZone.AddComponent<Image>();
+            var img = tapZone.GetOrAdd<Image>();
             img.color = new Color(0f, 0f, 0f, 0f);
             img.raycastTarget = true;
 

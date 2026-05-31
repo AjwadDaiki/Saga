@@ -17,14 +17,14 @@ namespace Saga.UI
 
         private void Awake()
         {
-            _cg = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            _cg = gameObject.GetOrAdd<CanvasGroup>();
             _cg.alpha = 0f;
         }
 
         public void Show(string text)
         {
             if (Label != null) Label.text = text;
-            if (_cg == null) _cg = gameObject.GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            if (_cg == null) _cg = gameObject.GetOrAdd<CanvasGroup>();
             _seq?.Kill();
             _cg.alpha = 0f;
             transform.localScale = Vector3.one * 0.9f;

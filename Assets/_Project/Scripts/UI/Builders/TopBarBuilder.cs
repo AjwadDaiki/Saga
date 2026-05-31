@@ -112,7 +112,7 @@ namespace Saga.UI.Builders
         {
             var img = go.GetComponent<Image>();
             if (img != null) img.raycastTarget = true;
-            var btn = go.GetComponent<Button>() ?? go.AddComponent<Button>();
+            var btn = go.GetOrAdd<Button>();
             btn.transition = Selectable.Transition.None;
             // Stub onClick — connecter à SettingsModal quand il existera.
             btn.onClick.RemoveAllListeners();

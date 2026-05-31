@@ -224,7 +224,7 @@ namespace Saga.UI
             int radius = 16, int floorPx = 6)
         {
             var tokens = DesignTokens.Get();
-            var sb = buttonGo.GetComponent<SagaButton>() ?? buttonGo.AddComponent<SagaButton>();
+            var sb = buttonGo.GetOrAdd<SagaButton>();
             sb.Button = buttonGo.GetComponent<Button>();
             if (sb.Button != null) sb.Button.transition = Selectable.Transition.None;
             sb._floorPx = floorPx;

@@ -113,7 +113,8 @@ namespace Saga.UI.Builders
             // donc tapsTowardsNextAdversaire / threshold qui doit monter à chaque tap.
 
             // Ensure CanvasGroup (view shows/hides via group.alpha).
-            var group = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+            // Unity gotcha : ?? AddComponent ne marche pas (fake-null). Use GetOrAdd<T>.
+            var group = go.GetOrAdd<CanvasGroup>();
             group.alpha = 1f; group.interactable = false; group.blocksRaycasts = false;
 
             // Trouve ou auto-create Fill child.
@@ -121,7 +122,7 @@ namespace Saga.UI.Builders
             Image fillImg;
             if (fillTransform != null)
             {
-                fillImg = fillTransform.GetComponent<Image>() ?? fillTransform.gameObject.AddComponent<Image>();
+                fillImg = fillTransform.gameObject.GetOrAdd<Image>();
                 Debug.Log($"[Boss] WireBossBar — Found existing Fill child '{fillTransform.name}', wiring Image.Filled.");
             }
             else
