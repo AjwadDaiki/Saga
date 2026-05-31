@@ -1,10 +1,6 @@
-using DG.Tweening;
 using Saga.Core;
-using Saga.Data;
 using Saga.UI;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Saga.UI.Builders
 {

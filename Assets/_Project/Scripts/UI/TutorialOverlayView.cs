@@ -227,7 +227,6 @@ namespace Saga.UI
             var targetCenter = WorldToCanvasLocal(target, canvasRt);
             var targetSize = target.rect.size;
             // Place above if target is in lower half, else below.
-            var canvasHeight = canvasRt.rect.height;
             var bubbleHeight = bubbleRt.rect.height;
             var below = targetCenter.y > 0f; // upper half of canvas → bubble below
             var y = below
