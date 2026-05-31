@@ -54,6 +54,20 @@ namespace Saga.Core
 
         private void Awake()
         {
+#if UNITY_EDITOR
+            // Designer Mode (Sprint 8 — Ajwad workflow Designer-First) : skip the procedural
+            // scene generation pour qu'Ajwad puisse placer ses assets custom directement dans
+            // Main.unity sans qu'on les écrase au Play. Toggle via menu "Saga > Designer Mode".
+            // Effect uniquement en Editor — les builds shippés ignorent ce flag et bootstrap normal.
+            if (UnityEditor.EditorPrefs.GetBool("Saga.DesignerMode", false))
+            {
+                Debug.Log("[Bootstrap] Designer Mode ON — procedural scene generation SKIPPED. " +
+                          "Disable via 'Saga > Designer Mode > Enabled' to re-enable procedural build.");
+                MainCanvas = FindFirstObjectByType<Canvas>();
+                return;
+            }
+#endif
+
             // Build only once. If user authors the scene later, this short-circuits cleanly.
             if (FindFirstObjectByType<ForceCounterView>() != null)
             {
