@@ -79,13 +79,14 @@ namespace Saga.UI.Builders
         {
             if (go.GetComponent<ForceCounterView>() != null) return; // already wired (re-entry safe)
 
-            var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 30);
+            // Lilita One (DisplayFont) 40sp pour lisibilité maximale dans pill — autoSize 28..44.
+            var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 40);
             var view = go.AddComponent<ForceCounterView>();
             view.Compact = true;
             view.Label = label;
 
             EnsureBreathingPulse(go, peak: 1.012f, period: 3.5f);
-            Debug.Log($"[TopBar] Wired Force pill (label: {(label.transform.parent == go.transform ? "auto-created" : "found")}) — live counter active.");
+            Debug.Log($"[TopBar] Wired Force pill — live counter active (Lilita 40sp + outline navy).");
         }
 
         /// <summary>
@@ -94,7 +95,7 @@ namespace Saga.UI.Builders
         /// </summary>
         private static void WireEchosPill(GameObject go, DesignTokens tokens)
         {
-            var label = EnsureLabel(go.transform, tokens, color: Color.white, fontSize: 30);
+            var label = EnsureLabel(go.transform, tokens, color: Color.white, fontSize: 40);
             var gm = GameManager.Instance;
             label.text = gm?.State != null
                 ? Saga.Math.NumberFormatter.Format(gm.State.totalEchos, 1)
@@ -155,15 +156,19 @@ namespace Saga.UI.Builders
         private static void ConfigureLabel(TextMeshProUGUI tmp, DesignTokens tokens, Color color, int fontSize)
         {
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.font = tokens.NumbersFont;
+            // Sprint 9 Phase 2 fix R1 — Lilita One (DisplayFont SAGA) pour lisibilité cartoony +
+            // outline 0.2 navy DA pour contraste max. autoSize bornes raised pour éviter pixelisation
+            // (min 28 au lieu de 18 — en-dessous le SDF devient bouillie).
+            tmp.font = tokens.DisplayFont;
             tmp.fontSize = fontSize;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = color;
             tmp.enableAutoSizing = true;
-            tmp.fontSizeMin = 18;
+            tmp.fontSizeMin = 28;
             tmp.fontSizeMax = fontSize;
             tmp.outlineColor = tokens.navyContour;
-            tmp.outlineWidth = 0.30f;
+            tmp.outlineWidth = 0.20f;
+            tmp.characterSpacing = 4f;
             tmp.text = "0";
             tmp.raycastTarget = false;
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
