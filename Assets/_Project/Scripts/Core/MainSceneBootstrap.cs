@@ -157,6 +157,15 @@ namespace Saga.Core
             BuildTapHandler(MainCanvas);
             SceneBuilder.BuildTapFxSpawner(MainCanvas, AdversaireTransform);
 
+            // Sprint 9 fix — en designer mode, l'authored Background_Dojo raycastTarget=true bloque
+            // tous les clicks (IsPointerOverUI=true → InputAction path TapHandler rejected). On
+            // pose un TapZone transparent topmost dans la zone combat qui route clicks vers
+            // TapHandler.ProcessTap. Cards/Skills/Tabs restent réceptifs (topmost dans leur région).
+            if (designerFirst)
+            {
+                EnsureTapZone(MainCanvas);
+            }
+
             // UpgradesBuilder : Phase 2 fix — encore procédural. En designer-first on skip
             // (Card_Strike/Focus/Power authored — Phase 3 ajoutera le dual-mode dispatch).
             if (!designerFirst) UpgradesBuilder.Build(ctx);
@@ -938,6 +947,60 @@ namespace Saga.Core
         {
             var go = new GameObject("TapHandler", typeof(TapHandler));
             go.transform.SetParent(canvas.transform, false);
+        }
+
+        /// <summary>
+        /// Sprint 9 — Designer Mode TapZone : trouve un GO "TapZone" authored par Ajwad ou
+        /// auto-créé un Image transparent raycastTarget=true couvrant la zone combat (entre
+        /// Top HUD/Stage en haut et Upgrades/Skills/Nav en bas). Le TapZoneHandler component
+        /// route OnPointerDown vers TapHandler.ProcessTap (bypasse IsPointerOverUI).
+        /// </summary>
+        private static void EnsureTapZone(Canvas canvas)
+        {
+            var existing = GameObject.Find("TapZone");
+            GameObject tapZone;
+            if (existing != null)
+            {
+                tapZone = existing;
+                Debug.Log($"[Bootstrap] Found authored TapZone — wiring TapZoneHandler.");
+            }
+            else
+            {
+                tapZone = new GameObject("TapZone", typeof(RectTransform), typeof(Image));
+                tapZone.transform.SetParent(canvas.transform, false);
+                var rt = (RectTransform)tapZone.transform;
+                rt.anchorMin = new Vector2(0f, 0f);
+                rt.anchorMax = new Vector2(1f, 1f);
+                // Zone combat : skip 250px en haut (TopHUD 154 + Stage 96) et 710px en bas
+                // (BottomNav 192 + Skills 230 + Upgrades 288). Reste ~960px de zone tappable
+                // au centre. Adjust selon ce qu'Ajwad veut en repositionnant le GO ou en
+                // posant son propre "TapZone" authored.
+                rt.offsetMin = new Vector2(0f, 710f);
+                rt.offsetMax = new Vector2(0f, -250f);
+                Debug.Log($"[Bootstrap] Auto-created TapZone — zone combat 960px center band (override en posant un GO 'TapZone' authored).");
+            }
+
+            // Image transparente, raycastTarget=true pour catch les clicks.
+            var img = tapZone.GetComponent<Image>() ?? tapZone.AddComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            img.raycastTarget = true;
+
+            // Sibling order : juste après Background_Dojo si trouvé, sinon premier (derrière UI).
+            var bg = GameObject.Find("Background_Dojo");
+            if (bg != null && bg.transform.parent == canvas.transform)
+            {
+                tapZone.transform.SetSiblingIndex(bg.transform.GetSiblingIndex() + 1);
+            }
+            else
+            {
+                tapZone.transform.SetAsFirstSibling();
+            }
+
+            // Wire handler.
+            if (tapZone.GetComponent<Saga.Gameplay.TapZoneHandler>() == null)
+            {
+                tapZone.AddComponent<Saga.Gameplay.TapZoneHandler>();
+            }
         }
 
         // ============================================================

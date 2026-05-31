@@ -17,6 +17,9 @@ namespace Saga.Gameplay
     [DisallowMultipleComponent]
     public class TapHandler : MonoBehaviour
     {
+        /// <summary>Sprint 9 — singleton handle so TapZone (designer mode) peut router clicks ici.</summary>
+        public static TapHandler Instance { get; private set; }
+
         private InputAction _tapAction;
         private ComboSystem _combo;
 
@@ -26,6 +29,7 @@ namespace Saga.Gameplay
 
         private void Awake()
         {
+            Instance = this;
             _combo = new ComboSystem();
             _tapAction = new InputAction(name: "Tap", type: InputActionType.Button, binding: "<Pointer>/press");
             _tapAction.performed += OnTapPerformed;
@@ -61,6 +65,17 @@ namespace Saga.Gameplay
             // fresh PointerEventData. See coordinator brief 2026-05-27.
             if (IsPointerOverUI(screenPos)) return;
 
+            ProcessTap(screenPos);
+        }
+
+        /// <summary>
+        /// Sprint 9 — Public entry point pour les routes externes (TapZone IPointerDownHandler en
+        /// designer mode, anti-cheat / debug tools). Skip la vérif IsPointerOverUI : le caller est
+        /// responsable de filtrer les clicks UI (typiquement via raycast routing). Tout le reste
+        /// (phase gating, combo, multipliers, RaiseTapResolved) identique au path InputAction.
+        /// </summary>
+        public void ProcessTap(Vector2 screenPos)
+        {
             var gm = GameManager.Instance;
             if (gm == null || gm.State == null) return;
 
