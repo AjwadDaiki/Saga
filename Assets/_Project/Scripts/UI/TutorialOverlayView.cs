@@ -30,6 +30,7 @@ namespace Saga.UI
 
         private RectTransform _root;
         private CanvasGroup _cg;
+        private SceneRegistry _registry;
         private GameObject _dim;
         private GameObject _ring;
         private Image _ringImage;
@@ -39,10 +40,11 @@ namespace Saga.UI
         private Tween _ringPulse;
         private Tween _ringFade;
 
-        public void Initialize(RectTransform root, CanvasGroup cg)
+        public void Initialize(RectTransform root, CanvasGroup cg, SceneRegistry registry = null)
         {
             _root = root;
             _cg = cg;
+            _registry = registry;
             BuildDim();
             BuildSkipButton();
             // Hide initially; we fade in on first OnTutorialStepShown.
@@ -68,10 +70,14 @@ namespace Saga.UI
 
         private void HandleStepShown(TutorialStep step)
         {
-            var target = ResolveTarget(step.anchor);
+            var target = ResolveTarget(step.anchor, _registry);
             if (target == null)
             {
-                Debug.LogWarning($"[Tutorial] Anchor target '{step.anchor}' not found for step '{step.id}'. Skipping bubble + ring (joueur ne sera pas guidé sur ce step).");
+                Debug.LogWarning($"[Tutorial] Anchor target '{step.anchor}' not found for step '{step.id}'. Bubble centrée écran en fallback.");
+            }
+            else
+            {
+                Debug.Log($"[Tutorial] Step '{step.id}' anchored on '{target.name}' — ring + bubble positionnés.");
             }
 
             PlaceRing(target);
@@ -291,9 +297,30 @@ namespace Saga.UI
 
         // ----- Helpers -----
 
-        private static RectTransform ResolveTarget(TutorialStep.AnchorTarget anchor)
+        /// <summary>
+        /// Sprint 9 Phase 4 — Route via SceneRegistry pour les noms Ajwad authored.
+        /// Fallback GameObject.Find legacy si registry null OU GO non détecté (mode procédural).
+        /// Mapping anchor enum (legacy SO content) → registry champs (designer-first naming).
+        /// </summary>
+        private static RectTransform ResolveTarget(TutorialStep.AnchorTarget anchor, SceneRegistry registry)
         {
-            var name = anchor switch
+            // Priorité 1 : registry champ direct (Ajwad authored naming).
+            if (registry != null)
+            {
+                var fromRegistry = anchor switch
+                {
+                    TutorialStep.AnchorTarget.ForcePill => registry.Force,
+                    TutorialStep.AnchorTarget.UpgradeStrike => registry.CardStrike,
+                    TutorialStep.AnchorTarget.StageChip => registry.StageChip,
+                    TutorialStep.AnchorTarget.VagueButton => registry.VagueButton,
+                    TutorialStep.AnchorTarget.SettingsButton => registry.Settings,
+                    _ => null, // CombatZone n'est pas dans registry — bubble centre fallback
+                };
+                if (fromRegistry != null) return fromRegistry.transform as RectTransform;
+            }
+
+            // Priorité 2 : legacy GameObject.Find par anciens noms procéduraux (fallback).
+            var legacyName = anchor switch
             {
                 TutorialStep.AnchorTarget.CombatZone => "CombatZone",
                 TutorialStep.AnchorTarget.ForcePill => "ForcePill",
@@ -303,8 +330,8 @@ namespace Saga.UI
                 TutorialStep.AnchorTarget.SettingsButton => "SettingsButton",
                 _ => null,
             };
-            if (string.IsNullOrEmpty(name)) return null;
-            var go = GameObject.Find(name);
+            if (string.IsNullOrEmpty(legacyName)) return null;
+            var go = GameObject.Find(legacyName);
             return go != null ? go.transform as RectTransform : null;
         }
 

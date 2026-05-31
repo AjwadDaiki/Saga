@@ -45,7 +45,7 @@ namespace Saga.UI.Builders
             cg.blocksRaycasts = false; // visual only — joueur peut interagir avec targets
 
             var view = root.GetComponent<TutorialOverlayView>();
-            view.Initialize(rt, cg);
+            view.Initialize(rt, cg, ctx.Registry);
 
             // Start tutorial service AFTER overlay is wired — service raises Shown immediately
             // for first step, which the view will pick up via its OnEnable subscriptions.
