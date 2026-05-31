@@ -68,11 +68,25 @@ namespace Saga.UI.Builders
         /// </summary>
         private static void WireStageChip(GameObject go, DesignTokens tokens)
         {
-            if (go.GetComponent<StagePillView>() != null) return;
+            if (go.GetComponent<StagePillView>() != null)
+            {
+                Debug.Log($"[Stage] WireStageChip — StagePillView already on {go.name}, skip.");
+                return;
+            }
+            var parentRt = go.transform as RectTransform;
+            var parentSize = parentRt != null ? parentRt.rect.size : Vector2.zero;
+            Debug.Log($"[Stage] WireStageChip on {go.name} — parentSize={parentSize}, parentChildCount={go.transform.childCount}");
+
             var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 36);
+            var labelRt = label.rectTransform;
+            Debug.Log($"[Stage] WireStageChip — Label OK '{label.name}', rectSize={labelRt.rect.size}, text='{label.text}', font={(label.font != null ? label.font.name : "NULL")}");
+
             var view = go.AddComponent<StagePillView>();
             view.Label = label;
-            Debug.Log("[Stage] Wired Stage_Chip — live label active (Lilita 36sp).");
+            // Force first Refresh via view (subscribe OnStadeChanged + initial Refresh dans OnEnable)
+            var gm = GameManager.Instance;
+            var stade = gm?.State != null ? gm.State.currentStade : 1;
+            Debug.Log($"[Stage] StagePillView attached, current stade = {stade} → label devrait afficher 'Stade {stade}'");
         }
 
         /// <summary>
@@ -82,7 +96,20 @@ namespace Saga.UI.Builders
         /// </summary>
         private static void WireBossBar(GameObject go, DesignTokens tokens)
         {
-            if (go.GetComponent<AdversaireProgressBarView>() != null) return;
+            if (go.GetComponent<AdversaireProgressBarView>() != null)
+            {
+                Debug.Log($"[Boss] WireBossBar — AdversaireProgressBarView already on {go.name}, skip.");
+                return;
+            }
+
+            var parentRt = go.transform as RectTransform;
+            var parentSize = parentRt != null ? parentRt.rect.size : Vector2.zero;
+            Debug.Log($"[Boss] WireBossBar on {go.name} — parentSize={parentSize}, parentChildCount={go.transform.childCount}");
+
+            // NOTE pour Ajwad : AdversaireProgressBarView == "Prochain Adversaire" progress (taps
+            // vers le spawn adv en phase Training). HP boss bar pendant Combat = CombatHud
+            // separate (CombatHudView, créé en Phase A bootstrap). En Training, Boss_Bar montre
+            // donc tapsTowardsNextAdversaire / threshold qui doit monter à chaque tap.
 
             // Ensure CanvasGroup (view shows/hides via group.alpha).
             var group = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
@@ -94,7 +121,7 @@ namespace Saga.UI.Builders
             if (fillTransform != null)
             {
                 fillImg = fillTransform.GetComponent<Image>() ?? fillTransform.gameObject.AddComponent<Image>();
-                Debug.Log("[Stage] Boss_Bar — Found existing Fill child, wiring Image.Filled.");
+                Debug.Log($"[Boss] WireBossBar — Found existing Fill child '{fillTransform.name}', wiring Image.Filled.");
             }
             else
             {
@@ -104,7 +131,7 @@ namespace Saga.UI.Builders
                 fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
                 fillRt.offsetMin = new Vector2(8, 8); fillRt.offsetMax = new Vector2(-8, -8);
                 fillImg = fillGo.GetComponent<Image>();
-                Debug.Log("[Stage] Boss_Bar — Auto-created Fill child (inset 8px du sprite background).");
+                Debug.Log($"[Boss] WireBossBar — Auto-created Fill child on {go.name} (inset 8px).");
             }
 
             // Configure pour Image.Filled horizontal driven par view.
@@ -114,6 +141,7 @@ namespace Saga.UI.Builders
             fillImg.fillAmount = 0f;
             fillImg.color = tokens.mintPositif; // vert progression positive
             fillImg.raycastTarget = false;
+            Debug.Log($"[Boss] WireBossBar — Fill configured Image.Filled.Horizontal, color={fillImg.color}, fillAmount=0");
 
             // Hidden label requis par view (mais on n'affiche rien).
             var hiddenLbl = new GameObject("HiddenLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -128,7 +156,13 @@ namespace Saga.UI.Builders
             view.FillImage = fillImg;
             view.Label = hTmp;
             view.PulseTarget = go.transform as RectTransform;
-            Debug.Log("[Stage] Wired Boss_Bar — fillAmount driven by AdversaireProgressBarView.");
+
+            var gm = GameManager.Instance;
+            var phase = gm?.State != null ? gm.State.currentPhase.ToString() : "?";
+            var taps = gm?.State != null ? gm.State.tapsTowardsNextAdversaire : 0;
+            var stade = gm?.State != null ? gm.State.currentStade : 1;
+            Debug.Log($"[Boss] AdversaireProgressBarView attached, subscribed OnAdversaireProgressUpdated + OnPhaseChanged. Phase={phase}, taps={taps}, stade={stade}");
+            Debug.Log($"[Boss] Boss_Bar IS 'Prochain Adversaire' progress bar (Training-only). Doit s'incrémenter à chaque tap. En Combat → alpha 0 (HP boss = CombatHud separate).");
         }
 
         /// <summary>Find or create "Label" TMP child. Lilita One Bold + outline cremeText 0.22 + tracking 6.</summary>
