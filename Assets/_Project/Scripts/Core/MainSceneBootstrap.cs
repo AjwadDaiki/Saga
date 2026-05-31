@@ -54,6 +54,14 @@ namespace Saga.Core
 
         private void Awake()
         {
+            // Sprint 9 Phase 1 — Designer-First detection. Toujours scan la scène en TOUT PREMIER
+            // (avant Designer Mode skip + avant ForceCounterView short-circuit) pour log la
+            // détection même en mode skip. Permet à Ajwad de vérifier que ses GO authored sont
+            // trouvés sans avoir à désactiver Designer Mode.
+            var registry = new SceneRegistry();
+            registry.TryAutoPopulate();
+            registry.LogDetectedLayout();
+
 #if UNITY_EDITOR
             // Designer Mode (Sprint 8 — Ajwad workflow Designer-First) : skip the procedural
             // scene generation pour qu'Ajwad puisse placer ses assets custom directement dans
@@ -81,14 +89,6 @@ namespace Saga.Core
             CleanLeftoverWorldSprites();
 
             EnsureMainCamera();
-
-            // Sprint 9 Phase 1 — Designer-First detection. Scan la scène pour les GO authored
-            // par Ajwad (Force, Echos, Settings, ...). Si trouvés, ctx.DesignerFirstActive=true
-            // → les builders Sprint 9+ WireFromAuthored(ctx) attache components aux GO existants
-            // au lieu de re-créer une hiérarchie procédurale. Si non trouvés, fallback procédural.
-            var registry = new SceneRegistry();
-            registry.TryAutoPopulate();
-            registry.LogDetectedLayout();
 
             var ctx = new BuilderContext
             {
