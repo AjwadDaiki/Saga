@@ -55,29 +55,33 @@ namespace Saga.Core
         private void Awake()
         {
             // Sprint 9 Phase 1 — Designer-First detection. Toujours scan la scène en TOUT PREMIER
-            // (avant Designer Mode skip + avant ForceCounterView short-circuit) pour log la
-            // détection même en mode skip. Permet à Ajwad de vérifier que ses GO authored sont
-            // trouvés sans avoir à désactiver Designer Mode.
+            // (avant tout return conditionnel) pour log la détection.
             var registry = new SceneRegistry();
             registry.TryAutoPopulate();
             registry.LogDetectedLayout();
 
+            // Sprint 9 fix Phase 2 — Designer-First = flag explicit OR auto-detect (Force GO).
+            // Le flag Saga.DesignerMode reste comme override force-on même si scène vide
+            // (debug Ajwad). Auto-detect via Registry suffit en cas normal.
+            var designerFirst = registry.IsDesignerLayoutDetected;
 #if UNITY_EDITOR
-            // Designer Mode (Sprint 8 — Ajwad workflow Designer-First) : skip the procedural
-            // scene generation pour qu'Ajwad puisse placer ses assets custom directement dans
-            // Main.unity sans qu'on les écrase au Play. Toggle via menu "Saga > Designer Mode".
-            // Effect uniquement en Editor — les builds shippés ignorent ce flag et bootstrap normal.
             if (UnityEditor.EditorPrefs.GetBool("Saga.DesignerMode", false))
             {
-                Debug.Log("[Bootstrap] Designer Mode ON — procedural scene generation SKIPPED. " +
-                          "Disable via 'Saga > Designer Mode > Enabled' to re-enable procedural build.");
-                MainCanvas = FindFirstObjectByType<Canvas>();
-                return;
+                designerFirst = true;
+                Debug.Log("[Bootstrap] Designer Mode flag ON (EditorPrefs override).");
             }
 #endif
+            if (designerFirst)
+            {
+                Debug.Log("[Bootstrap] Designer-First mode : skip scene-level builders (Background, " +
+                          "SceneBuilder perso/mannequin) ; UI band builders dispatch via dual-mode. " +
+                          "Gameplay scaffolding (TapHandler, overlays, modals) runs normally.");
+            }
 
             // Build only once. If user authors the scene later, this short-circuits cleanly.
-            if (FindFirstObjectByType<ForceCounterView>() != null)
+            // En designer-first, ForceCounterView est attaché par WireForcePill au runtime ; le
+            // short-circuit ne doit pas fire prématurément. On le skip si designer-first.
+            if (!designerFirst && FindFirstObjectByType<ForceCounterView>() != null)
             {
                 MainCanvas = FindFirstObjectByType<Canvas>();
                 return;
@@ -86,55 +90,94 @@ namespace Saga.Core
             // Sprint 3 fix #3 — sweep any pre-existing SpriteRenderer in the scene (likely from
             // scene templates / URP 2D defaults that may have shipped a placeholder background quad).
             // Runs BEFORE we create our own WorldRoot so it never destroys what we build.
-            CleanLeftoverWorldSprites();
+            // En designer-first, on skip (Ajwad a authored ses propres sprites).
+            if (!designerFirst) CleanLeftoverWorldSprites();
 
             EnsureMainCamera();
 
             var ctx = new BuilderContext
             {
-                WorldRoot = new GameObject("WorldRoot").transform,
+                WorldRoot = designerFirst ? null : new GameObject("WorldRoot").transform,
                 Tokens = DesignTokens.Get(),
                 Registry = registry,
-                DesignerFirstActive = registry.IsDesignerLayoutDetected,
+                DesignerFirstActive = designerFirst,
             };
 
-            BackgroundBuilder.Build(ctx);          // Sprint 7.5 zone 1 — dojo dusk background + particles.
-            SceneBuilder.Build(ctx);               // Sprint 7.5 zone 4 — character + mannequin + adv/cap/maitre + slash FX.
+            // ===== Phase A — Scene-level builders (SKIPPED en designer-first) =====
+            // Background dojo procédural : Ajwad a Background_Dojo authored → skip pour pas duplicate.
+            // SceneBuilder (perso/mannequin/adv/cap/maitre + slash FX) : Ajwad a Hero_Samurai +
+            // Mannequin authored → skip pour pas duplicate. Les Transform refs runtime restent
+            // null en designer-first ; les TapFx/Adversaire/Capitaine/Maitre spawn-views feront
+            // une best-effort lookup via GameObject.Find si besoin (Phase 3+ wiring).
+            if (!designerFirst)
+            {
+                BackgroundBuilder.Build(ctx);          // Sprint 7.5 zone 1 — dojo dusk background + particles.
+                SceneBuilder.Build(ctx);               // Sprint 7.5 zone 4 — character + mannequin + adv/cap/maitre + slash FX.
 
-            // Copy zone-4 transforms back to the public properties consumed by other scripts.
-            CharacterTransform = ctx.CharacterTransform;
-            MannequinTransform = ctx.MannequinTransform;
-            AdversaireTransform = ctx.AdversaireTransform;
-            CapitaineTransform = ctx.CapitaineTransform;
-            MaitreTransform = ctx.MaitreTransform;
+                // Copy zone-4 transforms back to the public properties consumed by other scripts.
+                CharacterTransform = ctx.CharacterTransform;
+                MannequinTransform = ctx.MannequinTransform;
+                AdversaireTransform = ctx.AdversaireTransform;
+                CapitaineTransform = ctx.CapitaineTransform;
+                MaitreTransform = ctx.MaitreTransform;
+            }
+            else
+            {
+                // Best-effort lookup des transforms authored par Ajwad (pour les systèmes downstream
+                // qui en ont besoin — TapFxSpawner cible AdversaireTransform). Null si pas authored.
+                var hero = GameObject.Find("Hero_Samurai");
+                if (hero != null) CharacterTransform = hero.transform;
+                var mannequin = GameObject.Find("Mannequin");
+                if (mannequin != null)
+                {
+                    MannequinTransform = mannequin.transform;
+                    AdversaireTransform = mannequin.transform; // mannequin sert de target adv tant que pas d'adv authored
+                }
+            }
 
+            // ===== Phase A continued — Gameplay scaffolding (TOUJOURS exécuté) =====
             BuildEventSystem();
-            MainCanvas = BuildCanvas();
+            // Canvas : si Ajwad a authored un Canvas (designer-first), on l'utilise ; sinon créé.
+            MainCanvas = designerFirst
+                ? (FindFirstObjectByType<Canvas>() ?? BuildCanvas())
+                : BuildCanvas();
             ctx.Canvas = MainCanvas;
-            ctx.UIRoot = BuildSafeAreaContainer(MainCanvas);
+            // UIRoot (SafeAreaContainer) : créé seulement en procédural (les builders dual-mode
+            // n'en ont pas besoin — ils wire directement sur les GO Registry).
+            ctx.UIRoot = designerFirst ? null : BuildSafeAreaContainer(MainCanvas);
 
+            // Gameplay UI overlays (TOUJOURS — fix Phase 2 : ces overlays drivent l'interaction
+            // tap / combat / FX et ne sont PAS authored par Ajwad). Skipped seulement les builders
+            // qui duppliqueraient des GO authored.
             SceneBuilder.BuildComboMeter(MainCanvas);
             BuildTapHandler(MainCanvas);
             SceneBuilder.BuildTapFxSpawner(MainCanvas, AdversaireTransform);
-            UpgradesBuilder.Build(ctx);            // Sprint 7.5 zone 6 — upgrade card panel.
+
+            // UpgradesBuilder : Phase 2 fix — encore procédural. En designer-first on skip
+            // (Card_Strike/Focus/Power authored — Phase 3 ajoutera le dual-mode dispatch).
+            if (!designerFirst) UpgradesBuilder.Build(ctx);
+
             BuildStadeTransitionOverlay(MainCanvas);
 
-            // Sprint 4: combat active system UI
+            // Sprint 4: combat active system UI (gameplay overlays — toujours).
             BuildCombatHud(MainCanvas);
             SceneBuilder.BuildAdversaireSpawnView(MainCanvas);
             BuildDeathOverlay(MainCanvas);
 
-            // Sprint 5/6: Élan + Vague + Souffle + Affronter Maître button (button is bound to its
-            // modal below once the modal exists).
-            SkillsBuilder.Build(ctx);              // Sprint 7.5 zone 5 — Élan row + Vague + Souffle + Affronter (modal=null).
+            // Sprint 5/6: Élan + Vague + Souffle + Affronter Maître button.
+            // SkillsBuilder : Phase 2 fix — encore procédural. En designer-first on skip
+            // (Vague/Souffle authored — Phase 3 ajoutera le dual-mode dispatch).
+            if (!designerFirst) SkillsBuilder.Build(ctx);
+
             BuildVagueFlashOverlay(MainCanvas);
             BuildCapitaineIntroOverlay(MainCanvas);
             BuildCapitaineDeathOverlay(MainCanvas);
 
-            // Sprint 6: Maître + Prestige
+            // Sprint 6: Maître + Prestige (modals — toujours).
             var citationModal = BuildCitationInputModal(MainCanvas);
             var affronterModal = BuildAffronterMaitreModal(MainCanvas);
-            SkillsBuilder.BindAffronterMaitre(ctx, affronterModal);
+            // BindAffronterMaitre seulement si SkillsBuilder a été construit (ctx.ElanRow rempli).
+            if (!designerFirst) SkillsBuilder.BindAffronterMaitre(ctx, affronterModal);
             BuildMaitreIntroOverlay(MainCanvas);
             BuildPrestigeCinematicOverlay(MainCanvas, citationModal);
 
@@ -146,13 +189,16 @@ namespace Saga.Core
             BuildEquipmentInventoryModal(MainCanvas);
 
             // Sprint 7.5 refonte : top bar pills + bottom nav 5 onglets.
-            StageBuilder.Build(ctx);               // Sprint 7.5 zone 3 — placeholder, Phase 3 stage chip.
-            TopBarBuilder.Build(ctx);              // Sprint 7.5 zone 2 — currency pills + settings.
-            BottomNavBuilder.Build(ctx);           // Sprint 7.5 zone 7 — 5-tab bottom nav.
+            // TopBarBuilder déjà dual-mode (Sprint 9 Phase 2) → toujours run, dispatch interne.
+            // StageBuilder / BottomNavBuilder pas encore dual-mode → skip en designer-first.
+            if (!designerFirst) StageBuilder.Build(ctx); // Sprint 7.5 zone 3 — Phase 3 ajoutera dual-mode.
+            TopBarBuilder.Build(ctx);                    // Sprint 9 Phase 2 dual-mode (WireForce/Echos/Settings).
+            if (!designerFirst) BottomNavBuilder.Build(ctx); // Sprint 7.5 zone 7 — Phase 3 ajoutera dual-mode.
 
             // Sprint 8 Phase A — tutorial onboarding overlay. Built LAST pour que les targets
             // (ForcePill, VagueButton, StageChip, etc.) existent dans la hiérarchie au lookup.
             // Builder no-op si State.tutorialDone (legacy player auto-skip via SaveService v10).
+            // Phase 4 Sprint 9 adaptera ResolveTarget pour les noms authored (Force, Vague, etc.).
             TutorialOverlayBuilder.Build(ctx);
         }
 
