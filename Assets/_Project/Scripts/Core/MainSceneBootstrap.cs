@@ -214,11 +214,11 @@ namespace Saga.Core
             BuildEquipmentInventoryModal(MainCanvas);
 
             // Sprint 7.5 refonte : top bar pills + bottom nav 5 onglets.
-            // TopBarBuilder déjà dual-mode (Sprint 9 Phase 2) → toujours run, dispatch interne.
-            // StageBuilder / BottomNavBuilder pas encore dual-mode → skip en designer-first.
-            if (!designerFirst) StageBuilder.Build(ctx); // Sprint 7.5 zone 3 — Phase 3 ajoutera dual-mode.
+            // TopBarBuilder + StageBuilder dual-mode (Sprint 9 Phase 2-3) → toujours run.
+            // BottomNavBuilder pas encore dual-mode → skip en designer-first (Phase 3 1d).
+            StageBuilder.Build(ctx);                     // Sprint 9 Phase 3 étape 1a dual-mode (WireStageChip/BossBar).
             TopBarBuilder.Build(ctx);                    // Sprint 9 Phase 2 dual-mode (WireForce/Echos/Settings).
-            if (!designerFirst) BottomNavBuilder.Build(ctx); // Sprint 7.5 zone 7 — Phase 3 ajoutera dual-mode.
+            if (!designerFirst) BottomNavBuilder.Build(ctx); // Sprint 7.5 zone 7 — Phase 3 1d ajoutera dual-mode.
 
             // Sprint 8 Phase A — tutorial onboarding overlay. Built LAST pour que les targets
             // (ForcePill, VagueButton, StageChip, etc.) existent dans la hiérarchie au lookup.
