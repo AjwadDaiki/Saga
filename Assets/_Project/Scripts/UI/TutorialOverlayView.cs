@@ -18,7 +18,7 @@ namespace Saga.UI
     [DisallowMultipleComponent]
     public class TutorialOverlayView : MonoBehaviour
     {
-        private const float FadeIn = 0.25f;
+        private const float FadeInDuration = 0.25f;
         private const float FadeOut = 0.20f;
         private const float DimAlphaTarget = 0.55f;
         private const float RingPulsePeriod = 1.0f;
@@ -107,7 +107,7 @@ namespace Saga.UI
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
             var img = _dim.GetComponent<Image>();
-            img.color = new Color(0f, 0f, 0f, 0f); // alpha 0 — animé in via FadeIn()
+            img.color = new Color(0f, 0f, 0f, 0f); // alpha 0 — animé via FadeIn()
             img.raycastTarget = false; // joueur peut tap les targets
         }
 
@@ -279,12 +279,12 @@ namespace Saga.UI
             if (_cg == null) return;
             DOTween.Kill(_cg);
             var cg = _cg;
-            DOTween.To(() => cg.alpha, a => cg.alpha = a, 1f, FadeIn)
+            DOTween.To(() => cg.alpha, a => cg.alpha = a, 1f, FadeInDuration)
                 .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             var dimImg = _dim != null ? _dim.GetComponent<Image>() : null;
             if (dimImg != null)
             {
-                UIFadeUtil.Fade(dimImg, DimAlphaTarget, FadeIn)
+                UIFadeUtil.Fade(dimImg, DimAlphaTarget, FadeInDuration)
                     .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
             }
         }
