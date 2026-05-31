@@ -36,11 +36,147 @@ namespace Saga.UI.Builders
 
         public static void Build(BuilderContext ctx)
         {
+            // Sprint 9 — dispatch dual-mode. Si Ajwad a authored la layout (Force GO trouvé par
+            // SceneRegistry), on attache les components aux GO existants au lieu de re-créer une
+            // hiérarchie procédurale. Ses Shadow customs et sprites RhosGFX placeholder sont
+            // préservés tels quels.
+            if (ctx.DesignerFirstActive && ctx.Registry?.Force != null)
+            {
+                WireFromAuthored(ctx);
+                return;
+            }
+            BuildProcedural(ctx);
+        }
+
+        private static void BuildProcedural(BuilderContext ctx)
+        {
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
             var catalog = RhosGFXAssetCatalog.Get();
             BuildForcePill(parent, ctx.Tokens, catalog);
             BuildEchosPill(parent, ctx.Tokens, catalog);
             BuildSettingsButton(parent, ctx.Tokens, catalog);
+        }
+
+        // ====================================================================================
+        //  SPRINT 9 — Designer-First wiring (attache components aux GO Ajwad authored).
+        // ====================================================================================
+
+        private static void WireFromAuthored(BuilderContext ctx)
+        {
+            var registry = ctx.Registry;
+            var tokens = ctx.Tokens;
+            if (registry.Force != null) WireForcePill(registry.Force, tokens);
+            if (registry.Echos != null) WireEchosPill(registry.Echos, tokens);
+            if (registry.Settings != null) WireSettingsButton(registry.Settings, tokens);
+        }
+
+        /// <summary>
+        /// Force pill : auto-create Label child if missing, attach ForceCounterView (live counter
+        /// driven par GameEvents.OnForceChanged), idle BreathingPulseView subtle.
+        /// Préserve Shadow customs (jamais touchés).
+        /// </summary>
+        private static void WireForcePill(GameObject go, DesignTokens tokens)
+        {
+            if (go.GetComponent<ForceCounterView>() != null) return; // already wired (re-entry safe)
+
+            var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 30);
+            var view = go.AddComponent<ForceCounterView>();
+            view.Compact = true;
+            view.Label = label;
+
+            EnsureBreathingPulse(go, peak: 1.012f, period: 3.5f);
+            Debug.Log($"[TopBar] Wired Force pill (label: {(label.transform.parent == go.transform ? "auto-created" : "found")}) — live counter active.");
+        }
+
+        /// <summary>
+        /// Échos pill : auto-create Label child if missing, set text from gm.State.totalEchos
+        /// (one-shot ; live update Sprint 10 quand OnEchosChanged event existera).
+        /// </summary>
+        private static void WireEchosPill(GameObject go, DesignTokens tokens)
+        {
+            var label = EnsureLabel(go.transform, tokens, color: Color.white, fontSize: 30);
+            var gm = GameManager.Instance;
+            label.text = gm?.State != null
+                ? Saga.Math.NumberFormatter.Format(gm.State.totalEchos, 1)
+                : "0";
+            EnsureBreathingPulse(go, peak: 1.012f, period: 3.5f);
+            Debug.Log($"[TopBar] Wired Echos pill — value: {label.text}.");
+        }
+
+        /// <summary>
+        /// Settings button : ensure Button + PressBounceView pour feedback tactile visuel.
+        /// onClick wire stub (no SettingsModal encore — Sprint 9+ pluggera).
+        /// </summary>
+        private static void WireSettingsButton(GameObject go, DesignTokens tokens)
+        {
+            var img = go.GetComponent<Image>();
+            if (img != null) img.raycastTarget = true;
+            var btn = go.GetComponent<Button>() ?? go.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            // Stub onClick — connecter à SettingsModal quand il existera.
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => Debug.Log("[Settings] click (no modal wired yet — Sprint 9+ pluggera)."));
+
+            if (go.GetComponent<PressBounceView>() == null)
+            {
+                var bounce = go.AddComponent<PressBounceView>();
+                bounce.Target = go.transform as RectTransform;
+            }
+            Debug.Log("[TopBar] Wired Settings button — click feedback active (modal stub).");
+        }
+
+        // ----- Helpers (Sprint 9 Designer-First) -----
+
+        /// <summary>
+        /// Find or create a "Label" TMP child. Preserves any existing child Label intact.
+        /// Auto-created Label has default centered layout + DA outline.
+        /// </summary>
+        private static TextMeshProUGUI EnsureLabel(Transform parent, DesignTokens tokens, Color color, int fontSize)
+        {
+            var existing = parent.Find("Label");
+            if (existing != null)
+            {
+                var tmp = existing.GetComponent<TextMeshProUGUI>();
+                if (tmp != null) return tmp;
+                tmp = existing.gameObject.AddComponent<TextMeshProUGUI>();
+                ConfigureLabel(tmp, tokens, color, fontSize);
+                return tmp;
+            }
+            var go = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            var newTmp = go.GetComponent<TextMeshProUGUI>();
+            ConfigureLabel(newTmp, tokens, color, fontSize);
+            return newTmp;
+        }
+
+        private static void ConfigureLabel(TextMeshProUGUI tmp, DesignTokens tokens, Color color, int fontSize)
+        {
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.font = tokens.NumbersFont;
+            tmp.fontSize = fontSize;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.color = color;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 18;
+            tmp.fontSizeMax = fontSize;
+            tmp.outlineColor = tokens.navyContour;
+            tmp.outlineWidth = 0.30f;
+            tmp.text = "0";
+            tmp.raycastTarget = false;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        private static void EnsureBreathingPulse(GameObject go, float peak, float period)
+        {
+            if (go.GetComponent<BreathingPulseView>() != null) return;
+            var pulse = go.AddComponent<BreathingPulseView>();
+            pulse.Target = go.transform as RectTransform;
+            pulse.Peak = peak;
+            pulse.Period = period;
         }
 
         // ====================================================================================
