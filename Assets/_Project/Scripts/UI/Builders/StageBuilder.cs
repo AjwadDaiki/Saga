@@ -17,6 +17,17 @@ namespace Saga.UI.Builders
     {
         public static void Build(BuilderContext ctx)
         {
+            // Sprint 9 Phase 3 dual-mode dispatch.
+            if (ctx.DesignerFirstActive && ctx.Registry?.StageChip != null)
+            {
+                WireFromAuthored(ctx);
+                return;
+            }
+            BuildProcedural(ctx);
+        }
+
+        private static void BuildProcedural(BuilderContext ctx)
+        {
             var tokens = ctx.Tokens;
             if (ctx.Canvas == null || tokens == null) return;
             var parent = ctx.UIRoot != null ? (Transform)ctx.UIRoot : ctx.Canvas.transform;
@@ -35,6 +46,128 @@ namespace Saga.UI.Builders
             BuildStageChip(bandRt, tokens, catalog);
             BuildBossProgressBar(bandRt, tokens, catalog);
             BuildBossSkullRight(bandRt, tokens, catalog);
+        }
+
+        // ====================================================================================
+        //  SPRINT 9 Phase 3 — Designer-First wiring (attache views aux GO Ajwad authored).
+        // ====================================================================================
+
+        private static void WireFromAuthored(BuilderContext ctx)
+        {
+            var tokens = ctx.Tokens;
+            var registry = ctx.Registry;
+            if (registry.StageChip != null) WireStageChip(registry.StageChip, tokens);
+            if (registry.BossBar != null) WireBossBar(registry.BossBar, tokens);
+            // BossSkull : pulse léger sur changement combat phase (Sprint 10A si demandé).
+            // Pour V1, on laisse statique (l'asset Ajwad est visible).
+        }
+
+        /// <summary>
+        /// Stage_Chip : auto-create Label child (Lilita Bold) + StagePillView qui subscribe
+        /// OnStadeChanged. Préserve Shadow customs + sprite background authored.
+        /// </summary>
+        private static void WireStageChip(GameObject go, DesignTokens tokens)
+        {
+            if (go.GetComponent<StagePillView>() != null) return;
+            var label = EnsureLabel(go.transform, tokens, color: tokens.navyContour, fontSize: 36);
+            var view = go.AddComponent<StagePillView>();
+            view.Label = label;
+            Debug.Log("[Stage] Wired Stage_Chip — live label active (Lilita 36sp).");
+        }
+
+        /// <summary>
+        /// Boss_Bar : trouve ou auto-create Fill child (Image.Type.Filled horizontal) +
+        /// AdversaireProgressBarView qui drive fillAmount via OnAdversaireDamaged.
+        /// Le sprite background authored reste intact, le Fill enfant overlay anime.
+        /// </summary>
+        private static void WireBossBar(GameObject go, DesignTokens tokens)
+        {
+            if (go.GetComponent<AdversaireProgressBarView>() != null) return;
+
+            // Ensure CanvasGroup (view shows/hides via group.alpha).
+            var group = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+            group.alpha = 1f; group.interactable = false; group.blocksRaycasts = false;
+
+            // Trouve ou auto-create Fill child.
+            var fillTransform = go.transform.Find("Fill");
+            Image fillImg;
+            if (fillTransform != null)
+            {
+                fillImg = fillTransform.GetComponent<Image>() ?? fillTransform.gameObject.AddComponent<Image>();
+                Debug.Log("[Stage] Boss_Bar — Found existing Fill child, wiring Image.Filled.");
+            }
+            else
+            {
+                var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+                fillGo.transform.SetParent(go.transform, false);
+                var fillRt = (RectTransform)fillGo.transform;
+                fillRt.anchorMin = Vector2.zero; fillRt.anchorMax = Vector2.one;
+                fillRt.offsetMin = new Vector2(8, 8); fillRt.offsetMax = new Vector2(-8, -8);
+                fillImg = fillGo.GetComponent<Image>();
+                Debug.Log("[Stage] Boss_Bar — Auto-created Fill child (inset 8px du sprite background).");
+            }
+
+            // Configure pour Image.Filled horizontal driven par view.
+            fillImg.type = Image.Type.Filled;
+            fillImg.fillMethod = Image.FillMethod.Horizontal;
+            fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fillImg.fillAmount = 0f;
+            fillImg.color = tokens.mintPositif; // vert progression positive
+            fillImg.raycastTarget = false;
+
+            // Hidden label requis par view (mais on n'affiche rien).
+            var hiddenLbl = new GameObject("HiddenLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            hiddenLbl.transform.SetParent(go.transform, false);
+            var hRt = (RectTransform)hiddenLbl.transform;
+            hRt.sizeDelta = Vector2.zero;
+            var hTmp = hiddenLbl.GetComponent<TextMeshProUGUI>();
+            hTmp.fontSize = 1; hTmp.color = new Color(0, 0, 0, 0); hTmp.raycastTarget = false;
+
+            var view = go.AddComponent<AdversaireProgressBarView>();
+            view.Group = group;
+            view.FillImage = fillImg;
+            view.Label = hTmp;
+            view.PulseTarget = go.transform as RectTransform;
+            Debug.Log("[Stage] Wired Boss_Bar — fillAmount driven by AdversaireProgressBarView.");
+        }
+
+        /// <summary>Find or create "Label" TMP child. Lilita One Bold + outline cremeText 0.22 + tracking 6.</summary>
+        private static TextMeshProUGUI EnsureLabel(Transform parent, DesignTokens tokens, Color color, int fontSize)
+        {
+            var existing = parent.Find("Label");
+            if (existing != null)
+            {
+                var tmp = existing.GetComponent<TextMeshProUGUI>();
+                if (tmp != null) return tmp;
+                tmp = existing.gameObject.AddComponent<TextMeshProUGUI>();
+                ConfigureLabel(tmp, tokens, color, fontSize);
+                return tmp;
+            }
+            var go = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            var newTmp = go.GetComponent<TextMeshProUGUI>();
+            ConfigureLabel(newTmp, tokens, color, fontSize);
+            return newTmp;
+        }
+
+        private static void ConfigureLabel(TextMeshProUGUI tmp, DesignTokens tokens, Color color, int fontSize)
+        {
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.font = tokens.DisplayFont; // Lilita One SAGA
+            tmp.fontSize = fontSize;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.color = color;
+            tmp.enableAutoSizing = false;
+            tmp.outlineColor = tokens.cremeText;
+            tmp.outlineWidth = 0.22f;
+            tmp.characterSpacing = 6f;
+            tmp.text = "Stade 1";
+            tmp.raycastTarget = false;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode = TextOverflowModes.Overflow;
         }
 
         // ====================================================================================
