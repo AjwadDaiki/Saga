@@ -105,6 +105,7 @@ namespace Saga.Gameplay
             gm.State.totalTaps++;
             gm.Save?.MarkDirty();
 
+            Debug.Log($"[TapHandler] About to raise OnTapResolved — value={value}, mult={finalMult}, screenPos={screenPos}");
             GameEvents.RaiseTapResolved(value, finalMult, screenPos);
         }
 

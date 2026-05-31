@@ -50,12 +50,14 @@ namespace Saga.UI
         {
             GameEvents.OnTapResolved += HandleTapResolved;
             GameEvents.OnComboChanged += HandleComboChanged;
+            Debug.Log($"[TapFxSpawner] OnEnable — subscribed OnTapResolved + OnComboChanged. GO active={gameObject.activeInHierarchy}.");
         }
 
         private void OnDisable()
         {
             GameEvents.OnTapResolved -= HandleTapResolved;
             GameEvents.OnComboChanged -= HandleComboChanged;
+            Debug.Log($"[TapFxSpawner] OnDisable — UNSUBSCRIBED OnTapResolved. Si ce log appara avant un tap, c'est la cause de absence de FX.");
         }
 
         private int _currentTier;
