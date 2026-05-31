@@ -163,7 +163,19 @@ namespace Saga.Core
             // TapHandler.ProcessTap. Cards/Skills/Tabs restent réceptifs (topmost dans leur région).
             if (designerFirst)
             {
+                // Demande 1 — désactive raycastTarget sur sprites Background/Hero/Mannequin/Wolf et
+                // leurs enfants (Body/Head/Weapon/Base/Top/...). Sinon ils bloquent les taps via UI
+                // raycast. La TapZone derrière reste topmost en raycast pour catch les clicks.
+                NeutralizeRaycastTargets("Background_Dojo");
+                NeutralizeRaycastTargets("Hero_Samurai");
+                NeutralizeRaycastTargets("Mannequin");
+                NeutralizeRaycastTargets("Enemy_Wolf");
+
                 EnsureTapZone(MainCanvas);
+
+                // Sprint 10A — attach animators réactifs aux sprites custom Ajwad.
+                AttachHeroAnimator();
+                AttachMannequinAnimator();
             }
 
             // UpgradesBuilder : Phase 2 fix — encore procédural. En designer-first on skip
@@ -1000,6 +1012,55 @@ namespace Saga.Core
             if (tapZone.GetComponent<Saga.Gameplay.TapZoneHandler>() == null)
             {
                 tapZone.AddComponent<Saga.Gameplay.TapZoneHandler>();
+            }
+        }
+
+        /// <summary>
+        /// Sprint 9 fix Phase 2 D1 — désactive Image.raycastTarget récursif sur un GO + ses
+        /// enfants (Body/Head/Weapon/Base/Top/...). Permet aux taps de passer à travers
+        /// les sprites custom Ajwad et atteindre la TapZone derrière.
+        /// </summary>
+        private static void NeutralizeRaycastTargets(string rootName)
+        {
+            var root = GameObject.Find(rootName);
+            if (root == null) return;
+            var images = root.GetComponentsInChildren<UnityEngine.UI.Image>(includeInactive: true);
+            var count = 0;
+            foreach (var img in images)
+            {
+                if (img.raycastTarget)
+                {
+                    img.raycastTarget = false;
+                    count++;
+                }
+            }
+            if (count > 0)
+            {
+                Debug.Log($"[Bootstrap] {rootName} : disabled raycastTarget on {count} Image(s) — taps pass-through.");
+            }
+        }
+
+        /// <summary>Sprint 10A — attache HeroAnimator au GO Hero_Samurai (lookup body/head/weapon enfants).</summary>
+        private static void AttachHeroAnimator()
+        {
+            var hero = GameObject.Find("Hero_Samurai");
+            if (hero == null) return;
+            if (hero.GetComponent<Saga.UI.HeroAnimator>() == null)
+            {
+                hero.AddComponent<Saga.UI.HeroAnimator>();
+                Debug.Log("[Bootstrap] HeroAnimator attached to Hero_Samurai — attack on tap active.");
+            }
+        }
+
+        /// <summary>Sprint 10A — attache MannequinAnimator au GO Mannequin (lookup top/base enfants).</summary>
+        private static void AttachMannequinAnimator()
+        {
+            var mannequin = GameObject.Find("Mannequin");
+            if (mannequin == null) return;
+            if (mannequin.GetComponent<Saga.UI.MannequinAnimator>() == null)
+            {
+                mannequin.AddComponent<Saga.UI.MannequinAnimator>();
+                Debug.Log("[Bootstrap] MannequinAnimator attached to Mannequin — hit reaction on tap active.");
             }
         }
 
