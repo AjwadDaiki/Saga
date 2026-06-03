@@ -178,6 +178,8 @@ namespace Saga.Core
                 AttachMannequinAnimator();
                 AttachCardAnimators(registry);
                 AttachTabAnimators(registry);
+                AttachSkillsVFXBridge(MainCanvas);
+                AdjustComboPositionForHero(MainCanvas);
             }
 
             // UpgradesBuilder : Phase 2 fix — encore procédural. En designer-first on skip
@@ -929,8 +931,13 @@ namespace Saga.Core
             var titleLabel = titleGo.GetComponent<TextMeshProUGUI>();
             titleLabel.alignment = TextAlignmentOptions.Center;
             titleLabel.color = TextPrimaryColor;
-            titleLabel.fontSize = 72;
+            // Sprint 10 V2 Phase 7 polish — Lilita 80sp + outline navy + tracking.
+            titleLabel.font = DesignTokens.Get().DisplayFont;
+            titleLabel.fontSize = 80;
             titleLabel.fontStyle = FontStyles.Bold;
+            titleLabel.outlineColor = DesignTokens.Get().navyContour;
+            titleLabel.outlineWidth = 0.30f;
+            titleLabel.characterSpacing = 6f;
             titleLabel.text = "";
 
             var subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -1132,6 +1139,57 @@ namespace Saga.Core
                 Debug.Log($"[Bootstrap] TabAnimator attached to {tab.name} (active={isActive}).");
             }
             anim.IsActiveTab = isActive;
+        }
+
+        /// <summary>Sprint 10 V2 Phase 6 — VAGUE/SOUFFLE bridge events → Hero anims + VFX d'écran.</summary>
+        private static void AttachSkillsVFXBridge(Canvas canvas)
+        {
+            if (canvas == null) return;
+            var hero = GameObject.Find("Hero_Samurai");
+            var heroAnim = hero != null ? hero.GetComponent<Saga.UI.HeroAnimatorV2>() : null;
+            var bridge = canvas.gameObject.GetOrAdd<Saga.UI.SkillsVFXBridge>();
+            bridge.Configure(canvas, heroAnim);
+            Debug.Log($"[Bootstrap] SkillsVFXBridge attached on Canvas — VAGUE/SOUFFLE wired to {(heroAnim != null ? "Hero V2" : "no hero anim")}.");
+        }
+
+        /// <summary>Sprint 10 V2 Phase 7 — repositionne ComboMeter relativement à Hero_Samurai (+120 Y).</summary>
+        private static void AdjustComboPositionForHero(Canvas canvas)
+        {
+            if (canvas == null) return;
+            var combo = GameObject.Find("ComboMeter");
+            var hero = GameObject.Find("Hero_Samurai");
+            if (combo == null || hero == null) return;
+            var heroRt = hero.transform as RectTransform;
+            var comboRt = combo.transform as RectTransform;
+            var canvasRt = canvas.transform as RectTransform;
+            if (heroRt == null || comboRt == null || canvasRt == null) return;
+
+            // Centre Hero en coords canvas-local.
+            var heroWorld = heroRt.TransformPoint(heroRt.rect.center);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                canvasRt, RectTransformUtility.WorldToScreenPoint(null, heroWorld), null, out var heroLocal);
+
+            // Combo centered au-dessus Hero (+120 Y) avec anchor center pour rester local position.
+            comboRt.anchorMin = comboRt.anchorMax = new Vector2(0.5f, 0.5f);
+            comboRt.pivot = new Vector2(0.5f, 0.5f);
+            comboRt.anchoredPosition = new Vector2(heroLocal.x, heroLocal.y + 120f);
+
+            // Polish typo : Lilita 60sp + outline navy + tracking. Trouve le Label TMP.
+            var labelTrans = combo.transform.Find("Label");
+            if (labelTrans != null)
+            {
+                var tmp = labelTrans.GetComponent<TMPro.TextMeshProUGUI>();
+                var tokens = DesignTokens.Get();
+                if (tmp != null)
+                {
+                    tmp.font = tokens.DisplayFont;
+                    tmp.fontSize = 60;
+                    tmp.outlineColor = tokens.navyContour;
+                    tmp.outlineWidth = 0.25f;
+                    tmp.characterSpacing = 5f;
+                }
+            }
+            Debug.Log($"[Bootstrap] ComboMeter repositioned au-dessus Hero (local pos {comboRt.anchoredPosition}), Lilita 60sp outline navy.");
         }
 
         // ============================================================
