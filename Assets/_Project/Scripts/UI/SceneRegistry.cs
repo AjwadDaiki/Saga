@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Saga.UI
@@ -66,26 +68,81 @@ namespace Saga.UI
         /// </summary>
         public void TryAutoPopulate()
         {
-            Force = GameObject.Find("Force");
-            Echos = GameObject.Find("Echos");
-            Settings = GameObject.Find("Settings");
+            // Sprint 10 Phase 1a — lookup tolérant : ignore espaces trailing + case-insensitive.
+            // V2 assets Ajwad ont des typos ("Tab_shop" lowercase, "Tab_Legend " trailing space) →
+            // GameObject.Find strict ratait ces GO. Tolérant trim+lower match les variations.
+            var all = CollectAllSceneGameObjects();
 
-            StageChip = GameObject.Find("Stage_Chip");
-            BossBar = GameObject.Find("Boss_Bar");
-            BossSkull = GameObject.Find("Boss_Skull");
+            Force = FindTolerant(all, "Force");
+            Echos = FindTolerant(all, "Echos");
+            Settings = FindTolerant(all, "Settings");
 
-            CardStrike = GameObject.Find("Card_Strike");
-            CardFocus = GameObject.Find("Card_Focus");
-            CardPower = GameObject.Find("Card_Power");
+            StageChip = FindTolerant(all, "Stage_Chip");
+            BossBar = FindTolerant(all, "Boss_Bar");
+            BossSkull = FindTolerant(all, "Boss_Skull");
 
-            VagueButton = GameObject.Find("Vague");
-            SouffleButton = GameObject.Find("Souffle");
+            CardStrike = FindTolerant(all, "Card_Strike");
+            CardFocus = FindTolerant(all, "Card_Focus");
+            CardPower = FindTolerant(all, "Card_Power");
 
-            TabShop = GameObject.Find("Tab_Shop");
-            TabHero = GameObject.Find("Tab_Hero");
-            TabDojo = GameObject.Find("Tab_Dojo");
-            TabArtifacts = GameObject.Find("Tab_Artifacts");
-            TabLegend = GameObject.Find("Tab_Legend");
+            VagueButton = FindTolerant(all, "Vague");
+            SouffleButton = FindTolerant(all, "Souffle");
+
+            TabShop = FindTolerant(all, "Tab_Shop");
+            TabHero = FindTolerant(all, "Tab_Hero");
+            TabDojo = FindTolerant(all, "Tab_Dojo");
+            TabArtifacts = FindTolerant(all, "Tab_Artifacts");
+            TabLegend = FindTolerant(all, "Tab_Legend");
+        }
+
+        /// <summary>Collect tous les GameObjects (actifs + inactifs) de la scène active.</summary>
+        private static List<GameObject> CollectAllSceneGameObjects()
+        {
+            var list = new List<GameObject>();
+            var active = SceneManager.GetActiveScene();
+            var roots = active.GetRootGameObjects();
+            foreach (var root in roots)
+            {
+                CollectRecursive(root.transform, list);
+            }
+            return list;
+        }
+
+        private static void CollectRecursive(Transform t, List<GameObject> list)
+        {
+            list.Add(t.gameObject);
+            for (var i = 0; i < t.childCount; i++)
+            {
+                CollectRecursive(t.GetChild(i), list);
+            }
+        }
+
+        /// <summary>
+        /// Lookup tolérant : trim + case-insensitive. Si plusieurs GO matchent, return le premier
+        /// (suit l'ordre de DFS scene roots — généralement le plus haut dans la hiérarchie).
+        /// </summary>
+        private static GameObject FindTolerant(List<GameObject> all, string target)
+        {
+            var trimmed = target.Trim();
+            return all.FirstOrDefault(go => go != null
+                && go.name.Trim().Equals(trimmed, System.StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Helper public pour les builders qui font Transform.Find sur sub-elements
+        /// (BG / Icon / Label) — tolérance même règle (trim + case-insensitive).
+        /// </summary>
+        public static Transform FindChildTolerant(Transform parent, string name)
+        {
+            if (parent == null) return null;
+            var trimmed = name.Trim();
+            for (var i = 0; i < parent.childCount; i++)
+            {
+                var child = parent.GetChild(i);
+                if (child.name.Trim().Equals(trimmed, System.StringComparison.OrdinalIgnoreCase))
+                    return child;
+            }
+            return null;
         }
 
         /// <summary>
