@@ -1040,27 +1040,50 @@ namespace Saga.Core
             }
         }
 
-        /// <summary>Sprint 10A — attache HeroAnimator au GO Hero_Samurai (lookup body/head/weapon enfants).</summary>
+        /// <summary>Sprint 10 V2 — attache HeroAnimatorV2 (7 parties + 4 attack variants).</summary>
         private static void AttachHeroAnimator()
         {
             var hero = GameObject.Find("Hero_Samurai");
             if (hero == null) return;
-            if (hero.GetComponent<Saga.UI.HeroAnimator>() == null)
+            // Remove V1 si présent (re-entrant safe).
+            var v1 = hero.GetComponent<Saga.UI.HeroAnimator>();
+            if (v1 != null) UnityEngine.Object.Destroy(v1);
+            if (hero.GetComponent<Saga.UI.HeroAnimatorV2>() == null)
             {
-                hero.AddComponent<Saga.UI.HeroAnimator>();
-                Debug.Log("[Bootstrap] HeroAnimator attached to Hero_Samurai — attack on tap active.");
+                hero.AddComponent<Saga.UI.HeroAnimatorV2>();
+                Debug.Log("[Bootstrap] HeroAnimatorV2 attached to Hero_Samurai — 7 parts + 4 attack variants.");
             }
         }
 
-        /// <summary>Sprint 10A — attache MannequinAnimator au GO Mannequin (lookup top/base enfants).</summary>
+        /// <summary>Sprint 10 V2 — attache MannequinAnimatorV2 + Wolf + CombatTargetSwitcher.</summary>
         private static void AttachMannequinAnimator()
         {
             var mannequin = GameObject.Find("Mannequin");
-            if (mannequin == null) return;
-            if (mannequin.GetComponent<Saga.UI.MannequinAnimator>() == null)
+            if (mannequin != null)
             {
-                mannequin.AddComponent<Saga.UI.MannequinAnimator>();
-                Debug.Log("[Bootstrap] MannequinAnimator attached to Mannequin — hit reaction on tap active.");
+                var v1 = mannequin.GetComponent<Saga.UI.MannequinAnimator>();
+                if (v1 != null) UnityEngine.Object.Destroy(v1);
+                if (mannequin.GetComponent<Saga.UI.MannequinAnimatorV2>() == null)
+                {
+                    mannequin.AddComponent<Saga.UI.MannequinAnimatorV2>();
+                    Debug.Log("[Bootstrap] MannequinAnimatorV2 attached to Mannequin.");
+                }
+            }
+
+            // Sprint 10 V2 — Wolf animator + Mannequin/Wolf phase switcher.
+            var wolf = GameObject.Find("Enemy_Wolf");
+            if (wolf != null && wolf.GetComponent<Saga.UI.WolfAnimator>() == null)
+            {
+                wolf.AddComponent<Saga.UI.WolfAnimator>();
+                Debug.Log("[Bootstrap] WolfAnimator attached to Enemy_Wolf.");
+            }
+
+            if (mannequin != null && wolf != null)
+            {
+                var switcher = mannequin.GetComponent<Saga.UI.CombatTargetSwitcher>()
+                            ?? mannequin.AddComponent<Saga.UI.CombatTargetSwitcher>();
+                switcher.Configure(mannequin, wolf);
+                Debug.Log("[Bootstrap] CombatTargetSwitcher wired — phase toggle Mannequin/Wolf active.");
             }
         }
 
