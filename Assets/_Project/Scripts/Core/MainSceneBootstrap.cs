@@ -176,6 +176,8 @@ namespace Saga.Core
                 // Sprint 10A — attach animators réactifs aux sprites custom Ajwad.
                 AttachHeroAnimator();
                 AttachMannequinAnimator();
+                AttachCardAnimators(registry);
+                AttachTabAnimators(registry);
             }
 
             // UpgradesBuilder : Phase 2 fix — encore procédural. En designer-first on skip
@@ -1080,11 +1082,56 @@ namespace Saga.Core
 
             if (mannequin != null && wolf != null)
             {
-                var switcher = mannequin.GetComponent<Saga.UI.CombatTargetSwitcher>()
-                            ?? mannequin.AddComponent<Saga.UI.CombatTargetSwitcher>();
+                var switcher = mannequin.GetOrAdd<Saga.UI.CombatTargetSwitcher>();
                 switcher.Configure(mannequin, wolf);
                 Debug.Log("[Bootstrap] CombatTargetSwitcher wired — phase toggle Mannequin/Wolf active.");
             }
+        }
+
+        /// <summary>Sprint 10 V2 — attache CardAnimator + Button visual-only sur 3 cards authored.</summary>
+        private static void AttachCardAnimators(SceneRegistry registry)
+        {
+            AttachCardOne(registry.CardStrike);
+            AttachCardOne(registry.CardFocus);
+            AttachCardOne(registry.CardPower);
+        }
+
+        private static void AttachCardOne(GameObject card)
+        {
+            if (card == null) return;
+            // Button OPTIONAL : si non présent, IPointerDownHandler du CardAnimator catch directement.
+            // raycastTarget activé sur l'Image principale si présente (sinon EventSystem ne route pas).
+            var img = card.GetComponent<UnityEngine.UI.Image>();
+            if (img != null) img.raycastTarget = true;
+            if (card.GetComponent<Saga.UI.CardAnimator>() == null)
+            {
+                card.AddComponent<Saga.UI.CardAnimator>();
+                Debug.Log($"[Bootstrap] CardAnimator attached to {card.name}.");
+            }
+        }
+
+        /// <summary>Sprint 10 V2 — attache TabAnimator visual-only sur 5 tabs authored. Dojo = active par défaut.</summary>
+        private static void AttachTabAnimators(SceneRegistry registry)
+        {
+            AttachTabOne(registry.TabShop, isActive: false);
+            AttachTabOne(registry.TabHero, isActive: false);
+            AttachTabOne(registry.TabDojo, isActive: true); // active par convention
+            AttachTabOne(registry.TabArtifacts, isActive: false);
+            AttachTabOne(registry.TabLegend, isActive: false);
+        }
+
+        private static void AttachTabOne(GameObject tab, bool isActive)
+        {
+            if (tab == null) return;
+            var img = tab.GetComponent<UnityEngine.UI.Image>();
+            if (img != null) img.raycastTarget = true;
+            var anim = tab.GetComponent<Saga.UI.TabAnimator>();
+            if (anim == null)
+            {
+                anim = tab.AddComponent<Saga.UI.TabAnimator>();
+                Debug.Log($"[Bootstrap] TabAnimator attached to {tab.name} (active={isActive}).");
+            }
+            anim.IsActiveTab = isActive;
         }
 
         // ============================================================
