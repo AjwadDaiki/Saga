@@ -127,6 +127,10 @@ namespace Saga.UI
 
         public void PlayWobble() => PlayHit();
 
+        /// <summary>Read accessor pour Shadow sync (Polish 6 ShadowSyncBridge).</summary>
+        public Transform TopTransform => _top;
+        public Vector3 TopOriginalRotEuler => _topRot0Euler;
+
         private void ScheduleIdleResume(float delay)
         {
             DOTween.Sequence().AppendInterval(delay).AppendCallback(PlayIdle)

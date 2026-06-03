@@ -179,6 +179,7 @@ namespace Saga.Core
                 AttachCardAnimators(registry);
                 AttachTabAnimators(registry);
                 AttachSkillsVFXBridge(MainCanvas);
+                AttachShadowSyncBridge(MainCanvas);
                 AdjustComboPositionForHero(MainCanvas);
             }
 
@@ -1153,6 +1154,45 @@ namespace Saga.Core
             var bridge = canvas.gameObject.GetOrAdd<Saga.UI.SkillsVFXBridge>();
             bridge.Configure(canvas, heroAnim);
             Debug.Log($"[Bootstrap] SkillsVFXBridge attached on Canvas — VAGUE/SOUFFLE wired to {(heroAnim != null ? "Hero V2" : "no hero anim")}.");
+        }
+
+        /// <summary>Sprint 10 V2 Polish 6 — Shadow_Sync sous Hero_Samurai et Mannequin synced à
+        /// l'idle oscillation (Hero body Y, Mannequin Top Z rotation).</summary>
+        private static void AttachShadowSyncBridge(Canvas canvas)
+        {
+            if (canvas == null) return;
+            var bridge = canvas.gameObject.GetOrAdd<Saga.UI.ShadowSyncBridge>();
+
+            var hero = GameObject.Find("Hero_Samurai");
+            var heroAnim = hero != null ? hero.GetComponent<Saga.UI.HeroAnimatorV2>() : null;
+            if (hero != null && heroAnim != null && heroAnim.BodyTransform != null)
+            {
+                bridge.RegisterYOscillation(
+                    parent: hero.transform,
+                    body: heroAnim.BodyTransform,
+                    localOffset: new Vector2(0f, -20f),
+                    shadowSize: new Vector2(220f, 40f),
+                    baseAlpha: 0.35f,
+                    amplitude: 5f);
+                Debug.Log("[Bootstrap] ShadowSyncBridge Hero registered (Y oscillation ±5).");
+            }
+
+            var mann = GameObject.Find("Mannequin");
+            var mannAnim = mann != null ? mann.GetComponent<Saga.UI.MannequinAnimatorV2>() : null;
+            if (mann != null && mannAnim != null && mannAnim.TopTransform != null)
+            {
+                var top = mannAnim.TopTransform;
+                var baseEulerZ = mannAnim.TopOriginalRotEuler.z;
+                // Phase via Top.localEulerAngles.z autour de baseZ ± 1° (idle amplitude).
+                bridge.Register(
+                    parent: mann.transform,
+                    localOffset: new Vector2(0f, -10f),
+                    shadowSize: new Vector2(180f, 30f),
+                    baseAlpha: 0.30f,
+                    phaseSource: () => Mathf.Clamp(
+                        Mathf.DeltaAngle(baseEulerZ, top.localEulerAngles.z) / 1f, -1f, 1f));
+                Debug.Log("[Bootstrap] ShadowSyncBridge Mannequin registered (Top rotation ±1°).");
+            }
         }
 
         /// <summary>Sprint 10 V2 Phase 7 — repositionne ComboMeter relativement à Hero_Samurai (+120 Y).</summary>
