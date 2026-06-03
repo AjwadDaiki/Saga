@@ -4,6 +4,7 @@ using DG.Tweening;
 using Saga.Core;
 using Saga.Data;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Saga.UI
 {
@@ -154,6 +155,23 @@ namespace Saga.UI
                 PlayIdle();
             });
             _activeAttack = seq;
+
+            // FEATURE 7 — spawn weapon trail (3 ghost-weapon copies fading) pour effet "swoosh".
+            SpawnWeaponTrail();
+        }
+
+        /// <summary>FEATURE 7 — Body lean dynamique Z (lean towards tap side). Layered overlay sur
+        /// l'idle Y float (different axe, pas de conflit DOTween).</summary>
+        public void PlayBodyLean(float degrees)
+        {
+            if (_body == null) return;
+            // Don't lean during attacks — variants drive their own body rotation.
+            if (_attacking) return;
+            var target = _bodyRot0.eulerAngles + new Vector3(0, 0, degrees);
+            DOTween.Sequence()
+                .Append(_body.DOLocalRotate(target, 0.10f).SetEase(Ease.OutQuad))
+                .Append(_body.DOLocalRotate(_bodyRot0.eulerAngles, 0.25f).SetEase(Ease.OutBack))
+                .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 
         public void PlayHit()
@@ -318,6 +336,47 @@ namespace Saga.UI
         /// <summary>Read accessor pour Shadow sync (Polish 6 ShadowSyncBridge).</summary>
         public Transform BodyTransform => _body;
         public Vector3 BodyOriginalPos => _bodyPos0;
+
+        /// <summary>FEATURE 7 — Spawn 3 ghost-weapon copies trailing the active swing, each
+        /// fading out over 0.25s. Renders the "swoosh" effect without needing a TrailRenderer
+        /// (which needs WorldSpace and physics — overkill for UI sprite chibi).</summary>
+        private void SpawnWeaponTrail()
+        {
+            if (_weapon == null) return;
+            var srcImg = _weapon.GetComponent<Image>();
+            if (srcImg == null || srcImg.sprite == null) return;
+
+            const int trailCount = 3;
+            for (var i = 0; i < trailCount; i++)
+            {
+                var delay = (i + 1) * 0.03f;
+                var go = new GameObject($"WeaponTrail{i}",
+                    typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
+                go.transform.SetParent(_weapon.parent, false);
+                go.transform.SetSiblingIndex(_weapon.GetSiblingIndex()); // rendered just below the weapon
+                var rt = (RectTransform)go.transform;
+                var srcRt = (RectTransform)_weapon;
+                rt.anchorMin = srcRt.anchorMin; rt.anchorMax = srcRt.anchorMax;
+                rt.pivot = srcRt.pivot;
+                rt.sizeDelta = srcRt.sizeDelta;
+                rt.anchoredPosition = srcRt.anchoredPosition;
+                rt.localRotation = srcRt.localRotation;
+                rt.localScale = srcRt.localScale;
+
+                var img = go.GetComponent<Image>();
+                img.sprite = srcImg.sprite;
+                img.color = new Color(1f, 0.95f, 0.65f, 0.55f - i * 0.12f); // golden ghost
+                img.raycastTarget = false;
+                var cg = go.GetComponent<CanvasGroup>();
+                cg.alpha = 0.55f - i * 0.12f; cg.blocksRaycasts = false; cg.interactable = false;
+
+                Object.Destroy(go, 0.30f + delay);
+                DOTween.Sequence()
+                    .AppendInterval(delay)
+                    .Append(DOTween.To(() => cg.alpha, a => { if (cg != null) cg.alpha = a; }, 0f, 0.22f).SetEase(Ease.OutQuad))
+                    .SetLink(go, LinkBehaviour.KillOnDestroy);
+            }
+        }
 
         private void KillIdleTweens()
         {

@@ -157,27 +157,59 @@ namespace Saga.UI
             rt.anchoredPosition = anchored;
             rt.sizeDelta = new Vector2(300, 80);
 
+            // FEATURE 7 — fontSize scaled by combo tier (more impactful damage numbers on high combo).
+            var tierFontBoost = Mathf.Clamp(_currentTier, 0, 3) * 8f;
             var label = go.GetComponent<TextMeshProUGUI>();
             label.alignment = TextAlignmentOptions.Center;
             // Sprint 7.5 zone 4 — JetBrains Mono Bold + outline charcoal pour damage numbers signature.
             label.font = tokens.NumbersFont;
-            label.fontSize = 64;
+            label.fontSize = 64 + tierFontBoost; // tier 0=64, tier 3=88
             label.fontStyle = FontStyles.Bold;
-            label.color = DamageColor;
+            label.color = DamageTierColor(_currentTier);
             label.outlineColor = tokens.navyContour;
-            label.outlineWidth = 0.30f;
+            label.outlineWidth = 0.30f + Mathf.Clamp(_currentTier, 0, 3) * 0.05f;
             label.text = "-" + Saga.Math.NumberFormatter.Format(damage);
 
-            // Tween directly on this damage label — bypass FloatingNumberView so we keep the red color.
+            // FEATURE 7 — POP scale 0 → 1.3 → 1.0 + arc trajectory (quadratic Bezier via DOTween.To core).
             var group = go.GetComponent<CanvasGroup>();
             group.alpha = 1f;
-            var endLocal = new Vector3(anchored.x + Random.Range(-30f, 30f), anchored.y + 140f, rt.localPosition.z);
+            rt.localScale = Vector3.zero;
 
-            UnityEngine.Object.Destroy(go, 0.9f); // belt-and-braces
+            var startLocal = (Vector3)anchored;
+            startLocal.z = rt.localPosition.z;
+            var endAnchored = new Vector2(anchored.x + Random.Range(-50f, 50f), anchored.y + 160f);
+            var endLocal = new Vector3(endAnchored.x, endAnchored.y, rt.localPosition.z);
+            var apex = new Vector3((startLocal.x + endLocal.x) * 0.5f,
+                Mathf.Max(startLocal.y, endLocal.y) + 40f, startLocal.z);
+
+            UnityEngine.Object.Destroy(go, 1.0f); // belt-and-braces
+            DOTween.Sequence()
+                .Append(rt.DOScale(1.3f, 0.12f).SetEase(Ease.OutBack, 3f))
+                .Append(rt.DOScale(1.0f, 0.08f).SetEase(Ease.OutQuad))
+                .SetLink(go, LinkBehaviour.KillOnDestroy);
+
             var seq = DOTween.Sequence();
-            seq.Append(rt.DOLocalMove(endLocal, 0.8f).SetEase(Ease.OutCubic));
-            seq.Join(DOTween.To(() => group.alpha, a => { if (group != null) group.alpha = a; }, 0f, 0.8f).SetEase(Ease.InQuad));
+            seq.Append(DOTween.To(() => 0f, t =>
+            {
+                var oneMinusT = 1f - t;
+                var pos = oneMinusT * oneMinusT * startLocal
+                    + 2f * oneMinusT * t * apex
+                    + t * t * endLocal;
+                rt.localPosition = pos;
+            }, 1f, 0.80f).SetEase(Ease.OutCubic));
+            seq.Join(DOTween.To(() => group.alpha, a => { if (group != null) group.alpha = a; }, 0f, 0.80f).SetEase(Ease.InQuad));
             seq.SetLink(go, LinkBehaviour.KillOnDestroy);
+        }
+
+        private static Color DamageTierColor(int tier)
+        {
+            switch (Mathf.Clamp(tier, 0, 3))
+            {
+                case 0: return DamageColor;
+                case 1: return new Color(1.000f, 0.624f, 0.239f, 1f);     // orangeChaud
+                case 2: return new Color(1.000f, 0.847f, 0.302f, 1f);     // jauneReward
+                default: return new Color(1.000f, 0.420f, 0.420f, 1f);    // coralAction tier 3+
+            }
         }
 
         private void SpawnDust(Vector2 anchored)

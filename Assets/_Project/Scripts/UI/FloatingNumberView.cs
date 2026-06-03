@@ -12,6 +12,9 @@ namespace Saga.UI
     ///
     /// Per 05_VISUAL_STYLE §FX: tap dust + ring is separate (ParticleSystem); this is the number.
     /// Per 02_GAME_DESIGN §9: "Les +X de tap doivent flotter vers le compteur cible et disparaître dedans."
+    ///
+    /// Sprint 10 V2 FEATURE 7 — scale POP 0 → 1.3 → 1.0 + arc trajectory (lateral drift + parabolic Y)
+    /// au lieu d'une montée verticale plate.
     /// </summary>
     [DisallowMultipleComponent]
     public class FloatingNumberView : MonoBehaviour
@@ -56,6 +59,7 @@ namespace Saga.UI
         /// <summary>
         /// Launch the float-up animation toward an optional target world position.
         /// If <paramref name="targetAnchored"/> is null, only floats upward.
+        /// FEATURE 7 — adds POP scale 0→1.3→1.0 + arc lateral drift.
         /// </summary>
         public void Play(Vector2? targetAnchored = null)
         {
@@ -64,24 +68,37 @@ namespace Saga.UI
             if (_rect == null) { Destroy(gameObject); return; }
 
             var start = _rect.anchoredPosition;
-            var end = targetAnchored ?? new Vector2(start.x, start.y + _verticalRiseScreenPx);
-            // Anchors centered (0.5, 0.5) so anchoredPosition maps 1:1 to localPosition.xy.
-            // Tween via DOLocalMove (core DOTween shortcut in DOTween.dll) instead of DOAnchorPos
-            // (which lives in the UI module — see DESIGN_DECISIONS_LOG.md 2026-05-27).
+            var lateralDrift = Random.Range(-50f, 50f);
+            var end = targetAnchored ?? new Vector2(start.x + lateralDrift, start.y + _verticalRiseScreenPx);
             var endLocal = new Vector3(end.x, end.y, _rect.localPosition.z);
 
+            // POP scale 0 → 1.3 → 1.0 sur 0.20s (OutBack), then float.
+            _rect.localScale = Vector3.zero;
+            var popUp = DOTween.Sequence();
+            popUp.Append(_rect.DOScale(1.3f, 0.12f).SetEase(Ease.OutBack, 3f));
+            popUp.Append(_rect.DOScale(1.0f, 0.08f).SetEase(Ease.OutQuad));
+            popUp.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+
+            // Arc trajectory via manual quadratic Bezier — DOPath/DOJump live in UI module not referenced.
             var seq = DOTween.Sequence();
-            seq.Append(_rect.DOLocalMove(endLocal, _duration).SetEase(Ease.OutCubic));
+            var startLocal = _rect.localPosition;
+            var apex = new Vector3((startLocal.x + endLocal.x) * 0.5f,
+                Mathf.Max(startLocal.y, endLocal.y) + 35f, startLocal.z);
+            seq.Append(DOTween.To(() => 0f, t =>
+            {
+                var oneMinusT = 1f - t;
+                var pos = oneMinusT * oneMinusT * startLocal
+                    + 2f * oneMinusT * t * apex
+                    + t * t * endLocal;
+                _rect.localPosition = pos;
+            }, 1f, _duration).SetEase(Ease.OutCubic));
+
             if (_group != null)
             {
                 _group.alpha = 1f;
-                // DOTween.To<float> is in DOTween core. CanvasGroup.alpha is a simple float setter
-                // so we tween it directly without needing the UI-module DOFade extension.
                 seq.Join(DOTween.To(() => _group.alpha, a => _group.alpha = a, 0f, _duration).SetEase(Ease.InQuad));
             }
             seq.OnComplete(() => Destroy(gameObject));
-            // Auto-kill the whole sequence if this GameObject gets destroyed externally (scene reload,
-            // play mode toggle, parent removal) before OnComplete fires.
             seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
         }
 

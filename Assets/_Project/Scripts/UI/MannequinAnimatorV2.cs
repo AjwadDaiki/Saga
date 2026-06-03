@@ -127,6 +127,48 @@ namespace Saga.UI
 
         public void PlayWobble() => PlayHit();
 
+        /// <summary>FEATURE 7 — coup massif (combo tier ≥ 2) : Top rotate ±25° + scale squash 0.8/1.15
+        /// puis pop back. Base micro-shake amplifié. Override le PlayHit normal pour cette frame.</summary>
+        public void PlayMassiveHit()
+        {
+            KillIdleTweens();
+            KillActiveHit();
+
+            var seq = DOTween.Sequence();
+            if (_top != null)
+            {
+                seq.Append(_top.DOLocalRotate(_topRot0Euler + new Vector3(0, 0, -25f), 0.06f).SetEase(Ease.OutQuad));
+                seq.Join(_top.DOScale(new Vector3(_topScale0.x * 1.15f, _topScale0.y * 0.80f, _topScale0.z), 0.06f).SetEase(Ease.OutQuad));
+                seq.Append(_top.DOLocalRotate(_topRot0Euler + new Vector3(0, 0, 22f), 0.10f).SetEase(Ease.OutQuad));
+                seq.Join(_top.DOScale(new Vector3(_topScale0.x * 0.85f, _topScale0.y * 1.18f, _topScale0.z), 0.10f).SetEase(Ease.OutQuad));
+                seq.Append(_top.DOLocalRotate(_topRot0Euler + new Vector3(0, 0, -12f), 0.08f).SetEase(Ease.OutQuad));
+                seq.Append(_top.DOLocalRotate(_topRot0Euler, 0.30f).SetEase(Ease.OutElastic));
+                seq.Join(_top.DOScale(_topScale0, 0.30f).SetEase(Ease.OutElastic));
+            }
+            if (_base != null)
+            {
+                seq.Insert(0f, _base.DOLocalMoveX(_basePos0.x + 4f, 0.06f));
+                seq.Insert(0.06f, _base.DOLocalMoveX(_basePos0.x - 3f, 0.06f));
+                seq.Insert(0.12f, _base.DOLocalMoveX(_basePos0.x + 1.5f, 0.06f));
+                seq.Insert(0.18f, _base.DOLocalMoveX(_basePos0.x, 0.10f));
+                seq.Insert(0f, _base.DOScale(new Vector3(_baseScale0.x * 1.10f, _baseScale0.y * 0.85f, _baseScale0.z), 0.08f));
+                seq.Insert(0.20f, _base.DOScale(_baseScale0, 0.20f).SetEase(Ease.OutElastic));
+            }
+            if (_topImage != null)
+            {
+                _topImage.color = Color.white;
+                var img = _topImage;
+                var orig = _topOriginalColor;
+                DOTween.Sequence()
+                    .AppendInterval(0.10f)
+                    .AppendCallback(() => { if (img != null) img.color = orig; })
+                    .SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            }
+            seq.SetLink(gameObject, LinkBehaviour.KillOnDestroy);
+            _activeHit = seq;
+            ScheduleIdleResume(0.7f);
+        }
+
         /// <summary>Read accessor pour Shadow sync (Polish 6 ShadowSyncBridge).</summary>
         public Transform TopTransform => _top;
         public Vector3 TopOriginalRotEuler => _topRot0Euler;

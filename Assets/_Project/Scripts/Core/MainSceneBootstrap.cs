@@ -180,6 +180,7 @@ namespace Saga.Core
                 AttachTabAnimators(registry);
                 AttachSkillsVFXBridge(MainCanvas);
                 AttachShadowSyncBridge(MainCanvas);
+                AttachEpicCombatBridge(MainCanvas);
                 AdjustComboPositionForHero(MainCanvas);
             }
 
@@ -1154,6 +1155,20 @@ namespace Saga.Core
             var bridge = canvas.gameObject.GetOrAdd<Saga.UI.SkillsVFXBridge>();
             bridge.Configure(canvas, heroAnim);
             Debug.Log($"[Bootstrap] SkillsVFXBridge attached on Canvas — VAGUE/SOUFFLE wired to {(heroAnim != null ? "Hero V2" : "no hero anim")}.");
+        }
+
+        /// <summary>Sprint 10 V2 FEATURE 7 — Epic combat : canvas shake tier-based + body lean
+        /// + mannequin massive hit on combo tier ≥ 2.</summary>
+        private static void AttachEpicCombatBridge(Canvas canvas)
+        {
+            if (canvas == null) return;
+            var hero = GameObject.Find("Hero_Samurai");
+            var mann = GameObject.Find("Mannequin");
+            var heroAnim = hero != null ? hero.GetComponent<Saga.UI.HeroAnimatorV2>() : null;
+            var mannAnim = mann != null ? mann.GetComponent<Saga.UI.MannequinAnimatorV2>() : null;
+            var bridge = canvas.gameObject.GetOrAdd<Saga.UI.EpicCombatBridge>();
+            bridge.Configure(canvas, heroAnim, mannAnim);
+            Debug.Log($"[Bootstrap] EpicCombatBridge attached — Hero:{heroAnim != null} Mannequin:{mannAnim != null}.");
         }
 
         /// <summary>Sprint 10 V2 Polish 6 — Shadow_Sync sous Hero_Samurai et Mannequin synced à
