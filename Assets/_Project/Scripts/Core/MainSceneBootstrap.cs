@@ -1079,13 +1079,16 @@ namespace Saga.Core
                 }
             }
 
-            // Sprint 10 V2 — Wolf animator + Mannequin/Wolf phase switcher.
+            // Sprint 10 V2 — Wolf integration.
+            // Décision coordinateur : WolfAnimator désactivé pour l'instant. Le Wolf reste in
+            // scene (static, pas d'anim), CombatTargetSwitcher continue à toggle sa visibilité
+            // selon phase. À réactiver plus tard quand contenu combat est wired end-to-end.
             var wolf = GameObject.Find("Enemy_Wolf");
-            if (wolf != null && wolf.GetComponent<Saga.UI.WolfAnimator>() == null)
-            {
-                wolf.AddComponent<Saga.UI.WolfAnimator>();
-                Debug.Log("[Bootstrap] WolfAnimator attached to Enemy_Wolf.");
-            }
+            // if (wolf != null && wolf.GetComponent<Saga.UI.WolfAnimator>() == null)
+            // {
+            //     wolf.AddComponent<Saga.UI.WolfAnimator>();
+            //     Debug.Log("[Bootstrap] WolfAnimator attached to Enemy_Wolf.");
+            // }
 
             if (mannequin != null && wolf != null)
             {

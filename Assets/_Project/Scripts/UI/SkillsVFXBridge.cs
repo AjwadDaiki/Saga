@@ -97,10 +97,14 @@ namespace Saga.UI
             img.raycastTarget = false;
 
             // Calculer largeur canvas pour atteindre hors écran droit.
+            // DOAnchorPosX vit dans DOTween.Modules.UI (non référencé par Saga.Runtime — même
+            // contrainte que DOFade Image / DOAnchorPos). Use DOTween.To core sur anchoredPosition.
             var canvasWidth = _canvasRt.rect.width;
             Object.Destroy(go, 0.65f);
+            var targetPos = new Vector2(canvasWidth + 500f, 0f);
             DOTween.Sequence()
-                .Append(rt.DOAnchorPosX(canvasWidth + 500f, 0.55f).SetEase(Ease.OutCubic))
+                .Append(DOTween.To(() => rt.anchoredPosition, p => rt.anchoredPosition = p,
+                    targetPos, 0.55f).SetEase(Ease.OutCubic))
                 .Join(DOTween.To(() => img.color, c => img.color = c,
                     new Color(img.color.r, img.color.g, img.color.b, 0f), 0.55f).SetEase(Ease.InQuad))
                 .SetLink(go, LinkBehaviour.KillOnDestroy);
